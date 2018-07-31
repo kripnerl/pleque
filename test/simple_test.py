@@ -34,6 +34,8 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
 
     ax.contour(r, z, psi.T, 30)
     ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     ax.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b')
     ax.plot(eq._x_point[0], eq._x_point[1], 'x', color='r')
     ax.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r')
@@ -104,14 +106,12 @@ def plot_over_view_2d(eq: Equilibrium):
 
     psi = eq.psi(R=r, Z=z)
 
-    print('R: {}'.format(r.shape))
-    print('Z: {}'.format(z.shape))
-    print('psi: {}'.format(psi.shape))
-
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
     plt.contour(r, z, psi.T, 30)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b')
     plt.plot(eq._x_point[0], eq._x_point[1], 'x', color='r')
     plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r')
@@ -122,28 +122,38 @@ def plot_over_view_2d(eq: Equilibrium):
     plt.subplot(132)
     plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 30)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{pol}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
     plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 30)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
 
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
     plt.pcolormesh(r, z, eq.B_R(R=r, Z=z).T)
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{R}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
     plt.pcolormesh(r, z, eq.B_Z(R=r, Z=z).T)
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{Z}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
     plt.pcolormesh(r, z, np.sqrt(eq.B_R(R=r, Z=z) ** 2 + eq.B_Z(R=r, Z=z) ** 2).T)
+    if eq._first_wall is not None:
+        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{pol}$')
     plt.gca().set_aspect('equal')
 
@@ -211,14 +221,13 @@ def main():
 
     # eq = Equilibrium(eq_ds)
 
-    eq = test_read_gfile(gfile)
+    eq = test_read_gfile(gfile, 'test_files/compu/limiter_v3_1_iba.dat')
 
     plot_over_view_2d(eq)
 
     test_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
-
     print(eq.fluxfuncs.__dict__)
 
     plt.show()

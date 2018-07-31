@@ -24,7 +24,13 @@ def read_gfile(g_file: str, limiter: str = None):
                                'Z': z,
                                'psi_N': psi_N})
 
-    eq = Equilibrium(eq_ds)
+    if limiter is not None:
+        lim = np.loadtxt(limiter)
+        print(lim.shape)
+    else:
+        lim = None
+
+    eq = Equilibrium(eq_ds, first_wall=lim)
 
     eq._geqdsk = eq_gfile
 
@@ -37,7 +43,7 @@ def read_gfile(g_file: str, limiter: str = None):
             psi_N = self.psi_N(R=R, Z=Z, grid=grid)
         return self._q_spl(psi_N)
 
-    def diff_q(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def diff_q(self: eq, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
         """
 
         :param self:
@@ -54,7 +60,7 @@ def read_gfile(g_file: str, limiter: str = None):
             psi_N = self.psi_N(R=R, Z=Z, grid=grid)
         return self._dq_dpsin_spl(psi_N) * self._diff_psiN
 
-    def tor_flux(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def tor_flux(self: eq, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
             psi_N = self.psi_N(R=R, Z=Z, grid=grid)
 

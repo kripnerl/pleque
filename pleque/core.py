@@ -92,7 +92,7 @@ class Equilibrium(object):
         self.z_max = np.max(z)
 
         if verbose:
-            print('Generate 2D spline')
+            print('--- Generate 2D spline ---')
 
         # generate spline:
         # todo: first assume r, z are ascending:
@@ -354,8 +354,6 @@ class Equilibrium(object):
 
                     #                    psi_xyabs = np.abs(psi_xy[ar, az])
                     psi_xyopt = np.abs(self._spl(r_ex2, z_ex2, dx=1, dy=1, grid=False))
-                    print()
-                    print(res)
 
                     if psi_xyopt < 0.1:
                         # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
@@ -409,13 +407,13 @@ class Equilibrium(object):
 
         if self._x_point[1] < self._x_point2[1]:
             if self._verbose:
-                print('lower x-point configuration')
+                print('>>> found lower x-point configuration')
             v = v[v[:, 1] > self._x_point[1], :]
             v = v[v[:, 1] < self._x_point2[1], :]
 
         else:
             if self._verbose:
-                print('upper x-point configuration')
+                print('>>> found upper x-point configuration')
             v = v[v[:, 1] < self._x_point[1], :]
             v = v[v[:, 1] > self._x_point2[1], :]
 
