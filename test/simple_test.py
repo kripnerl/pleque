@@ -12,6 +12,36 @@ if not modpath in sys.path:  # not to stack same paths continuously if it is alr
     sys.path.insert(0, modpath)
 
 
+def load_gfile(g_file):
+    from tokamak.formats import geqdsk
+    eq_gfile = geqdsk.read(g_file)
+
+    psi = eq_gfile['psi']
+    r = eq_gfile['r'][:, 0]
+    z = eq_gfile['z'][0, :]
+
+    pressure = eq_gfile['pressure']
+    fpol = eq_gfile['fpol']
+    psi_N = np.linspace(0, 1, len(fpol))
+
+    eq_ds = xa.Dataset({'psi': (['Z', 'R'], psi),
+                        'pressure': ('psi_N', pressure),
+                        'fpol': ('psi_N', fpol)},
+                       coords={'R': r,
+                               'Z': z,
+                               'psi_N': psi_N})
+
+    print(eq_ds)
+
+    if False:
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.contour(r, z, psi)
+        plt.gca().set_aspect('equal')
+
+    return eq_ds
+
+
 def test_qprofiles(g_file: str, eq: Equilibrium):
     from tokamak.formats import geqdsk
     import matplotlib.pyplot as plt
@@ -66,39 +96,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_ylabel(r'$\Phi$')
 
 
-
-
-def load_gfile(g_file):
-    from tokamak.formats import geqdsk
-    eq_gfile = geqdsk.read(g_file)
-
-    psi = eq_gfile['psi']
-    r = eq_gfile['r'][:, 0]
-    z = eq_gfile['z'][0, :]
-
-    pressure = eq_gfile['pressure']
-    fpol = eq_gfile['fpol']
-    psi_N = np.linspace(0, 1, len(fpol))
-
-    eq_ds = xa.Dataset({'psi': (['Z', 'R'], psi),
-                        'pressure': ('psi_N', pressure),
-                        'fpol': ('psi_N', fpol)},
-                       coords={'R': r,
-                               'Z': z,
-                               'psi_N': psi_N})
-
-    print(eq_ds)
-
-    if False:
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.contour(r, z, psi)
-        plt.gca().set_aspect('equal')
-
-    return eq_ds
-
-
-def plot_over_view_2d(eq: Equilibrium):
+def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
     r = np.linspace(eq.r_min, eq.r_max, 100)
@@ -182,56 +180,57 @@ def plot_over_view_2d(eq: Equilibrium):
 
 
 def main():
-    import numpy as np
     import matplotlib.pyplot as plt
 
-    r = np.linspace(0.5, 2.5, 100)
-    z = np.linspace(-1.5, 1.5, 200)
+    ## Here is only some testing equilibirum prepared:
 
-    r_grid, z_grid = np.meshgrid(r, z)
-    el_r = 1 / 2
-    el_z = 1 / 1
+    # r = np.linspace(0.5, 2.5, 100)
+    # z = np.linspace(-1.5, 1.5, 200)
+    #
+    # r_grid, z_grid = np.meshgrid(r, z)
+    # el_r = 1 / 2
+    # el_z = 1 / 1
+    #
+    # def foofunc(r, z, par_r, par_z): return np.exp(-(r / par_r) ** 2 - (z / par_z) ** 2)
+    #
+    # # simple circle equilibrium
+    # psi_circle = foofunc(r_grid - 1.5, z_grid, el_r, el_z)
+    # # test x-point equilibrium done from 'three hills':
+    # psi_xpoint = 0.5 * foofunc(r_grid - 1.5, z_grid - 1.5, el_r, el_z * .5) + \
+    #              foofunc(r_grid - 1.5, z_grid + 1.5, el_r, el_z * .5) + \
+    #              psi_circle
+    #
+    # # psi = psi_circle.copy()
+    # psi = psi_xpoint.copy()
+    #
+    # # eq_ds = Dataset({'psi': (['Z', 'R'], psi)},
+    # #                 coords={'R': r,
+    # #                         'Z': z})
 
-    def foofunc(r, z, par_r, par_z): return np.exp(-(r / par_r) ** 2 - (z / par_z) ** 2)
 
-    # simple circle equilibrium
-    psi_circle = foofunc(r_grid - 1.5, z_grid, el_r, el_z)
-    # test x-point equilibrium done from 'three hills':
-    psi_xpoint = 0.5 * foofunc(r_grid - 1.5, z_grid - 1.5, el_r, el_z * .5) + \
-                 foofunc(r_grid - 1.5, z_grid + 1.5, el_r, el_z * .5) + \
-                 psi_circle
+    ## Load the equilibrium directly from gfile
 
-    # psi = psi_circle.copy()
-    psi = psi_xpoint.copy()
+    # # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
+    # gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
+    # eq_ds = load_gfile(gfile)
+    #
+    # print(eq_ds)
+    # # eq = Equilibrium(eq_ds)
 
-    # eq_ds = Dataset({'psi': (['Z', 'R'], psi)},
-    #                 coords={'R': r,
-    #                         'Z': z})
+    ## Load the equilibrium from fiesta generated g-filem using module routine
 
-    # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
     gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    eq_ds = load_gfile(gfile)
-
-    # plt.pcolormesh(r_grid, z_grid, psi)
-    # plt.gca().set_aspect('equal')
-    # plt.colorbar()
-    # plt.show()
-
-    print(eq_ds)
-
-    # eq = Equilibrium(eq_ds)
-
     eq = test_read_gfile(gfile, 'test_files/compu/limiter_v3_1_iba.dat')
 
-    plot_over_view_2d(eq)
+    plot_overview(eq)
 
     test_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
 
+    # Show all plots generated during tests
     plt.show()
-
 
 
 if __name__ == '__main__':
