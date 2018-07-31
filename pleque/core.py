@@ -2,6 +2,35 @@ import numpy as np
 import xarray
 
 
+class FluxFuncs:
+    # def interpolate(self, coords, data)
+    # def interpolate(self, R, Z, data):
+    #     pass
+
+    def __init__(self, equi):
+        # _flux_funcs = ['psi', 'rho']
+        _flux_funcs = ['psi_N', 'psi', 'rho']
+        self._equi = equi
+        # self.__dict__.update(_flux_funcs)  # at class level?
+        for fn in _flux_funcs:
+            setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
+
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, **coords):
+        from scipy.interpolate import UnivariateSpline
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z)
+        # interp = interpolate(psi_N, data)
+        interp = UnivariateSpline(psi_N, data, s=0, k=3)
+        setattr(self, '_interp_' + name, interp)
+
+        def new_func(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, **coords):
+            if R is not None and Z is not None:
+                psi_N = self.psi_N(R=R, Z=Z)
+            return interp(psi_N)
+
+        setattr(type(self), name, new_func)
+
+
 class Equilibrium(object):
     # def __init__(self,
     #              basedata: xarray.Dataset,
@@ -19,6 +48,7 @@ class Equilibrium(object):
                  x_points=None,
                  strike_points=None,
                  spline_order=5,
+                 spline_smooth=0,
                  cocos=-1,
                  verbose=True
                  ):
@@ -31,7 +61,7 @@ class Equilibrium(object):
         basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
         first_wall: required for initialization in case of limiter configuration
         """
-        from scipy.interpolate import RectBivariateSpline
+        from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 
         if verbose:
             print('---------------------------------')
@@ -50,7 +80,7 @@ class Equilibrium(object):
         # todo: resolve this from input
         self._Bpol_sign = 1
 
-        basedata = basedata.transpose('R', 'Z')
+        basedata = basedata.transpose('R', 'Z', 'psi_N')
 
         r = basedata.R.data
         z = basedata.Z.data
@@ -66,13 +96,33 @@ class Equilibrium(object):
 
         # generate spline:
         # todo: first assume r, z are ascending:
-        spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order, s=0)
+        spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
+                                  s=spline_smooth)
         self._spl = spl
 
         # find extremes:
-        self._find_extremes_
+        self.__find_extremes__()
 
-    def psi(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        # generate 1d profiles:
+        if (self._psi_lcfs - self._psi_axis > 0):
+            self._psi_sign = +1
+        else:
+            self._psi_sign = -1
+
+        psi_N = basedata.psi_N.data
+        pressure = basedata.pressure.data
+        fpol = basedata.fpol.data
+        self.BvacR = fpol[-1]
+
+        self._fpol_spl = UnivariateSpline(psi_N, fpol, k=3, s=1)
+        self._df_dpsin_spl = self._fpol_spl.derivative()
+        self._pressure_spl = UnivariateSpline(psi_N, pressure, k=3, s=1)
+        self._dp_dpsin_spl = self._pressure_spl.derivative()
+
+        self.fluxfuncs.add_flux_func('fpol', fpol, psi_N=psi_N)
+        self.fluxfuncs.add_flux_func('pressure', pressure, psi_N=psi_N)
+
+    def psi(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
         """
         Psi value
 
@@ -84,7 +134,70 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
+        if psi_N is not None:
+            return self._psi_axis + psi_N * (self._psi_lcfs - self._psi_axis)
+
         return self._spl(R, Z, grid=grid)
+
+    def psi_N(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
+        if psi is None:
+            psi = self.psi(R=R, Z=Z)
+        return (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
+
+    @property
+    def _diff_psi_N(self):
+        return 1 / (self._psi_lcfs - self._psi_axis)
+
+    def rho(self, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        return np.sqrt(psi_N)
+
+    def pressure(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        return self._pressure_spl(psi_N)
+
+    def pprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        return self._dp_dpsin_spl(psi_N) * self._diff_psi_N
+
+    def fpol(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        mask_out = psi_N > 1
+        fpol = self._fpol_spl(psi_N)
+        fpol[mask_out] = self.BvacR
+        return fpol
+
+    def fprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        mask_out = psi_N > 1
+        fprime = self._df_dpsin_spl(psi_N) * self._diff_psi_N
+        fprime[mask_out] = 0
+        return fprime
+
+    def ffprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        if R is not None and Z is not None:
+            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
+        mask_out = psi_N > 1
+        ffprime = self._fpol_spl(psi_N) * self._df_dpsin_spl(psi_N) * self._diff_psi_N
+        ffprime[mask_out] = 0
+        return ffprime
+
+    def q(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def diff_q(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def tor_flux(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
 
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -97,8 +210,13 @@ class Equilibrium(object):
         :param coords:
         :return: Absolute value of magnetic field in Tesla.
         """
+        B_R = self.B_R(R=R, Z=Z)
+        B_Z = self.B_Z(R=R, Z=Z)
+        B_T = self.B_tor(R=R, Z=Z)
+        B_abs = np.sqrt(B_R ** 2 + B_Z ** 2 + B_T ** 2)
 
-        pass
+        return B_abs
+
 
     def B_R(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -148,9 +266,12 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        pass
+        B_R = self.B_R(R=R, Z=Z)
+        B_Z = self.B_Z(R=R, Z=Z)
+        B_pol = np.sqrt(B_R ** 2 + B_Z ** 2)
+        return B_pol
 
-    def B_tor(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+    def B_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         """
         Toroidal value of magnetic field in Tesla.
 
@@ -161,13 +282,29 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        B_R = self.B_R(R=R, Z=Z)
-        B_Z = self.B_Z(R=R, Z=Z)
-        B_pol = np.sqrt(B_R ** 2 + B_Z ** 2)
-        return B_pol
+        if grid:
+            R_mesh = R[:, None]
+        else:
+            R_mesh = R
+        return self.fpol(R=R, Z=Z, grid=grid) / R_mesh
 
-    @property
-    def _find_extremes_(self):
+    def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
 
@@ -181,8 +318,8 @@ class Equilibrium(object):
         psi_xysq = psi_x ** 2 + psi_y ** 2
         psi_xy = self._spl(rs, zs, dx=1, dy=1)
 
-        mins0 = argrelmin(psi_xysq, axis=0)  # type: Tuple[int]
-        mins1 = argrelmin(psi_xysq, axis=1)  # type: Tuple[int]
+        mins0 = tuple(argrelmin(psi_xysq, axis=0))
+        mins1 = tuple(argrelmin(psi_xysq, axis=1))
 
         import matplotlib.pyplot as plt
         # plt.figure()
@@ -203,7 +340,7 @@ class Equilibrium(object):
                 if ar == br and az == bz:
                     r_ex = rs[ar]
                     z_ex = zs[az]
-                    psi_xyabs = np.abs(psi_xy[ar, az])
+                    x0 = np.array((r_ex, z_ex))
 
                     # minimize in the vicinity:
                     bounds = ((np.max((self.r_min, r_ex - 0.1)),
@@ -211,9 +348,11 @@ class Equilibrium(object):
                               (np.max((self.z_min, z_ex - 0.1)),
                                np.min((self.z_max, z_ex + 0.1))))
 
-                    res = minimize(psi_xysq_func, (r_ex, z_ex), bounds=bounds)
+                    res = minimize(psi_xysq_func, x0, bounds=bounds)
                     r_ex2 = res['x'][0]
                     z_ex2 = res['x'][1]
+
+                    #                    psi_xyabs = np.abs(psi_xy[ar, az])
                     psi_xyopt = np.abs(self._spl(r_ex2, z_ex2, dx=1, dy=1, grid=False))
                     print()
                     print(res)
@@ -234,9 +373,11 @@ class Equilibrium(object):
         x_points = np.array(x_points)
 
         op_dist = (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
-        idx = np.argmin(op_dist)
-        self._mg_axis = o_points[idx]
+        sortidx = np.argsort(op_dist)
+        # idx = np.argmin(op_dist)
+        self._mg_axis = o_points[sortidx[0]]
         self._psi_axis = np.asscalar(self.psi(R=self._mg_axis[0], Z=self._mg_axis[1]))
+        self._opoints = o_points[sortidx]
 
         # identify THE x-point as the x-point nearest in psi value to mg_axis
         # todo: Ensure that the psi function between x-point and o-point is monotonic (!)
@@ -253,6 +394,7 @@ class Equilibrium(object):
 
         self._x_point = x_points[sortidx[0]]
         self._psi_lcfs = np.asscalar(self.psi(R=self._x_point[0], Z=self._x_point[1]))
+        self._x_points = x_points[sortidx]
 
         self._x_point2 = x_points[sortidx[1]]
         self._psi_xp2 = np.asscalar(self.psi(R=self._x_point2[0], Z=self._x_point2[1]))
@@ -278,3 +420,7 @@ class Equilibrium(object):
             v = v[v[:, 1] > self._x_point2[1], :]
 
         self._lcfs = v
+
+    @property
+    def fluxfuncs(self):
+        return FluxFuncs(self)  # filters out methods from self
