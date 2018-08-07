@@ -93,3 +93,4 @@ def readeqdsk(filepath):
     equi["r_lim"] = boundage[equi["nbound"]:equi["nlim"], 0]
     equi["z_lim"] = boundage[equi["nbound"]:equi["nlim"], 1]
 
+    return equi
