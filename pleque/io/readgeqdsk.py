@@ -5,7 +5,33 @@ import xarray as xr
 def readeqdsk_xarray(filepath):
     #TODO: Put the dictionary into a xarray for better user experience
     #TODO: I need to find out how to calculate r coordinates correctly
-    pass
+
+    eq = readeqdsk(filepath)
+
+    #calculate r, z coordinates for 2d psi profile
+    r_psi = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
+    z_psi = np.linspace(eq["zmid"] - eq["zdim"]/2, eq["zmid"] + eq["zdim"]/2, eq["nz"])
+
+
+    eq_xarray = xr.Dataset({"psi":(("r_psi", "z_psi"), eq["psi"]),  #2d psi poloidal profile
+                            "r_bound":eq["r_bound"], "z_bound":eq["z_bound"], #plasma boundary
+                            "r_lim": eq["r_lim"], "z_lim": eq["r_lim"],
+                            "fpol": ("qpsi",eq["fpol"]),
+                            "press": ("qpsi",eq["press"]),
+                            "ffprime": ("qpsi",eq["ffprime"]),
+                            "pprime": ("qpsi",eq["pprime"])}, #limiter contour
+                           coords={"r_psi":r_psi,
+                                   "z_psi":z_psi,
+                                   "qpsi": eq["qpsi"]})
+
+    attrs = ["rdim", "zdim", "rcentr", "rleft", "zmid", "rmagaxis", "zmagaxis", "psimagaxis",
+             "psibdry", "bcentr", "cpasma", "psimagaxis","rmagaxis", "zmagaxis",  "psibdry"]
+
+    for i in attrs:
+        eq_xarray.attrs[i] = eq[i]
+
+
+    return eq_xarray
 
 def readeqdsk(filepath):
     """
@@ -39,23 +65,14 @@ def readeqdsk(filepath):
     equistuff = re.findall(pattern_floats, equistuff)
     equistuff = np.asarray(equistuff).astype(float)
 
-    #dig out the variables
-    equi["rdim"] = equistuff[0]
-    equi["zdim"] = equistuff[1]
-    equi["rcentr"] = equistuff[2]
-    equi["rleft"] = equistuff[3]
-    equi["zmid"] = equistuff[4]
-    equi["rmagaxis"] = equistuff[5]
-    equi["zmagaxis"] = equistuff[6]
-    equi["psimagaxis"] = equistuff[7]
-    equi["psibdry"] = equistuff[8]
-    equi["bcentr"] = equistuff[9]
-    equi["cpasma"] = equistuff[10]
-    equi["psimagaxis"] = equistuff[11]
-    equi["rmagaxis"] = equistuff[13]
-    equi["zmagaxis"] = equistuff[15]
-    equi["psibdry"] = equistuff[17]
+    # attribute names and positions
+    attrs = ["rdim", "zdim", "rcentr", "rleft", "zmid", "rmagaxis", "zmagaxis", "psimagaxis",
+             "psibdry", "bcentr", "cpasma", "psimagaxis","rmagaxis", "zmagaxis",  "psibdry"]
+    attrs_pos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 10, 11, 13, 15, 17]
 
+    # get the attributes
+    for i in range(len(attrs)):
+        equi[attrs[i]] = equistuff[attrs_pos[i]]
 
     #get the 1d and 2d arrays
     names = ["fpol", "press", "ffprime", "pprime", "psi", "qpsi"]
