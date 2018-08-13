@@ -64,7 +64,7 @@ def readeqdsk(filepath):
     for i in names:
         if i == "psi": #only psi is 2D array
             equi[i] = np.reshape(equistuff[index: index + equi["nr"] * equi["nz"]],
-                                 newshape=(equi["nr"], equi["nz"]))
+                                 newshape=(equi["nr"], equi["nz"]), order = "F") # [r, z]
             index += equi["nr"] * equi["nz"]
         else:#read 1d arrays
             equi[i] = equistuff[index:index + equi["nr"]]
