@@ -2,11 +2,14 @@ import numpy as np
 import re
 import xarray as xr
 
-def readeqdsk_xarray(filepath):
-    #TODO: Put the dictionary into a xarray for better user experience
-    #TODO: I need to find out how to calculate r coordinates correctly
-
-    eq = readeqdsk(filepath)
+def readeqdsk_xarray(filepath, order = "F"):
+    """
+    Read the eqdsk file contents into an xarray
+    :param filepath: path to the gfile
+    :param order: dimension convention of psi poloidal 2D array ("C", "F", ...), default is "F"
+    :return: xarray
+    """
+    eq = readeqdsk(filepath, order = "F")
 
     #calculate r, z coordinates for 2d psi profile
     r_psi = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
@@ -33,10 +36,11 @@ def readeqdsk_xarray(filepath):
 
     return eq_xarray
 
-def readeqdsk(filepath):
+def readeqdsk(filepath, order = "F"):
     """
     Read equidisk file into a python dictionary.
     :param filepath: path to the eqdsk file
+    :param order: dimension convention of psi poloidal 2D array ("C", "F", ...), default is "F"
     :return: dictionary with equilibrium data
     """
 
@@ -81,7 +85,7 @@ def readeqdsk(filepath):
     for i in names:
         if i == "psi": #only psi is 2D array
             equi[i] = np.reshape(equistuff[index: index + equi["nr"] * equi["nz"]],
-                                 newshape=(equi["nr"], equi["nz"]), order = "F") # [r, z]
+                                 newshape=(equi["nr"], equi["nz"]), order = order) # [r, z]
             index += equi["nr"] * equi["nz"]
         else:#read 1d arrays
             equi[i] = equistuff[index:index + equi["nr"]]
