@@ -15,7 +15,8 @@ class FluxFuncs:
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
+    def add_flux_func(self: Equilibrium, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
+                      **coords):
         from scipy.interpolate import UnivariateSpline
         if R is not None and Z is not None:
             psi_n = self.psi_n(R=R, Z=Z)
@@ -23,7 +24,7 @@ class FluxFuncs:
         interp = UnivariateSpline(psi_n, data, s=0, k=3)
         setattr(self, '_interp_' + name, interp)
 
-        def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
+        def new_func(self: Equilibrium, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
             if R is not None and Z is not None:
                 psi_n = self.psi_n(R=R, Z=Z)
             return interp(psi_n)
@@ -147,7 +148,7 @@ class Equilibrium(object):
 
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         if psi is None:
-            psi = self.psi(R=R, Z=Z)
+            psi = self.psi(R=R, Z=Z, grid=grid)
         return (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
 
     @property
@@ -315,8 +316,8 @@ class Equilibrium(object):
         from scipy.optimize import minimize
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 200)
-        zs = np.linspace(self.z_min, self.z_max, 220)
+        rs = np.linspace(self.r_min, self.r_max, 120)
+        zs = np.linspace(self.z_min, self.z_max, 130)
 
         psi = self.psi(R=rs, Z=zs)
         psi_x = self._spl(rs, zs, dx=1, dy=0)
@@ -359,7 +360,7 @@ class Equilibrium(object):
                     z_ex2 = res['x'][1]
 
                     #                    psi_xyabs = np.abs(psi_xy[ar, az])
-                    psi_xyopt = np.abs(self._spl(r_ex2, z_ex2, dx=1, dy=1, grid=False))
+                    psi_xyopt = np.abs(self._spl(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
 
                     if psi_xyopt < 0.1:
                         # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
@@ -370,14 +371,20 @@ class Equilibrium(object):
                         # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
                         x_points.append((r_ex2, z_ex2))
 
-        # Identify the o-point nearest the operation range as center of plasma
+        # todo: After beeing function written, check whether are points inside limiter
+
+        # First identify the o-point nearest the operation range as center of plasma
         r_centr = (self.r_min + self.r_max) / 2
         z_centr = (self.z_min + self.z_max) / 2
         o_points = np.array(o_points)
         x_points = np.array(x_points)
 
         op_dist = (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
-        sortidx = np.argsort(op_dist)
+        # assume that psi value has its minimum in the center
+        op_psiscale = self.psi(R=o_points[:, 0], Z=o_points[:, 1], grid=False)
+        op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
+
+        sortidx = np.argsort(op_dist * op_psiscale)
         # idx = np.argmin(op_dist)
         self._mg_axis = o_points[sortidx[0]]
         self._psi_axis = np.asscalar(self.psi(R=self._mg_axis[0], Z=self._mg_axis[1]))
@@ -393,8 +400,12 @@ class Equilibrium(object):
             psi_xp = np.asscalar(self.psi(R=rxp, Z=zxp, grid=False))
             psi_diff[i] = np.abs(psi_xp - self._psi_axis)
 
+        xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
+        xp_dist = (xp_dist - np.min(xp_dist)) / (np.max(xp_dist) - np.min(xp_dist))
+
+
         # idx = np.argmin(psi_diff)
-        sortidx = np.argsort(psi_diff)
+        sortidx = np.argsort(psi_diff * xp_dist)
 
         self._x_point = x_points[sortidx[0]]
         self._psi_lcfs = np.asscalar(self.psi(R=self._x_point[0], Z=self._x_point[1]))

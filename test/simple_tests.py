@@ -42,6 +42,8 @@ def load_gfile(g_file):
     return eq_ds
 
 
+# todo: add plotting function for various derivatives of psi
+
 def test_qprofiles(g_file: str, eq: Equilibrium):
     from tokamak.formats import geqdsk
     import matplotlib.pyplot as plt
@@ -96,6 +98,18 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_ylabel(r'$\Phi$')
 
 
+def plot_extremes(eq: Equilibrium, ax=None):
+    import matplotlib.pyplot as plt
+    if ax is None:
+        ax = plt.gca()
+
+    # opoints:
+    for op in eq._opoints:
+        ax.plot(op[0], op[1], 'o', color='C5')
+
+    for xp in eq._x_points:
+        ax.plot(xp[0], xp[1], 'x', color='C4')
+
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
@@ -106,19 +120,21 @@ def plot_overview(eq: Equilibrium):
 
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
-    plt.contour(r, z, psi.T, 30)
+    plt.contour(r, z, psi.T, 20)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b')
     plt.plot(eq._x_point[0], eq._x_point[1], 'x', color='r')
     plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r')
+    return_axis = plt.gca()
+
 
     plt.title(r'$\psi$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
-    plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 30)
+    plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 20)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -126,13 +142,14 @@ def plot_overview(eq: Equilibrium):
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
-    plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 30)
+    plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 20)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
 
+    # ----
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
     plt.pcolormesh(r, z, eq.B_R(R=r, Z=z).T)
@@ -178,6 +195,7 @@ def plot_overview(eq: Equilibrium):
     ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
     ax2.set_ylabel(r"$ff'$ ", color='C2')
 
+    return return_axis
 
 def main():
     import matplotlib.pyplot as plt
@@ -231,7 +249,6 @@ def main():
 
     # Show all plots generated during tests
     plt.show()
-
 
 if __name__ == '__main__':
     main()
