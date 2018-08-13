@@ -22,14 +22,14 @@ def load_gfile(g_file):
 
     pressure = eq_gfile['pressure']
     fpol = eq_gfile['fpol']
-    psi_N = np.linspace(0, 1, len(fpol))
+    psi_n = np.linspace(0, 1, len(fpol))
 
     eq_ds = xa.Dataset({'psi': (['Z', 'R'], psi),
-                        'pressure': ('psi_N', pressure),
-                        'fpol': ('psi_N', fpol)},
+                        'pressure': ('psi_n', pressure),
+                        'fpol': ('psi_n', fpol)},
                        coords={'R': r,
                                'Z': z,
-                               'psi_N': psi_N})
+                               'psi_n': psi_n})
 
     print(eq_ds)
 
@@ -49,7 +49,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     eq_gfile = geqdsk.read(g_file)
 
     qpsi = eq_gfile['qpsi']
-    psi_N = np.linspace(0, 1, len(qpsi))
+    psi_n = np.linspace(0, 1, len(qpsi))
 
     print(eq_gfile.keys())
 
@@ -74,13 +74,13 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_aspect('equal')
     ax.set_title(r'$\psi$')
 
-    psi_mod = eq.psi(psi_N=psin_axis)
-    tor_flux = eq.tor_flux(psi_N=psin_axis)
+    psi_mod = eq.psi(psi_n=psin_axis)
+    tor_flux = eq.tor_flux(psi_n=psin_axis)
     q_as_grad = np.gradient(tor_flux, psi_mod)
 
     plt.subplot(222)
     ax = plt.gca()
-    ax.plot(psi_N, qpsi, 'x', label='g-file data')
+    ax.plot(psi_n, qpsi, 'x', label='g-file data')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Equilibrium data')
@@ -160,22 +160,22 @@ def plot_overview(eq: Equilibrium):
     plt.figure()
     plt.subplot(211)
     ax = plt.gca()
-    ax.plot(psi_n, eq.pressure(psi_N=psi_n), 'C1')
+    ax.plot(psi_n, eq.pressure(psi_n=psi_n), 'C1')
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r'$p [Pa]$', color='C1')
 
     ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.pprime(psi_N=psi_n), color='C2')
+    ax2.plot(psi_n, eq.pprime(psi_n=psi_n), color='C2')
     ax2.set_ylabel(r"$p'$", color='C2')
 
     plt.subplot(212)
     ax = plt.gca()
-    ax.plot(psi_n, eq.fpol(psi_N=psi_n), 'C1')
+    ax.plot(psi_n, eq.fpol(psi_n=psi_n), 'C1')
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r'$f$ ', color='C1')
 
     ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.ffprime(psi_N=psi_n), 'C2')
+    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
     ax2.set_ylabel(r"$ff'$ ", color='C2')
 
 

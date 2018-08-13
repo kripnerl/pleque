@@ -9,24 +9,24 @@ class FluxFuncs:
 
     def __init__(self, equi):
         # _flux_funcs = ['psi', 'rho']
-        _flux_funcs = ['psi_N', 'psi', 'rho']
+        _flux_funcs = ['psi_n', 'psi', 'rho']
         self._equi = equi
         # self.__dict__.update(_flux_funcs)  # at class level?
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, **coords):
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
         from scipy.interpolate import UnivariateSpline
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z)
-        # interp = interpolate(psi_N, data)
-        interp = UnivariateSpline(psi_N, data, s=0, k=3)
+            psi_n = self.psi_n(R=R, Z=Z)
+        # interp = interpolate(psi_n, data)
+        interp = UnivariateSpline(psi_n, data, s=0, k=3)
         setattr(self, '_interp_' + name, interp)
 
-        def new_func(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, **coords):
+        def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
             if R is not None and Z is not None:
-                psi_N = self.psi_N(R=R, Z=Z)
-            return interp(psi_N)
+                psi_n = self.psi_n(R=R, Z=Z)
+            return interp(psi_n)
 
         setattr(type(self), name, new_func)
 
@@ -80,7 +80,13 @@ class Equilibrium(object):
         # todo: resolve this from input
         self._Bpol_sign = 1
 
-        basedata = basedata.transpose('R', 'Z', 'psi_N')
+        try:
+            # todo: do this somehow better!
+            basedata = basedata.transpose('R', 'Z', 'psi_n')
+        except ValueError:
+            print('WARNING:\n'
+                  'basedata are not transposed! '
+                  'Proceed with trepidation.')
 
         r = basedata.R.data
         z = basedata.Z.data
@@ -109,20 +115,20 @@ class Equilibrium(object):
         else:
             self._psi_sign = -1
 
-        psi_N = basedata.psi_N.data
+        psi_n = basedata.psi_n.data
         pressure = basedata.pressure.data
         fpol = basedata.fpol.data
         self.BvacR = fpol[-1]
 
-        self._fpol_spl = UnivariateSpline(psi_N, fpol, k=3, s=1)
+        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
         self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_N, pressure, k=3, s=1)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
         self._dp_dpsin_spl = self._pressure_spl.derivative()
 
-        self.fluxfuncs.add_flux_func('fpol', fpol, psi_N=psi_N)
-        self.fluxfuncs.add_flux_func('pressure', pressure, psi_N=psi_N)
+        self.fluxfuncs.add_flux_func('fpol', fpol, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
 
-    def psi(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
         Psi value
 
@@ -134,68 +140,68 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        if psi_N is not None:
-            return self._psi_axis + psi_N * (self._psi_lcfs - self._psi_axis)
+        if psi_n is not None:
+            return self._psi_axis + psi_n * (self._psi_lcfs - self._psi_axis)
 
         return self._spl(R, Z, grid=grid)
 
-    def psi_N(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
+    def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         if psi is None:
             psi = self.psi(R=R, Z=Z)
         return (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
 
     @property
-    def _diff_psi_N(self):
+    def _diff_psi_n(self):
         return 1 / (self._psi_lcfs - self._psi_axis)
 
-    def rho(self, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def rho(self, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        return np.sqrt(psi_N)
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        return np.sqrt(psi_n)
 
-    def pressure(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def pressure(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        return self._pressure_spl(psi_N)
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        return self._pressure_spl(psi_n)
 
-    def pprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def pprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        return self._dp_dpsin_spl(psi_N) * self._diff_psi_N
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        return self._dp_dpsin_spl(psi_n) * self._diff_psi_n
 
-    def fpol(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def fpol(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        mask_out = psi_N > 1
-        fpol = self._fpol_spl(psi_N)
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        mask_out = psi_n > 1
+        fpol = self._fpol_spl(psi_n)
         fpol[mask_out] = self.BvacR
         return fpol
 
-    def fprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        mask_out = psi_N > 1
-        fprime = self._df_dpsin_spl(psi_N) * self._diff_psi_N
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        mask_out = psi_n > 1
+        fprime = self._df_dpsin_spl(psi_n) * self._diff_psi_n
         fprime[mask_out] = 0
         return fprime
 
-    def ffprime(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
-            psi_N = self.psi_N(R=R, Z=Z, grid=grid)
-        mask_out = psi_N > 1
-        ffprime = self._fpol_spl(psi_N) * self._df_dpsin_spl(psi_N) * self._diff_psi_N
+            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
+        mask_out = psi_n > 1
+        ffprime = self._fpol_spl(psi_n) * self._df_dpsin_spl(psi_n) * self._diff_psi_n
         ffprime[mask_out] = 0
         return ffprime
 
-    def q(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
-    def diff_q(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
-    def tor_flux(self, *coordinates, R=None, Z=None, psi_N=None, coord_type=None, grid=True, **coords):
+    def tor_flux(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 

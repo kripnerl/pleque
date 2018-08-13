@@ -1,6 +1,8 @@
-import numpy as np
 import re
+
+import numpy as np
 import xarray as xr
+
 
 def readeqdsk_xarray(filepath, order = "F"):
     """
@@ -9,23 +11,24 @@ def readeqdsk_xarray(filepath, order = "F"):
     :param order: dimension convention of psi poloidal 2D array ("C", "F", ...), default is "F"
     :return: xarray
     """
-    eq = readeqdsk(filepath, order = "F")
+    eq = _readeqdsk(filepath, order="F")
 
     #calculate r, z coordinates for 2d psi profile
     r_psi = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
     z_psi = np.linspace(eq["zmid"] - eq["zdim"]/2, eq["zmid"] + eq["zdim"]/2, eq["nz"])
+    psi_n = np.linspace(0, 1, len(eq['qpsi']))
 
-
-    eq_xarray = xr.Dataset({"psi":(("r_psi", "z_psi"), eq["psi"]),  #2d psi poloidal profile
-                            "r_bound":eq["r_bound"], "z_bound":eq["z_bound"], #plasma boundary
+    eq_xarray = xr.Dataset({"psi": (("R", "Z"), eq["psi"]),  # 2d psi poloidal profile
+                            "r_bound": eq["r_bound"], "z_bound": eq["z_bound"],  # plasma boundary
                             "r_lim": eq["r_lim"], "z_lim": eq["r_lim"],
-                            "fpol": ("qpsi",eq["fpol"]),
-                            "press": ("qpsi",eq["press"]),
-                            "ffprime": ("qpsi",eq["ffprime"]),
-                            "pprime": ("qpsi",eq["pprime"])}, #limiter contour
-                           coords={"r_psi":r_psi,
-                                   "z_psi":z_psi,
-                                   "qpsi": eq["qpsi"]})
+                            "fpol": ("psi_n", eq["fpol"]),
+                            "pressure": ("psi_n", eq["press"]),
+                            "ffprime": ("psi_n", eq["ffprime"]),
+                            "qpsi": ("psi_n", eq["qpsi"]),
+                            "pprime": ("psi_n", eq["pprime"])},  # limiter contour
+                           coords={"R": r_psi,
+                                   "Z": z_psi,
+                                   "psi_n": psi_n})
 
     attrs = ["rdim", "zdim", "rcentr", "rleft", "zmid", "rmagaxis", "zmagaxis", "psimagaxis",
              "psibdry", "bcentr", "cpasma", "psimagaxis","rmagaxis", "zmagaxis",  "psibdry"]
@@ -36,7 +39,8 @@ def readeqdsk_xarray(filepath, order = "F"):
 
     return eq_xarray
 
-def readeqdsk(filepath, order = "F"):
+
+def _readeqdsk(filepath, order="F"):
     """
     Read equidisk file into a python dictionary.
     :param filepath: path to the eqdsk file
