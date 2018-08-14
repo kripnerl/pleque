@@ -15,7 +15,7 @@ class FluxFuncs:
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self: Equilibrium, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
                       **coords):
         from scipy.interpolate import UnivariateSpline
         if R is not None and Z is not None:
