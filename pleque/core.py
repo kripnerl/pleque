@@ -311,9 +311,32 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        from pleque.utils.surfaces import point_in_first_wall
+        if grid:
+            r_mesh, z_mesh = np.meshgrid(R, Z)
+            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        else:
+            points = np.vstack((R, Z)).T
+
+        mask_in = point_in_first_wall(self, points)
+        return mask_in
+
+    def in_lcfs(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        from pleque.utils.surfaces import point_inside_curve
+        if grid:
+            r_mesh, z_mesh = np.meshgrid(R, Z)
+            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        else:
+            points = np.vstack((R, Z)).T
+
+        mask_in = point_inside_curve(points, self._lcfs)
+        return mask_in
+
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
+
 
         # for sure not the best algorithm ever...
         rs = np.linspace(self.r_min, self.r_max, 120)
@@ -416,6 +439,7 @@ class Equilibrium(object):
 
         # get lcfs, for now using matplotlib contour line
 
+        # todo: replace this by Matisek's function
         plt.figure(1111)
         cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
         paths = cl.collections[0].get_paths()
@@ -433,6 +457,9 @@ class Equilibrium(object):
                 print('>>> found upper x-point configuration')
             v = v[v[:, 1] < self._x_point[1], :]
             v = v[v[:, 1] > self._x_point2[1], :]
+
+        mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+        v = v[mask_in, :]
 
         self._lcfs = v
 
