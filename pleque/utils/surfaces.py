@@ -1,6 +1,4 @@
 import numpy as np
-from pleque.core import Equilibrium
-from pleque.io.readgeqdsk import readeqdsk_xarray
 from skimage import measure
 
 def find_contour(array, level, r = None, z = None, fully_connected = "low", positive_orientation = "low"):
@@ -31,23 +29,24 @@ def find_contour(array, level, r = None, z = None, fully_connected = "low", posi
 
     return coords
 
-def point_inside_curve(point, contour):
+
+def point_inside_curve(points, contour):
     """
     Uses skimage.measure.points_in_poly function to find whether points are inside a contour (polygon)
-    :param point: 2d array of point coordinates viz. skimage.measure.points_in_poly
+    :param points: 2d array (N, 2) of points coordinates viz. skimage.measure.points_in_poly
     :param contour: 2d array of contour (polygon) coordinates viz. skimage.measure.points_in_poly
     :return: array of bool
     """
-    return measure.points_in_poly(point, contour)
+    return measure.points_in_poly(points, contour)
 
 def get_surface(equilibrium, psi, r=100, z=100, norm =True, closed = True, insidelcfs = True):
     """
     Finds points of surface with given value of psi.
     :param equilibrium: Equilibrium object
     :param psi: Value of psi to get the surface for
-    :param r: If number, specifies nuber of points in the r dimension of the mesh. If numpy array,
+    :param r: If number, specifies number of points in the r dimension of the mesh. If numpy array,
     gives r grid points.
-    :param z: If number, specifies nuber of points in the z dimension of the mesh. If numpy array,
+    :param z: If number, specifies number of points in the z dimension of the mesh. If numpy array,
     gives z grid points.
     :param norm: Specifies whether we are working with normalised values of psi
     :param closed: Are we looking for a closed surface?
@@ -78,45 +77,47 @@ def get_surface(equilibrium, psi, r=100, z=100, norm =True, closed = True, insid
     for i in range(len(contour)):
             # are we looking for a closed magnetic surface and is it closed?
             if closed and contour[i][0,0] == contour[i][-1,0] and contour[i][0,1] == contour[i][-1,1]:
-                isinside = measure.points_in_poly(magaxis,contour[i])
+                isinside = measure.points_in_poly(magaxis, contour[i])
                 # surface inside lcfs has to be enclosing magnetic axis
                 if insidelcfs and np.asscalar(isinside):
                     fluxsurface.append(contour[i])
     return fluxsurface
 
-def point_inside_fluxsurface(equilibrium, point, psi, r=100, z = 100, norm = True,
+
+def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
                              insidelcfs = True):
     """
     Checks if a point is inside a flux surface with specified value of psi.
     :param equilibrium: Equilibrium object
-    :param point: 2d numpy array of point coordinates
+    :param points: 2d numpy array (N, 2) of points coordinates
     :param psi: value of the psi on the surface
-    :param r: If number, specifies nuber of points in the r dimension of the mesh. If numpy array,
+    :param r: If number, specifies number of points in the r dimension of the mesh. If numpy array,
     gives r grid points.
-    :param z: If number, specifies nuber of points in the z dimension of the mesh. If numpy array,
+    :param z: If number, specifies number of points in the z dimension of the mesh. If numpy array,
     gives z grid points.
     :param norm:  Specifies whether we are working with normalised values of psi
     :param insidelcfs:  Are we looking for a closed surface inside lcfs?
     :return: array of bool
     """
-    closed = True # looking for a point inside a not closed surface is ambiguous
+    closed = True  # looking for a points inside a not closed surface is ambiguous
 
     contour = get_surface(equilibrium = equilibrium, psi=psi, r=r, z=z, closed=closed, norm=norm,
                           insidelcfs = insidelcfs)
     isinside = []
     for i in range(len(contour)):
-        isinside.append(point_inside_curve(point, contour[i]))
+        isinside.append(point_inside_curve(points, contour[i]))
 
     return isinside, contour
 
-def point_in_first_wall(equilibrium, point):
+
+def point_in_first_wall(equilibrium, points):
     """
     Checks if points are inside first wall contour.
     :param equilibrium: Equilibrium object
-    :param point: 2d numpy array of point coordinates
+    :param points: 2d numpy array (N, 2) of points coordinates
     :return:
     """
 
-    isinside = point_inside_curve(point, equilibrium._first_wall)
+    isinside = point_inside_curve(points, equilibrium._first_wall)
 
     return isinside
