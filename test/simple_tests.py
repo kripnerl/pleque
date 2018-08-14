@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from pleque.io.test_gfile_loader import read_gfile as test_read_gfile
+from test.testing_utils import load_testing_equilibrium
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
@@ -238,11 +238,11 @@ def main():
     ## Load the equilibrium from fiesta generated g-filem using module routine
 
     gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    eq = test_read_gfile(gfile, 'test_files/compu/limiter_v3_1_iba.dat')
+    eq = load_testing_equilibrium()
 
     plot_overview(eq)
 
-    test_qprofiles(gfile, eq)
+    # test_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
