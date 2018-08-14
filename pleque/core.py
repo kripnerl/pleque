@@ -337,6 +337,7 @@ class Equilibrium(object):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
 
+
         # for sure not the best algorithm ever...
         rs = np.linspace(self.r_min, self.r_max, 120)
         zs = np.linspace(self.z_min, self.z_max, 130)
@@ -438,6 +439,7 @@ class Equilibrium(object):
 
         # get lcfs, for now using matplotlib contour line
 
+        # todo: replace this by Matisek's function
         plt.figure(1111)
         cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
         paths = cl.collections[0].get_paths()
@@ -455,6 +457,9 @@ class Equilibrium(object):
                 print('>>> found upper x-point configuration')
             v = v[v[:, 1] < self._x_point[1], :]
             v = v[v[:, 1] > self._x_point2[1], :]
+
+        mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+        v = v[mask_in, :]
 
         self._lcfs = v
 
