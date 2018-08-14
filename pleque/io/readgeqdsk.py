@@ -9,7 +9,7 @@ def readeqdsk_xarray(filepath, order = "F"):
     :param order: dimension convention of psi poloidal 2D array ("C", "F", ...), default is "F"
     :return: xarray
     """
-    eq = readeqdsk(filepath, order = "F")
+    eq = readeqdsk(filepath, order = order)
 
     #calculate r, z coordinates for 2d psi profile
     r_psi = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
