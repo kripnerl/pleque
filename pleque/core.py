@@ -311,6 +311,28 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        from pleque.utils.surfaces import point_in_first_wall
+        if grid:
+            r_mesh, z_mesh = np.meshgrid(R, Z)
+            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        else:
+            points = np.vstack((R, Z)).T
+
+        mask_in = point_in_first_wall(self, points)
+        return mask_in
+
+    def in_lcfs(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        from pleque.utils.surfaces import point_inside_curve
+        if grid:
+            r_mesh, z_mesh = np.meshgrid(R, Z)
+            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        else:
+            points = np.vstack((R, Z)).T
+
+        mask_in = point_inside_curve(points, self._lcfs)
+        return mask_in
+
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
