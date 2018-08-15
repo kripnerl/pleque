@@ -81,17 +81,9 @@ class Equilibrium(object):
         # todo: resolve this from input
         self._Bpol_sign = 1
 
-        try:
-            # todo: do this somehow better!
-            basedata = basedata.transpose('R', 'Z', 'psi_n')
-        except ValueError:
-            print('WARNING:\n'
-                  'basedata are not transposed! '
-                  'Proceed with trepidation.')
-
         r = basedata.R.data
         z = basedata.Z.data
-        psi = basedata.psi.data
+        psi = basedata.psi.transpose('R', 'Z').data
 
         self.r_min = np.min(r)
         self.r_max = np.max(r)
@@ -466,3 +458,8 @@ class Equilibrium(object):
     @property
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
+
+
+class FluxSurface:
+    def __init__(self, ):
+        pass
