@@ -24,8 +24,54 @@ class Coordinates(object):
     def sort(self, order):
         pass
 
-    def getAs(self, type):
-        pass
+    @property
+    def R(self):
+        if self.dim == 2:
+            return self.x1
+
+    @property
+    def Z(self):
+        if self.dim == 2:
+            # todo
+            return self.x2
+
+    @property
+    def psi(self):
+        if self.dim == 1:
+            return self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
+        elif self.dim == 2:
+            self._eq._spl(self.x1, self.x2, grid=self.grid)
+
+    @property
+    def psi_n(self):
+        if self.dim == 1:
+            return self.x1
+        elif self.dim == 2:
+            return (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
+
+    @property
+    def rho(self):
+        return np.sqrt(self.psi_n)
+
+    # todo
+    # @property
+    # def r_mid(self):
+    #     """
+    #     Midplane coordinate.
+    #     :return:
+    #     """
+    #
+    #
+    #     return
+
+    def getAs(self, coord_type=None):
+        if self.dim == 0:
+            return np.array(())
+        coord_type_ = self._verify_coord_type(coord_type)
+
+        if self.dim < len(coord_type):
+            raise ValueError('Can not return 2d from 1d data.')
+        raise ValueError('Not implemented yet.')
 
     def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
