@@ -81,14 +81,6 @@ class Equilibrium(object):
         # todo: resolve this from input
         self._Bpol_sign = 1
 
-        # try:
-        #     # todo: do this somehow better!
-        #     basedata = basedata.transpose('R', 'Z', 'psi_n')
-        # except ValueError:
-        #     print('WARNING:\n'
-        #           'basedata are not transposed! '
-        #           'Proceed with trepidation.')
-
         r = basedata.R.data
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
