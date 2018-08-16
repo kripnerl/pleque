@@ -1,6 +1,6 @@
 import numpy as np
 
-from pleque.coordinates import Coordinates
+from pleque.core import Coordinates
 from test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
