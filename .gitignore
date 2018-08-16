@@ -2,3 +2,7 @@
 *.pyc
 
 \.idea/
+
+test/\.cache/
+
+test/test_files/\.cache/
