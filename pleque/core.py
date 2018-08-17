@@ -209,6 +209,44 @@ class Equilibrium(object):
 
         return B_abs
 
+    def calc_gridcoords(self, rbase, ybase, dim = "size"):
+        """
+        Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
+        :param rbase: float or int,  size of step or grid dimension size depending on dim
+        :param zbase: float or int, size of step or grid dimension size depending on dim
+        :param dim: list or string, If "step" then rbase, ybase are interpreted as requested step size in the grid.
+        If "size" then rbase, zbase interpreted as requested grid sizes.
+        :return:
+        """
+
+        if isinstance(dim,(list, tuple, np.ndarray)) and len(dim) == 2:
+            if dim[0] == "step":
+                r = np.arange(self._basedata.R.min(),self._basedata.R.max(), rbase)
+            elif dim[0] == "size":
+                r = np.linspace(self._basedata.R.min(),self._basedata.R.max(), ybase)
+            else:
+                raise ValueError("Wrong dim[0] value passed")
+
+            if dim[1] == "step":
+                z = np.arange(self._basedata.Z.min(),self._basedata.R.max(), rbase)
+            elif dim[1] == "dim":
+                z = np.linspace(self._basedata.Z.min(),self._basedata.Z.max(), ybase)
+            else:
+                raise ValueError("Wrong dim[1] value passed")
+        elif isinstance(dim,str):
+            if dim == "step":
+                r = np.arange(self._basedata.R.min(),self._basedata.R.max(), rbase)
+                z = np.arange(self._basedata.Z.min(),self._basedata.R.max(), rbase)
+            elif dim == "size":
+                r = np.linspace(self._basedata.R.min(),self._basedata.R.max(), ybase)
+                z = np.linspace(self._basedata.Z.min(),self._basedata.Z.max(), ybase)
+            else:
+                raise ValueError("Wrong dim value passed")
+        else:
+            raise ValueError("Wrong dim value passed")
+
+        return r, z
+
     # todo: resolve the grids
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
         """
