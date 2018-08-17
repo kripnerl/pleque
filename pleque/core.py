@@ -456,12 +456,6 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
-
-class FluxSurface:
-    def __init__(self, ):
-        pass
-
-
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
