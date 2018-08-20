@@ -532,13 +532,14 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
+
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
-        self._valid_coordinates_2d = {('R', 'Z')}
+        self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
         self.dim = -1  # init only
         self.grid = grid
 
@@ -581,6 +582,17 @@ class Coordinates(object):
     @property
     def rho(self):
         return np.sqrt(self.psi_n)
+
+    @property
+    def r(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.sqrt((self.x1 - r_mgax) ** 2 + (self.x2 - z_mgax) ** 2)
+
+    @property
+    def theta(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
 
     # todo
     # @property
@@ -776,5 +788,11 @@ class Coordinates(object):
                 raise ValueError('This should not happen.')
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
-            self.x1 = self._x1_input
-            self.x2 = self._x2_input
+            if self._coord_type_input == ('R', 'Z'):
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+            elif self._coord_type_input == ('r', 'theta'):
+                # todo: COCOS
+                r_mgax, z_mgax = self._eq._mg_axis
+                self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
+                self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
