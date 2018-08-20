@@ -1,5 +1,6 @@
-from shapely import geometry
 import numpy as np
+from shapely import geometry
+
 
 class FluxSurface:
     def __init__(self, coords):
@@ -13,7 +14,7 @@ class FluxSurface:
 
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
-        if coords[0, 0] == coords[-1, 0] and coords[0, 0] == coords[-1, 0]:
+        if coords[0, 0] == coords[-1, 0] and coords[0, 1] == coords[-1, 1]:
             self.__poly = geometry.polygon.Polygon(coords)
             self.__string = geometry.linestring.LineString(coords)
             self.__closed = True
