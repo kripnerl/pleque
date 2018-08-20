@@ -404,8 +404,8 @@ class Equilibrium(object):
 
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 120)
-        zs = np.linspace(self.z_min, self.z_max, 130)
+        rs = np.linspace(self.r_min, self.r_max, 300)
+        zs = np.linspace(self.z_min, self.z_max, 400)
 
         psi = self._spl_psi(rs, zs)
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
