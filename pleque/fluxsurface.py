@@ -1,25 +1,27 @@
 import numpy as np
 from shapely import geometry
 
+from pleque.core import Coordinates
+
 
 class FluxSurface:
-    def __init__(self, coords):
+    def __init__(self, coords: Coordinates):
         """
         Calculates geometrical properties of the flux surface. To make the conrour colsed, the first and last points in
         the passed coordinates have to be the same
-        :param coords: vector (N,2), where N is the number of points in the contour of the flux surface and dim1 are the
+        :param points_RZ: vector (N,2), where N is the number of points in the contour of the flux surface and dim1 are the
         r, z coordinates of the contour points.
         """
 
-
+        points_RZ = coords.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
-        if coords[0, 0] == coords[-1, 0] and coords[0, 1] == coords[-1, 1]:
-            self.__poly = geometry.polygon.Polygon(coords)
-            self.__string = geometry.linestring.LineString(coords)
+        if points_RZ[0, 0] == points_RZ[-1, 0] and points_RZ[0, 1] == points_RZ[-1, 1]:
+            self.__poly = geometry.polygon.Polygon(points_RZ)
+            self.__string = geometry.linestring.LineString(points_RZ)
             self.__closed = True
         else:
-            self.__string = geometry.linestring.LineString(coords)
+            self.__string = geometry.linestring.LineString(points_RZ)
             self.__closed = False
 
     @property
@@ -82,9 +84,10 @@ class FluxSurface:
         """
         return np.array(self.shape.exterior.coords)
 
-    def contains(self, coords):
+    def contains(self, coords: Coordinates):
+        points_RZ = coords.as_array(('R', 'Z'))
         if self.__closed:
-            pnt = geometry.point.Point(coords)
+            pnt = geometry.point.Point(points_RZ)
             return self.__poly.contains(pnt)
         else:
             raise Exception("Opened Flux Surface does not have area")
