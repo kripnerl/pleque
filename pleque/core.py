@@ -362,6 +362,20 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Return instance of Coordinates. If instances of coordinates is already on the input, just pass it throught.
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
+            return coordinates[0]
+        else:
+            return Coordinates(*coordinates, coord_type=coord_type, grid=grid, **coords)
+
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
         if grid:
@@ -519,18 +533,13 @@ class Equilibrium(object):
         return FluxFuncs(self)  # filters out methods from self
 
 
-class FluxSurface:
-    def __init__(self, ):
-        pass
-
-
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
-        self._valid_coordinates_2d = {('R', 'Z')}
+        self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
         self.dim = -1  # init only
         self.grid = grid
 
@@ -574,6 +583,17 @@ class Coordinates(object):
     def rho(self):
         return np.sqrt(self.psi_n)
 
+    @property
+    def r(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.sqrt((self.x1 - r_mgax) ** 2 + (self.x2 - z_mgax) ** 2)
+
+    @property
+    def theta(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
+
     # todo
     # @property
     # def r_mid(self):
@@ -584,6 +604,22 @@ class Coordinates(object):
     #
     #
     #     return
+
+    def as_array(self, coord_type=None):
+        """
+        Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+        :param coord_type: not effected at the moment (TODO)
+        :return:
+        """
+        if self.dim == 0:
+            return np.array(())
+        # coord_type_ = self._verify_coord_type(coord_type)
+        elif self.dim == 1:
+            return self.x1
+        elif self.dim == 2:
+            return np.array([self.x1, self.x2]).T
+
+
 
     def getAs(self, coord_type=None):
         if self.dim == 0:
@@ -752,5 +788,11 @@ class Coordinates(object):
                 raise ValueError('This should not happen.')
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
-            self.x1 = self._x1_input
-            self.x2 = self._x2_input
+            if self._coord_type_input == ('R', 'Z'):
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+            elif self._coord_type_input == ('r', 'theta'):
+                # todo: COCOS
+                r_mgax, z_mgax = self._eq._mg_axis
+                self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
+                self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
