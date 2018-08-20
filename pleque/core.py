@@ -300,6 +300,20 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Return instance of Coordinates. If instances of coordinates is already on the input, just pass it throught.
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
+            return coordinates[0]
+        else:
+            return Coordinates(*coordinates, coord_type=coord_type, grid=grid, **coords)
+
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
         if grid:
