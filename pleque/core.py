@@ -1,6 +1,6 @@
 import numpy as np
 import xarray
-
+from collections import Iterable
 
 class FluxFuncs:
     # def interpolate(self, coords, data)
@@ -219,7 +219,7 @@ class Equilibrium(object):
         :return:
         """
 
-        if isinstance(dim,(list, tuple, np.ndarray)) and len(dim) == 2:
+        if isinstance(dim,Iterable) and len(dim) == 2:
             if dim[0] == "step":
                 r = np.arange(self._basedata.R.min(),self._basedata.R.max(), rbase)
             elif dim[0] == "size":
@@ -229,7 +229,7 @@ class Equilibrium(object):
 
             if dim[1] == "step":
                 z = np.arange(self._basedata.Z.min(),self._basedata.R.max(), rbase)
-            elif dim[1] == "dim":
+            elif dim[1] == "size":
                 z = np.linspace(self._basedata.Z.min(),self._basedata.Z.max(), ybase)
             else:
                 raise ValueError("Wrong dim[1] value passed")
