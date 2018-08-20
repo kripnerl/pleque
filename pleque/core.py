@@ -517,6 +517,22 @@ class Coordinates(object):
     #
     #     return
 
+    def as_array(self, coord_type=None):
+        """
+        Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+        :param coord_type: not effected at the moment (TODO)
+        :return:
+        """
+        if self.dim == 0:
+            return np.array(())
+        # coord_type_ = self._verify_coord_type(coord_type)
+        elif self.dim == 1:
+            return self.x1
+        elif self.dim == 2:
+            return np.array([self.x1, self.x2]).T
+
+
+
     def getAs(self, coord_type=None):
         if self.dim == 0:
             return np.array(())
