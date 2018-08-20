@@ -1,6 +1,8 @@
+from collections import Iterable
+
 import numpy as np
 import xarray
-from collections import Iterable
+
 
 class FluxFuncs:
     # def interpolate(self, coords, data)
@@ -209,43 +211,64 @@ class Equilibrium(object):
 
         return B_abs
 
-    def calc_gridcoords(self, rbase, ybase, dim = "size"):
+    def get_grid_RZ(self, base_R=None, base_Z=None, dim="size"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
-        :param rbase: float or int,  size of step or grid dimension size depending on dim
-        :param zbase: float or int, size of step or grid dimension size depending on dim
-        :param dim: list or string, If "step" then rbase, ybase are interpreted as requested step size in the grid.
+        :param base_R: float or int,  size of step or grid dimension size depending on dim, if None return base grid
+        :param base_Z: float or int, size of step or grid dimension size depending on dim, if None return base grid
+        :param dim: list or string, If "step" then rbase, zbase are interpreted as requested step size in the grid.
         If "size" then rbase, zbase interpreted as requested grid sizes.
-        :return:
+        :return: tuple of two 1d arrays with r and z coordinate
         """
 
         if isinstance(dim,Iterable) and len(dim) == 2:
-            if dim[0] == "step":
-                r = np.arange(self._basedata.R.min(),self._basedata.R.max(), rbase)
+            if base_R is None:
+                R = self._basedata.R.data
+            elif dim[0] == "step":
+                R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
             elif dim[0] == "size":
-                r = np.linspace(self._basedata.R.min(),self._basedata.R.max(), ybase)
+                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
             else:
                 raise ValueError("Wrong dim[0] value passed")
 
-            if dim[1] == "step":
-                z = np.arange(self._basedata.Z.min(),self._basedata.R.max(), rbase)
+            if base_Z is None:
+                Z = self._basedata.Z.data
+            elif dim[1] == "step":
+                Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
             elif dim[1] == "size":
-                z = np.linspace(self._basedata.Z.min(),self._basedata.Z.max(), ybase)
+                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
             else:
                 raise ValueError("Wrong dim[1] value passed")
-        elif isinstance(dim,str):
+        elif isinstance(dim, str):
             if dim == "step":
-                r = np.arange(self._basedata.R.min(),self._basedata.R.max(), rbase)
-                z = np.arange(self._basedata.Z.min(),self._basedata.R.max(), rbase)
+                if base_R is None:
+                    R = self._basedata.R.data
+                else:
+                    R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
+                if base_Z is None:
+                    Z = self._basedata.Z.data
+                else:
+                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
             elif dim == "size":
-                r = np.linspace(self._basedata.R.min(),self._basedata.R.max(), ybase)
-                z = np.linspace(self._basedata.Z.min(),self._basedata.Z.max(), ybase)
+                if base_R is None:
+                    R = self._basedata.R.data
+                else:
+                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
+                if base_Z is None:
+                    Z = self._basedata.Z.data
+                else:
+                    Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
             else:
                 raise ValueError("Wrong dim value passed")
         else:
             raise ValueError("Wrong dim value passed")
 
-        return r, z
+        return R, Z
+
+    def get_grid(self, base_R=None, base_Z=None, dim="size"):
+        R, Z = self.get_grid_RZ(base_R, base_Z, dim)
+        coords = Coordinates(self, R=R, Z=Z)
+        return coords
 
     # todo: resolve the grids
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
@@ -256,6 +279,7 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param grid:
         :param coords:
         :return:
         """
