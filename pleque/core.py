@@ -1,3 +1,5 @@
+from collections import Iterable
+
 import numpy as np
 import xarray
 
@@ -209,6 +211,65 @@ class Equilibrium(object):
 
         return B_abs
 
+    def get_grid_RZ(self, base_R=None, base_Z=None, dim="size"):
+        """
+        Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
+        :param base_R: float or int,  size of step or grid dimension size depending on dim, if None return base grid
+        :param base_Z: float or int, size of step or grid dimension size depending on dim, if None return base grid
+        :param dim: list or string, If "step" then rbase, zbase are interpreted as requested step size in the grid.
+        If "size" then rbase, zbase interpreted as requested grid sizes.
+        :return: tuple of two 1d arrays with r and z coordinate
+        """
+
+        if isinstance(dim,Iterable) and len(dim) == 2:
+            if base_R is None:
+                R = self._basedata.R.data
+            elif dim[0] == "step":
+                R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
+            elif dim[0] == "size":
+                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
+            else:
+                raise ValueError("Wrong dim[0] value passed")
+
+            if base_Z is None:
+                Z = self._basedata.Z.data
+            elif dim[1] == "step":
+                Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
+            elif dim[1] == "size":
+                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
+            else:
+                raise ValueError("Wrong dim[1] value passed")
+        elif isinstance(dim, str):
+            if dim == "step":
+                if base_R is None:
+                    R = self._basedata.R.data
+                else:
+                    R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
+                if base_Z is None:
+                    Z = self._basedata.Z.data
+                else:
+                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
+            elif dim == "size":
+                if base_R is None:
+                    R = self._basedata.R.data
+                else:
+                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
+                if base_Z is None:
+                    Z = self._basedata.Z.data
+                else:
+                    Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
+            else:
+                raise ValueError("Wrong dim value passed")
+        else:
+            raise ValueError("Wrong dim value passed")
+
+        return R, Z
+
+    def get_grid(self, base_R=None, base_Z=None, dim="size"):
+        R, Z = self.get_grid_RZ(base_R, base_Z, dim)
+        coords = Coordinates(self, R=R, Z=Z)
+        return coords
+
     # todo: resolve the grids
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
         """
@@ -218,6 +279,7 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param grid:
         :param coords:
         :return:
         """
