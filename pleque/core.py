@@ -444,13 +444,19 @@ class Equilibrium(object):
                                np.min((self.z_max, z_ex + 0.1))))
 
                     res = minimize(psi_xysq_func, x0, bounds=bounds)
+                    # Remove bad candidates for extreme
+                    if res['fun'] > 1e-3:
+                        continue
                     r_ex2 = res['x'][0]
                     z_ex2 = res['x'][1]
 
                     #                    psi_xyabs = np.abs(psi_xy[ar, az])
-                    psi_xyopt = np.abs(self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
+                    psi_xy = (self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
+                    psi_xx = (self._spl_psi(r_ex2, z_ex2, dx=2, dy=0, grid=False))
+                    psi_yy = (self._spl_psi(r_ex2, z_ex2, dx=0, dy=2, grid=False))
+                    D = psi_xx * psi_yy - psi_xy
 
-                    if psi_xyopt < 0.1:
+                    if D > 0:
                         # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
                         # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
                         o_points.append((r_ex2, z_ex2))
@@ -472,7 +478,14 @@ class Equilibrium(object):
         op_psiscale = self._spl_psi(o_points[:, 0], o_points[:, 1], grid=False)
         op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
-        sortidx = np.argsort(op_dist * op_psiscale)
+        op_in_first_wall = np.ones_like(op_dist)
+        if (self._first_wall is not None):
+            op_in_first_wall = self.in_first_wall(R=o_points[:, 0],
+                                                  Z=o_points[:, 1],
+                                                  grid=False) * 1
+            op_in_first_wall = np.abs(op_in_first_wall - 1 + 1e-3)
+
+        sortidx = np.argsort(op_dist * op_psiscale * op_in_first_wall)
         # idx = np.argmin(op_dist)
         self._mg_axis = o_points[sortidx[0]]
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1]))
