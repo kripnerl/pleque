@@ -362,6 +362,20 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Return instance of Coordinates. If instances of coordinates is already on the input, just pass it throught.
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
+            return coordinates[0]
+        else:
+            return Coordinates(*coordinates, coord_type=coord_type, grid=grid, **coords)
+
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
         if grid:
@@ -390,8 +404,8 @@ class Equilibrium(object):
 
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 120)
-        zs = np.linspace(self.z_min, self.z_max, 130)
+        rs = np.linspace(self.r_min, self.r_max, 300)
+        zs = np.linspace(self.z_min, self.z_max, 400)
 
         psi = self._spl_psi(rs, zs)
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
@@ -430,13 +444,19 @@ class Equilibrium(object):
                                np.min((self.z_max, z_ex + 0.1))))
 
                     res = minimize(psi_xysq_func, x0, bounds=bounds)
+                    # Remove bad candidates for extreme
+                    if res['fun'] > 1e-3:
+                        continue
                     r_ex2 = res['x'][0]
                     z_ex2 = res['x'][1]
 
                     #                    psi_xyabs = np.abs(psi_xy[ar, az])
-                    psi_xyopt = np.abs(self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
+                    psi_xy = (self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
+                    psi_xx = (self._spl_psi(r_ex2, z_ex2, dx=2, dy=0, grid=False))
+                    psi_yy = (self._spl_psi(r_ex2, z_ex2, dx=0, dy=2, grid=False))
+                    D = psi_xx * psi_yy - psi_xy
 
-                    if psi_xyopt < 0.1:
+                    if D > 0:
                         # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
                         # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
                         o_points.append((r_ex2, z_ex2))
@@ -458,7 +478,14 @@ class Equilibrium(object):
         op_psiscale = self._spl_psi(o_points[:, 0], o_points[:, 1], grid=False)
         op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
-        sortidx = np.argsort(op_dist * op_psiscale)
+        op_in_first_wall = np.ones_like(op_dist)
+        if (self._first_wall is not None):
+            op_in_first_wall = self.in_first_wall(R=o_points[:, 0],
+                                                  Z=o_points[:, 1],
+                                                  grid=False) * 1
+            op_in_first_wall = np.abs(op_in_first_wall - 1 + 1e-3)
+
+        sortidx = np.argsort(op_dist * op_psiscale * op_in_first_wall)
         # idx = np.argmin(op_dist)
         self._mg_axis = o_points[sortidx[0]]
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1]))
@@ -518,13 +545,14 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
+
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
-        self._valid_coordinates_2d = {('R', 'Z')}
+        self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
         self.dim = -1  # init only
         self.grid = grid
 
@@ -567,6 +595,17 @@ class Coordinates(object):
     @property
     def rho(self):
         return np.sqrt(self.psi_n)
+
+    @property
+    def r(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.sqrt((self.x1 - r_mgax) ** 2 + (self.x2 - z_mgax) ** 2)
+
+    @property
+    def theta(self):
+        r_mgax, z_mgax = self._eq._mg_axis
+        return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
 
     # todo
     # @property
@@ -762,5 +801,11 @@ class Coordinates(object):
                 raise ValueError('This should not happen.')
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
-            self.x1 = self._x1_input
-            self.x2 = self._x2_input
+            if self._coord_type_input == ('R', 'Z'):
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+            elif self._coord_type_input == ('r', 'theta'):
+                # todo: COCOS
+                r_mgax, z_mgax = self._eq._mg_axis
+                self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
+                self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)

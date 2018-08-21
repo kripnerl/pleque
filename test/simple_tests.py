@@ -12,6 +12,7 @@ if not modpath in sys.path:  # not to stack same paths continuously if it is alr
     sys.path.insert(0, modpath)
 
 
+# noinspection PyUnreachableCode
 def load_gfile(g_file):
     from tokamak.formats import geqdsk
     eq_gfile = geqdsk.read(g_file)
@@ -110,6 +111,71 @@ def plot_extremes(eq: Equilibrium, ax=None):
     for xp in eq._x_points:
         ax.plot(xp[0], xp[1], 'x', color='C4')
 
+
+# noinspection PyTypeChecker
+def plot_psi_derivatives(eq: Equilibrium):
+    import matplotlib.pyplot as plt
+
+    r = np.linspace(eq.r_min, eq.r_max, 100)
+    z = np.linspace(eq.z_min, eq.z_max, 120)
+
+    psi = eq.psi(R=r, Z=z)
+
+    fig, axs = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(8, 4))
+    ax = axs[0]
+    ax.contour(r, z, psi.T, 20)
+    ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    ax.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b', markersize=10)
+    ax.plot(eq._x_point[0], eq._x_point[1], 'x', color='r', markersize=10)
+    ax.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r', markersize=10)
+    psi_axis = ax
+    plot_extremes(eq, psi_axis)
+
+    def psi_xysq_func(r, z):
+        return eq._spl_psi(r, z, dx=1, dy=0, grid=True) ** 2 \
+               + eq._spl_psi(r, z, dx=0, dy=1, grid=True) ** 2
+
+    psi_xysq = psi_xysq_func(r, z)
+    psi_xyopt = (eq._spl_psi(r, z, dx=1, dy=1, grid=True)) ** 2
+    plt.title(r'$\psi$')
+
+    ax.set_aspect('equal')
+
+    ax = axs[1]
+    cl = ax.contour(r, z, psi_xysq.T, np.linspace(0, 0.1, 50))
+    # plt.colorbar(cl)
+    ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    ax.set_title(r'$\partial_x \psi^2 + \partial_y \psi^2$')
+    ax.set_aspect('equal')
+
+    ax = axs[2]
+    cl = ax.contour(r, z, psi_xyopt.T, np.linspace(0, 1, 50))
+    # plt.colorbar(cl)
+    ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    ax.set_title(r'$\partial_{xy} \psi^2$')
+    ax.set_aspect('equal')
+
+    psi_xy = (eq._spl_psi(r, z, dx=1, dy=1, grid=True)) ** 2
+    psi_xx = (eq._spl_psi(r, z, dx=2, dy=0, grid=True))
+    psi_yy = (eq._spl_psi(r, z, dx=0, dy=2, grid=True))
+    D = psi_xx * psi_yy - psi_xy
+
+    ax = axs[3]
+    cl = ax.contour(r, z, D.T, np.linspace(-50, 50, 50), cmap='PiYG')
+    plt.colorbar(cl)
+    ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    if eq._first_wall is not None:
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    ax.set_title(r'$D$')
+    ax.set_aspect('equal')
+
+
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
@@ -124,9 +190,9 @@ def plot_overview(eq: Equilibrium):
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
-    plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b')
-    plt.plot(eq._x_point[0], eq._x_point[1], 'x', color='r')
-    plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r')
+    plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b', markersize=10)
+    plt.plot(eq._x_point[0], eq._x_point[1], 'x', color='r', markersize=10)
+    plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r', markersize=10)
     return_axis = plt.gca()
 
 
@@ -149,57 +215,55 @@ def plot_overview(eq: Equilibrium):
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
 
-    # ----
-    plt.figure(figsize=(8, 4))
-    plt.subplot(131)
-    plt.pcolormesh(r, z, eq.B_R(R=r, Z=z).T)
-    if eq._first_wall is not None:
-        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
-    plt.title(r'$B_\mathrm{R}$')
-    plt.gca().set_aspect('equal')
-
-    plt.subplot(132)
-    plt.pcolormesh(r, z, eq.B_Z(R=r, Z=z).T)
-    if eq._first_wall is not None:
-        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
-    plt.title(r'$B_\mathrm{Z}$')
-    plt.gca().set_aspect('equal')
-
-    plt.subplot(133)
-    plt.pcolormesh(r, z, np.sqrt(eq.B_R(R=r, Z=z) ** 2 + eq.B_Z(R=r, Z=z) ** 2).T)
-    if eq._first_wall is not None:
-        plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
-    plt.title(r'$B_\mathrm{pol}$')
-    plt.gca().set_aspect('equal')
-
-    psi_n = np.linspace(0, 1, 100)
-
-    plt.figure()
-    plt.subplot(211)
-    ax = plt.gca()
-    ax.plot(psi_n, eq.pressure(psi_n=psi_n), 'C1')
-    ax.set_xlabel(r'$\psi_\mathrm{N}$')
-    ax.set_ylabel(r'$p [Pa]$', color='C1')
-
-    ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.pprime(psi_n=psi_n), color='C2')
-    ax2.set_ylabel(r"$p'$", color='C2')
-
-    plt.subplot(212)
-    ax = plt.gca()
-    ax.plot(psi_n, eq.fpol(psi_n=psi_n), 'C1')
-    ax.set_xlabel(r'$\psi_\mathrm{N}$')
-    ax.set_ylabel(r'$f$ ', color='C1')
-
-    ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
-    ax2.set_ylabel(r"$ff'$ ", color='C2')
+    # # ----
+    # plt.figure(figsize=(8, 4))
+    # plt.subplot(131)
+    # plt.pcolormesh(r, z, eq.B_R(R=r, Z=z).T)
+    # if eq._first_wall is not None:
+    #     plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    # plt.title(r'$B_\mathrm{R}$')
+    # plt.gca().set_aspect('equal')
+    #
+    # plt.subplot(132)
+    # plt.pcolormesh(r, z, eq.B_Z(R=r, Z=z).T)
+    # if eq._first_wall is not None:
+    #     plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    # plt.title(r'$B_\mathrm{Z}$')
+    # plt.gca().set_aspect('equal')
+    #
+    # plt.subplot(133)
+    # plt.pcolormesh(r, z, np.sqrt(eq.B_R(R=r, Z=z) ** 2 + eq.B_Z(R=r, Z=z) ** 2).T)
+    # if eq._first_wall is not None:
+    #     plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+    # plt.title(r'$B_\mathrm{pol}$')
+    # plt.gca().set_aspect('equal')
+    #
+    # psi_n = np.linspace(0, 1, 100)
+    #
+    # plt.figure()
+    # plt.subplot(211)
+    # ax = plt.gca()
+    # ax.plot(psi_n, eq.pressure(psi_n=psi_n), 'C1')
+    # ax.set_xlabel(r'$\psi_\mathrm{N}$')
+    # ax.set_ylabel(r'$p [Pa]$', color='C1')
+    #
+    # ax2 = ax.twinx()
+    # ax2.plot(psi_n, eq.pprime(psi_n=psi_n), color='C2')
+    # ax2.set_ylabel(r"$p'$", color='C2')
+    #
+    # plt.subplot(212)
+    # ax = plt.gca()
+    # ax.plot(psi_n, eq.fpol(psi_n=psi_n), 'C1')
+    # ax.set_xlabel(r'$\psi_\mathrm{N}$')
+    # ax.set_ylabel(r'$f$ ', color='C1')
+    #
+    # ax2 = ax.twinx()
+    # ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
+    # ax2.set_ylabel(r"$ff'$ ", color='C2')
 
     return return_axis
 
 def main():
-    import matplotlib.pyplot as plt
-
     ## Here is only some testing equilibirum prepared:
 
     # r = np.linspace(0.5, 2.5, 100)
@@ -238,9 +302,11 @@ def main():
     ## Load the equilibrium from fiesta generated g-filem using module routine
 
     gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    eq = load_testing_equilibrium()
+    eq = load_testing_equilibrium(1)
 
-    plot_overview(eq)
+    # ax = plot_overview(eq)
+    # plot_extremes(eq, ax)
+    # plot_psi_derivatives(eq)
 
     # test_qprofiles(gfile, eq)
 
@@ -248,7 +314,7 @@ def main():
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
-    plt.show()
+    #plt.show()
 
 if __name__ == '__main__':
     main()

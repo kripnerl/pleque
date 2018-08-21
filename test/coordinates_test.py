@@ -63,6 +63,10 @@ if __name__ == '__main__':
     coord = test_coords_2d(Z=[3, 5, 6, 2], R=[1, 2, 3, 4])
     assert coord._coord_type_input == ('R', 'Z')
 
+    coord = test_coords_2d(r=[0.2, 0.3, 0.3, 0.2], theta=[0, np.pi / 2, np.pi, 3 / 2 * np.pi])
+    test_arrays([0, np.pi / 2, np.pi, -np.pi / 2], coord.theta)
+    test_arrays([0.2, 0.3, 0.3, 0.2], coord.r)
+
     # 1d tests (psi_n)
     coord = test_coords_1d(0.5)
     assert coord._coord_type_input == ('psi_n',)

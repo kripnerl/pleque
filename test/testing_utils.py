@@ -1,4 +1,4 @@
-def load_testing_equilibrium():
+def load_testing_equilibrium(case=1):
     """
     Return testing equilibrium file
     :return:
@@ -7,11 +7,17 @@ def load_testing_equilibrium():
     from pleque.core import Equilibrium
     import numpy as np
 
-    gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
+    if case == 1:
+        gfile = 'test_files/compu/baseline_eqdsk'
+    elif case == 2:
+        gfile = 'test_files/compu/scenario_1_baseline_upward_eqdsk'
+    else:
+        gfile = 'test_files/compu/DoubleNull_eqdsk'
+
     limiterfile = 'test_files/compu/limiter_v3_1_iba.dat'
 
     eq_xr = readeqdsk_xarray(gfile)
     limiter = np.loadtxt(limiterfile)
-    equil = Equilibrium(eq_xr, first_wall=limiter, spline_smooth=0)
+    equil = Equilibrium(eq_xr, first_wall=limiter, spline_order=3, spline_smooth=0)
 
     return equil
