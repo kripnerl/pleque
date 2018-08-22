@@ -82,12 +82,12 @@ class FluxSurface:
         Fluxsurface contour points
         :return: numpy ndarray
         """
-        return np.array(self.shape.exterior.coords)
+        return np.array(self.__string.coords)
 
     def contains(self, coords: Coordinates):
-        points_RZ = coords.as_array(('R', 'Z'))
         if self.__closed:
+            points_RZ = coords.as_array(('R', 'Z'))[0]
             pnt = geometry.point.Point(points_RZ)
             return self.__poly.contains(pnt)
         else:
-            raise Exception("Opened Flux Surface does not have area")
+            raise Exception("Opened Flux Surface does not have inner points")
