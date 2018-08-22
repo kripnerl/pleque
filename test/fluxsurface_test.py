@@ -22,7 +22,7 @@ surf_opened = [eq.fluxSurface(level=1.05, inlcfs=False, closed=False),
 
 surf_lcfs = eq.fluxSurface(level=1-1e-6)[0]
 
-r, z = eq.get_grid_RZ(base_R=1e-3, base_Z=1e-3, dim="step")
+r, z = eq.get_grid_RZ(resolution=[1e-3, 2e-3], dim="step")
 psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
 
 
