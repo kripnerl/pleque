@@ -211,6 +211,52 @@ class Equilibrium(object):
 
         return B_abs
 
+    def fluxSurface(self, level = None, base_R = 1e-3, base_Z = 1e-3, norm = True,
+                    closed = True, inlcfs = True, dim = "step", coord_type=None, grid=True, **coords):
+
+        from pleque.fluxsurface import FluxSurface
+
+        R, Z = self.get_grid_RZ(base_R, base_Z, dim)
+
+        coords = Coordinates(self, R=R, Z=Z, coord_type=coord_type, grid=True, **coords)
+        contour = self._get_surface(coords, R = R, Z=Z, level = level, norm=norm)
+
+        for i in range(len(contour)):
+            contour[i] = FluxSurface(contour[i])
+
+        magaxis = Coordinates(self, np.expand_dims(self._mg_axis, axis=0))
+        fluxsurface = []
+        for i in range(len(contour)):
+            if inlcfs and contour[i].closed and contour[i].contains(magaxis):
+                fluxsurface.append(contour[i])
+                return fluxsurface
+            elif not inlcfs and closed and contour[i].closed:
+                fluxsurface.append(contour[i])
+            elif not inlcfs and not closed and not contour[i].closed:
+                fluxsurface.append(contour[i])
+
+        return fluxsurface
+
+    def _get_surface(self, *coordinates, R = None, Z = None, level=0.5, norm=True, coord_type=None, **coords):
+
+        from pleque.utils.surfaces import find_contour
+
+        # TODO: try-except can be removed after Lukas fixes Coordinates class
+        try:
+            coords = Coordinates(self, *coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
+        except ValueError:
+            coords = Coordinates(self, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
+
+        if norm == True:
+            contour = find_contour(coords.psi_n, level=level, r=coords.R, z=coords.Z)
+        else:
+            contour = find_contour(coords.psi, level=level, r=coordinates.R, z=coordinates.Z)
+
+        for i in range(len(contour)):
+            contour[i] = Coordinates(self, contour[i])
+
+        return contour
+
     def get_grid_RZ(self, base_R=None, base_Z=None, dim="size"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
