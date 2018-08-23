@@ -258,6 +258,7 @@ class Equilibrium(object):
                 fluxsurface.append(contour[i])
                 return fluxsurface
             elif not inlcfs and closed and contour[i].closed:
+            elif not inlcfs and closed and contour[i].closed and not contour[i].contains(magaxis):
                 fluxsurface.append(contour[i])
             elif not inlcfs and not closed and not contour[i].closed:
                 fluxsurface.append(contour[i])
