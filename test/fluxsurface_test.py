@@ -29,18 +29,18 @@ psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
 figx, ax = plt.subplots()
 cl = ax.contourf(psipol_map.R, psipol_map.Z, psipol_map.psi_n.T, 50)
 plt.colorbar(cl)
-ax.plot(surf_lcfs.contour[:,0], surf_lcfs.contour[:,1], "-C3")
+ax.plot(surf_lcfs.contour.as_array()[:,0], surf_lcfs.contour.as_array()[:,1], "-C3")
 for i in range(len(surf_inlcfs)):
     for j in range(len(surf_inlcfs[i])):
-        ax.plot(surf_inlcfs[i][j].contour[:,0], surf_inlcfs[i][j].contour[:,1], "-C1")
+        ax.plot(surf_inlcfs[i][j].contour.as_array()[:,0], surf_inlcfs[i][j].contour.as_array()[:,1], "-C1")
 
 for i in range(len(surf_closed)):
     for j in range(len(surf_closed[i])):
-        ax.plot(surf_closed[i][j].contour[:,0], surf_closed[i][j].contour[:,1], "--C4")
+        ax.plot(surf_closed[i][j].contour.as_array()[:,0], surf_closed[i][j].contour.as_array()[:,1], "--C4")
 
 for i in range(len(surf_opened)):
     for j in range(len(surf_opened[i])):
-        ax.plot(surf_opened[i][j].contour[:,0], surf_opened[i][j].contour[:,1], "--C5")
+        ax.plot(surf_opened[i][j].contour.as_array()[:,0], surf_opened[i][j].contour.as_array()[:,1], "--C5")
 
 ax.plot([],[],"-C3",
         label = "lcfs:\n    length = {0:1.2f},\n"

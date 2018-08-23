@@ -12,7 +12,7 @@ class FluxSurface:
         :param points_RZ: vector (N,2), where N is the number of points in the contour of the flux surface and dim1 are the
         r, z coordinates of the contour points.
         """
-
+        self.coords = coords
         points_RZ = coords.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
@@ -58,11 +58,12 @@ class FluxSurface:
          using Pappus centroid theorem : https://en.wikipedia.org/wiki/Pappus%27s_centroid_theorem
         :return: float
         """
-        return self.__string.length * 2 * np.pi * self.centroid[0]
+        return self.__string.length * 2 * np.pi * self.centroid.R[0]
 
     @property
     def centroid(self):
-        return np.array(self.__string.centroid.coords)[0]
+        return self.coords._eq.coordinates(R=np.array(self.__string.centroid.coords)[0][0],
+                                           Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R","Z"])
 
     @property
     def volume(self):
@@ -72,7 +73,7 @@ class FluxSurface:
         :return: float
         """
         if self.__closed:
-            return self.__poly.area * 2 * np.pi * self.centroid[0]
+            return self.__poly.area * 2 * np.pi * self.centroid.R[0]
         else:
             raise Exception("Opened Flux Surface does not have area")
 
@@ -82,12 +83,12 @@ class FluxSurface:
         Fluxsurface contour points
         :return: numpy ndarray
         """
-        return np.array(self.__string.coords)
+        return self.coords
 
     def contains(self, coords: Coordinates):
+        points_RZ = coords.as_array(('R', 'Z'))[0,:]
         if self.__closed:
-            points_RZ = coords.as_array(('R', 'Z'))[0]
             pnt = geometry.point.Point(points_RZ)
             return self.__poly.contains(pnt)
         else:
-            raise Exception("Opened Flux Surface does not have inner points")
+            raise Exception("Opened Flux Surface does not have area")
