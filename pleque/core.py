@@ -35,6 +35,9 @@ class FluxFuncs:
 
 
 class Equilibrium(object):
+    """
+    Equilibrium class ...
+    """
     # def __init__(self,
     #              basedata: xarray.Dataset,
     #              first_wall=None: Iterable[(float, float)],
