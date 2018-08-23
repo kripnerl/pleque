@@ -8,7 +8,8 @@ eq = load_testing_equilibrium()
 def test_coords_2d(*coordinates, R = None, Z = None, coord_type=None, grid=False, **coords):
 
     print('--------')
-    xy = Coordinates(eq, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+    # xy = Coordinates(eq, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+    xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
     print('dim = {}'.format(xy.dim))
     print('_x1_input = {}'.format(xy._x1_input))
     print('_x2_input = {}'.format(xy._x2_input))
@@ -21,8 +22,9 @@ def test_coords_2d(*coordinates, R = None, Z = None, coord_type=None, grid=False
     return xy
 
 def test_coords_1d(*coordinates, psi_n = None, coord_type=None, grid=False, **coords):
+    # xy = Coordinates(eq, *coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+    xy = eq.coordinates(*coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
-    xy = Coordinates(eq, *coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
     print('--------')
     print('dim = {}'.format(xy.dim))
     print('_x1_input = {}'.format(xy._x1_input))
@@ -88,6 +90,9 @@ if __name__ == '__main__':
 
     coord = test_coords_1d(np.linspace(0, 1, 6), coord_type=('rho',))
     assert coord._coord_type_input == ('rho',)
+
+    coord2 = eq.coordinates(coord)
+    assert coord is coord2
 
     # 0d case
     xy = Coordinates(eq)

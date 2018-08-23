@@ -214,59 +214,146 @@ class Equilibrium(object):
 
         return B_abs
 
-    def get_grid_RZ(self, base_R=None, base_Z=None, dim="size"):
+    def fluxSurface(self, *coordinates, resolution = [1e-3, 1e-3], dim = "step",
+                    closed = True, inlcfs = True, **coords):
         """
-        Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
-        :param base_R: float or int,  size of step or grid dimension size depending on dim, if None return base grid
-        :param base_Z: float or int, size of step or grid dimension size depending on dim, if None return base grid
-        :param dim: list or string, If "step" then rbase, zbase are interpreted as requested step size in the grid.
-        If "size" then rbase, zbase interpreted as requested grid sizes.
-        :return: tuple of two 1d arrays with r and z coordinate
+        Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
+        fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
+        closed are possible.
+        :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
+        If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
+        Coordinates.grid must be False.
+        :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
+         R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+          resolutions or dimension sizes can be required by passing an iterable of size 2
+        :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
+         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+         achieved by passing an iterable of shape 2.
+        :param closed: Are we looking for a closed surface. This parameter is ignored of inlcfs is True.
+        :param inlcfs: If True only the surface inside the last closed flux surface is returned.
+        :return: list of FluxSurface objects
         """
 
+        from pleque.fluxsurface import FluxSurface
+
+        # get the grid for psi map to find the contour in.
+        grid = self.get_grid_RZ(resolution=resolution, dim=dim)
+
+        # create coordinates
+        #coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
+
+        # get the coordinates of the contours with requested leve and convert them into
+        # instances of FluxSurface class
+        contour = self._get_surface(grid, level = coordinates.psi_n, norm=True)
+
+        for i in range(len(contour)):
+            contour[i] = FluxSurface(contour[i])
+
+        # get the position of the magnetic axis, which is used to determine whether the found fluxsurfaces are
+        # within the lcfs
+        magaxis = self.coordinates(np.expand_dims(self._mg_axis, axis=0))
+
+        # find fluxsurfaces with requested parameters
+        fluxsurface = []
+        for i in range(len(contour)):
+            if inlcfs and contour[i].closed and contour[i].contains(magaxis):
+                fluxsurface.append(contour[i])
+                return fluxsurface
+            elif not inlcfs and closed and contour[i].closed:
+                fluxsurface.append(contour[i])
+            elif not inlcfs and not closed and not contour[i].closed:
+                fluxsurface.append(contour[i])
+
+        return fluxsurface
+
+    def _get_surface(self, *coordinates, R = None, Z = None, level=0.5, norm=True, coord_type=None, **coords):
+        """
+        finds contours
+        :return: list of coordinates of contours on a requested level
+        """
+        from pleque.utils.surfaces import find_contour
+
+        coordinates = self.coordinates(coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
+
+        if norm == True:
+            contour = find_contour(coords.psi_n, level=level, r=coords.R, z=coords.Z)
+        else:
+            contour = find_contour(coords.psi, level=level, r=coordinates.R, z=coordinates.Z)
+
+        for i in range(len(contour)):
+            contour[i] = Coordinates(self, contour[i])
+
+        return contour
+
+    def get_grid_RZ(self, resolution = None, dim="step"):
+        """
+        Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
+        :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
+         R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+          resolutions or dimension sizes can be required by passing an iterable of size 2
+        :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
+         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+         achieved by passing an iterable of shape 2.
+        :return: tuple of two 1d arrays with r and z coordinate
+        """
+        if isinstance(resolution, Iterable):
+            if not len(resolution) == 2:
+                raise ValueError("if iterable, resolution has to be of size 2")
+            res_R = resolution[0]
+            res_Z = resolution[1]
+        else:
+            res_R = resolution
+            res_Z = resolution
+
         if isinstance(dim,Iterable) and len(dim) == 2:
-            if base_R is None:
+            if res_R is None:
                 R = self._basedata.R.data
             elif dim[0] == "step":
-                R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
+                R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
             elif dim[0] == "size":
-                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
+                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
             else:
                 raise ValueError("Wrong dim[0] value passed")
 
-            if base_Z is None:
+            if res_Z is None:
                 Z = self._basedata.Z.data
             elif dim[1] == "step":
-                Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
+                Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
             elif dim[1] == "size":
-                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
+                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
             else:
                 raise ValueError("Wrong dim[1] value passed")
         elif isinstance(dim, str):
             if dim == "step":
-                if base_R is None:
+                if res_R is None:
                     R = self._basedata.R.data
                 else:
-                    R = np.arange(self._basedata.R.min(), self._basedata.R.max(), base_R)
-                if base_Z is None:
+                    R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                if res_Z is None:
                     Z = self._basedata.Z.data
                 else:
-                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), base_R)
+                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
             elif dim == "size":
-                if base_R is None:
+                if res_R is None:
                     R = self._basedata.R.data
                 else:
-                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), base_Z)
-                if base_Z is None:
+                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
+                if res_Z is None:
                     Z = self._basedata.Z.data
                 else:
-                    Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), base_Z)
+                    Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
             else:
                 raise ValueError("Wrong dim value passed")
         else:
             raise ValueError("Wrong dim value passed")
 
-        return R, Z
+        rz = self.coordinates(R=R, Z=Z, grid=True)
+
+        return rz
 
     def get_grid(self, base_R=None, base_Z=None, dim="size"):
         R, Z = self.get_grid_RZ(base_R, base_Z, dim)
@@ -377,7 +464,7 @@ class Equilibrium(object):
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(*coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates(self, coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
