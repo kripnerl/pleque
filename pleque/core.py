@@ -211,13 +211,15 @@ class Equilibrium(object):
 
         return B_abs
 
-    def fluxSurface(self, level = None, resolution = [1e-3, 1e-3], dim = "step", norm = True,
-                    closed = True, inlcfs = True, coord_type=None, grid=True, **coords):
+    def fluxSurface(self, *coordinates, resolution = [1e-3, 1e-3], dim = "step",
+                    closed = True, inlcfs = True, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
         closed are possible.
-        :param level:Value of psi por psi-normalized to find the contour for
+        :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
+        If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
+        Coordinates.grid must be False.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
          R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
           resolutions or dimension sizes can be required by passing an iterable of size 2
@@ -226,7 +228,6 @@ class Equilibrium(object):
         values in resolution are interpreted as requested number of points in a dimension. If string is passed,
          same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
          achieved by passing an iterable of shape 2.
-        :param norm: default is True, determines if level and psi is normalized
         :param closed: Are we looking for a closed surface. This parameter is ignored of inlcfs is True.
         :param inlcfs: If True only the surface inside the last closed flux surface is returned.
         :return: list of FluxSurface objects
@@ -235,21 +236,21 @@ class Equilibrium(object):
         from pleque.fluxsurface import FluxSurface
 
         # get the grid for psi map to find the contour in.
-        R, Z = self.get_grid_RZ(resolution=resolution, dim=dim)
+        grid = self.get_grid_RZ(resolution=resolution, dim=dim)
 
         # create coordinates
-        coords = Coordinates(self, R=R, Z=Z, coord_type=coord_type, grid=True, **coords)
+        #coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
 
         # get the coordinates of the contours with requested leve and convert them into
         # instances of FluxSurface class
-        contour = self._get_surface(coords, R = R, Z=Z, level = level, norm=norm)
+        contour = self._get_surface(grid, level = coordinates.psi_n, norm=True)
 
         for i in range(len(contour)):
             contour[i] = FluxSurface(contour[i])
 
         # get the position of the magnetic axis, which is used to determine whether the found fluxsurfaces are
         # within the lcfs
-        magaxis = Coordinates(self, np.expand_dims(self._mg_axis, axis=0))
+        magaxis = self.coordinates(np.expand_dims(self._mg_axis, axis=0))
 
         # find fluxsurfaces with requested parameters
         fluxsurface = []
@@ -258,7 +259,6 @@ class Equilibrium(object):
                 fluxsurface.append(contour[i])
                 return fluxsurface
             elif not inlcfs and closed and contour[i].closed:
-            elif not inlcfs and closed and contour[i].closed and not contour[i].contains(magaxis):
                 fluxsurface.append(contour[i])
             elif not inlcfs and not closed and not contour[i].closed:
                 fluxsurface.append(contour[i])
@@ -272,11 +272,7 @@ class Equilibrium(object):
         """
         from pleque.utils.surfaces import find_contour
 
-        # TODO: try-except can be removed after Lukas fixes Coordinates class
-        try:
-            coords = Coordinates(self, *coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
-        except ValueError:
-            coords = Coordinates(self, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
+        coordinates = self.coordinates(coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
 
         if norm == True:
             contour = find_contour(coords.psi_n, level=level, r=coords.R, z=coords.Z)
@@ -352,7 +348,9 @@ class Equilibrium(object):
         else:
             raise ValueError("Wrong dim value passed")
 
-        return R, Z
+        rz = self.coordinates(R=R, Z=Z, grid=True)
+
+        return rz
 
     def get_grid(self, base_R=None, base_Z=None, dim="size"):
         R, Z = self.get_grid_RZ(base_R, base_Z, dim)
@@ -463,7 +461,7 @@ class Equilibrium(object):
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates(self, coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
