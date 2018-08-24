@@ -13,7 +13,7 @@ z = np.linspace(eq.z_min, eq.z_max, 400)
 psipol = eq.psi(R=r, Z=z)
 contour = find_contour(psipol, 0.2, r, z)
 
-fluxsurface = get_surface(eq, eq._psi_lcfs, 300, 400, norm=False)
+fluxsurface = get_surface(eq, eq._psi_lcfs, norm=False)
 print(r'$\psi$ (lcfs) = {:0.3f}'.format(eq._psi_lcfs))
 
 mesh_r, mesh_z = np.meshgrid(r[::10], z[::10])
