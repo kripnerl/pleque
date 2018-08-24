@@ -6,3 +6,5 @@
 test/\.cache/
 
 test/test_files/\.cache/
+
+notebooks/\.ipynb_checkpoints/
