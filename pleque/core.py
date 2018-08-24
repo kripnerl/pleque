@@ -485,6 +485,48 @@ class Equilibrium(object):
         mask_in = point_inside_curve(points, self._lcfs)
         return mask_in
 
+    def _trace_field_line(self, *coordinates, coord_type=None, sign=1, step=1e-2, **coords):
+        """
+        This method is deprecated ed at the moment and is only experimental.
+
+        :param coordinates:
+        :param coord_type:
+        :param coords:
+        :return:
+        """
+        # from numba import jit
+        from scipy.integrate import ode
+        crds = self.coordinates(*coordinates, coord_type=coord_type, grid=False, **coords)
+
+        def b_norm(t, y):
+            B = [self.B_R(R=y[0], Z=y[1]),
+                 self.B_Z(R=y[0], Z=y[1]),
+                 self.B_tor(R=y[0], Z=y[1]) / y[0]]
+            B = sign * B / np.norm(B)
+            return B
+
+        T_max = 1
+
+        ret = []
+        for r, z in crds:
+            times = []
+            pos = []
+            y0 = [r, z, 0]
+            t0 = 0.
+            pos.append(y0)
+            times.append(t0)
+
+            integrator = ode(b_norm).set_integrator('dopri5')
+            while integrator.successful() and integrator.t < T_max:
+                t = integrator.t + step
+                p = integrator.integrate(integrator.t + step)
+                times.append(t)
+                pos.append(p)
+            ret.append((times, pos))
+
+        return ret
+
+
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
@@ -649,7 +691,17 @@ class Coordinates(object):
         pass
 
     def __iter__(self):
-        pass
+        if self.grid:
+            raise TypeError('Grid is not iterable at the moment.')
+        if self.dim == 1:
+            for psi in self.psi:
+                yield psi
+        elif self.dim == 2:
+            for i in np.arange(len(self.x1)):
+                r = self.x1[i]
+                z = self.x2[i]
+                yield r, z
+
 
     def sort(self, order):
         pass
