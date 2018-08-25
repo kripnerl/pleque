@@ -43,6 +43,8 @@ def test_arrays(a1, a2):
 
 
 if __name__ == '__main__':
+    coord = eq.coordinates(eq._lcfs)
+
 
     # 2d tests (R, Z)
     #

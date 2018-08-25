@@ -35,6 +35,9 @@ class FluxFuncs:
 
 
 class Equilibrium(object):
+    """
+    Equilibrium class ...
+    """
     # def __init__(self,
     #              basedata: xarray.Dataset,
     #              first_wall=None: Iterable[(float, float)],
@@ -135,11 +138,11 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
 
     @property
@@ -147,19 +150,19 @@ class Equilibrium(object):
         return 1 / (self._psi_lcfs - self._psi_axis)
 
     def rho(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return np.sqrt(coord.psi_n)
 
     def pressure(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pressure_spl(coord.psi_n)
 
     def pprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dp_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
     def fpol(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo use in_plasma
         mask_out = coord.psi_n > 1
         fpol = self._fpol_spl(coord.psi_n)
@@ -167,14 +170,14 @@ class Equilibrium(object):
         return fpol
 
     def fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
         fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
         fprime[mask_out] = 0
         return fprime
 
     def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
         ffprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
         ffprime[mask_out] = 0
@@ -203,10 +206,10 @@ class Equilibrium(object):
         :param coords:
         :return: Absolute value of magnetic field in Tesla.
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        B_R = self.B_R(R=coord.R, Z=coord.Z)
-        B_Z = self.B_Z(R=coord.R, Z=coord.Z)
-        B_T = self.B_tor(R=coord.R, Z=coord.Z)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        B_R = self.B_R(R=coord.R, Z=coord.Z, grid=grid)
+        B_Z = self.B_Z(R=coord.R, Z=coord.Z, grid=grid)
+        B_T = self.B_tor(R=coord.R, Z=coord.Z, grid=grid)
         B_abs = np.sqrt(B_R ** 2 + B_Z ** 2 + B_T ** 2)
 
         return B_abs
@@ -333,12 +336,12 @@ class Equilibrium(object):
                 if res_Z is None:
                     Z = self._basedata.Z.data
                 else:
-                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
+                    Z = np.arange(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
             elif dim == "size":
                 if res_R is None:
                     R = self._basedata.R.data
                 else:
-                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
+                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_R)
                 if res_Z is None:
                     Z = self._basedata.Z.data
                 else:
@@ -352,9 +355,9 @@ class Equilibrium(object):
 
         return rz
 
-    def get_grid(self, base_R=None, base_Z=None, dim="size"):
-        R, Z = self.get_grid_RZ(base_R, base_Z, dim)
-        coords = Coordinates(self, R=R, Z=Z)
+    def get_grid(self, resolution=None, dim="step"):
+        R, Z = self.get_grid_RZ(resolution, dim)
+        coords = Coordinates(self, R=R, Z=Z, grid=True)
         return coords
 
     # todo: resolve the grids
@@ -373,10 +376,9 @@ class Equilibrium(object):
         coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         if grid:
             Rs, Zs = np.meshgrid(R, Z)
-            Rs = Rs.T
         else:
             Rs = R
-        return -self._spl_psi(R, Z, dy=1, grid=grid) / Rs * self._Bpol_sign
+        return -self._spl_psi(R, Z, dy=1, grid=grid).T / Rs * self._Bpol_sign
 
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -392,11 +394,10 @@ class Equilibrium(object):
         coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         if grid:
             Rs, Zs = np.meshgrid(R, Z)
-            Rs = Rs.T
         else:
             Rs = R
 
-        return self._spl_psi(R, Z, dx=1, grid=grid) / Rs * self._Bpol_sign
+        return self._spl_psi(R, Z, dx=1, grid=grid).T / Rs * self._Bpol_sign
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -431,7 +432,7 @@ class Equilibrium(object):
             R_mesh = R[:, None]
         else:
             R_mesh = R
-        return self.fpol(R=R, Z=Z, grid=grid) / R_mesh
+        return self.fpol(R=R, Z=Z, grid=grid) / R_mesh.T
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -449,6 +450,10 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
+    @property
+    def lcfs(self):
+        return self.coordinates(self._lcfs)
+
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
         Return instance of Coordinates. If instances of coordinates is already on the input, just pass it throught.
@@ -461,28 +466,36 @@ class Equilibrium(object):
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(self, coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        from pleque.utils.surfaces import point_in_first_wall
-        if grid:
-            r_mesh, z_mesh = np.meshgrid(R, Z)
-            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
-        else:
-            points = np.vstack((R, Z)).T
+        from pleque.utils.surfaces import point_inside_curve
+        # if grid:
+        #     r_mesh, z_mesh = np.meshgrid(R, Z)
+        #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        # else:
+        #     points = np.vstack((R, Z)).T
+        # mask_in = point_in_first_wall(self, points)
+        # return mask_in
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        mask_in = point_in_first_wall(self, points)
+        mask_in = point_inside_curve(points.as_array(), self._first_wall)
+        if points.grid:
+            mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
     def in_lcfs(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_inside_curve
-        if grid:
-            r_mesh, z_mesh = np.meshgrid(R, Z)
-            points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
-        else:
-            points = np.vstack((R, Z)).T
+        # if grid:
+        #     r_mesh, z_mesh = np.meshgrid(R, Z)
+        #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
+        # else:
+        #     points = np.vstack((R, Z)).T
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        mask_in = point_inside_curve(points, self._lcfs)
+        mask_in = point_inside_curve(points.as_array(), self._lcfs)
+        if points.grid:
+            mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
     def _trace_field_line(self, *coordinates, coord_type=None, sign=1, step=1e-2, **coords):
@@ -540,7 +553,6 @@ class Equilibrium(object):
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
         psi_y = self._spl_psi(rs, zs, dx=0, dy=1)
         psi_xysq = psi_x ** 2 + psi_y ** 2
-        psi_xy = self._spl_psi(rs, zs, dx=1, dy=1)
 
         mins0 = tuple(argrelmin(psi_xysq, axis=0))
         mins1 = tuple(argrelmin(psi_xysq, axis=1))
@@ -722,7 +734,11 @@ class Coordinates(object):
         if self.dim == 1:
             return self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
         elif self.dim == 2:
-            return self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
+            psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
+            if self.grid:
+                return psi.T
+            else:
+                return psi
 
     @property
     def psi_n(self):
@@ -745,6 +761,10 @@ class Coordinates(object):
         r_mgax, z_mgax = self._eq._mg_axis
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
 
+    def mesh(self):
+        if self.dim != 2 or not self.grid:
+            raise TypeError('mesh can be returned only for 2d grid coordinates.')
+        return np.meshgrid(self.x1, self.x2)
 
     # todo
     # @property
@@ -769,7 +789,14 @@ class Coordinates(object):
         elif self.dim == 1:
             return self.x1
         elif self.dim == 2:
-            return np.array([self.x1, self.x2]).T
+            if self.grid:
+                x1, x2 = self.mesh()
+                return np.vstack((x1.ravel(), x2.ravel())).T
+                # x1 = x1.ravel()
+                # x2 = x2.ravel()
+                # return np.array([x1, x2]).T
+            else:
+                return np.array([self.x1, self.x2]).T
 
 
 
@@ -837,12 +864,7 @@ class Coordinates(object):
                           'Turning grid = False.')
                 self.grid = False
 
-                if isinstance(xy, Coordinates):
-                    # todo: ask Ondra (!)
-                    print('ERROR: not implemented yet')
-                    raise ValueError('not implemented yet')
-                    pass
-                elif isinstance(xy, Iterable):
+                if isinstance(xy, Iterable):
                     # input as array of size (N, dim),
                     # if (N) add dimension
                     if not isinstance(xy, np.ndarray):
@@ -862,7 +884,6 @@ class Coordinates(object):
                     # 1d, one number
                     self.dim = 1
                     self._x1_input = np.array([xy])
-                pass
             elif len(coordinates) == 2:
                 self.dim = 2
                 x1 = coordinates[0]
