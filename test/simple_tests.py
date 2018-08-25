@@ -186,8 +186,9 @@ def plot_overview(eq: Equilibrium):
 
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
-    plt.contour(r, z, psi.T, 20)
-    plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.contour(r, z, psi, 20)
+    # plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.plot(eq.lcfs.R, eq.lcfs.Z, label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b', markersize=10)
@@ -200,7 +201,7 @@ def plot_overview(eq: Equilibrium):
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
-    plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 20)
+    plt.contour(r, z, eq.B_pol(R=r, Z=z), 20)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -208,7 +209,7 @@ def plot_overview(eq: Equilibrium):
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
-    plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 20)
+    plt.contour(r, z, eq.B_tor(R=r, Z=z), 20)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -264,6 +265,8 @@ def plot_overview(eq: Equilibrium):
     return return_axis
 
 def main():
+    import matplotlib.pyplot as plt
+
     ## Here is only some testing equilibirum prepared:
 
     # r = np.linspace(0.5, 2.5, 100)
@@ -304,7 +307,7 @@ def main():
     gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
     eq = load_testing_equilibrium(1)
 
-    # ax = plot_overview(eq)
+    ax = plot_overview(eq)
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
@@ -314,7 +317,7 @@ def main():
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
-    #plt.show()
+    plt.show()
 
 if __name__ == '__main__':
     main()

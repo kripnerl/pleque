@@ -49,7 +49,7 @@ def _readeqdsk(filepath, order="F"):
     """
 
     #read the file
-    with open(filepath,"r") as f:
+    with open(filepath, "r") as f:
         data = f.read()
 
     pattern_floats = re.compile("[+-]{1}[0-9]+\.\d+e{1}[+-]{1}\d+") #regexp for float trains
