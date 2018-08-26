@@ -1,3 +1,6 @@
+import os
+
+
 def load_testing_equilibrium(case=1):
     """
     Return testing equilibrium file
@@ -7,14 +10,16 @@ def load_testing_equilibrium(case=1):
     from pleque.core import Equilibrium
     import numpy as np
 
-    if case == 1:
-        gfile = 'test_files/compu/baseline_eqdsk'
-    elif case == 2:
-        gfile = 'test_files/compu/scenario_1_baseline_upward_eqdsk'
-    else:
-        gfile = 'test_files/compu/DoubleNull_eqdsk'
+    path = os.path.join(os.path.dirname(__file__), 'test_files')
 
-    limiterfile = 'test_files/compu/limiter_v3_1_iba.dat'
+    if case == 1:
+        gfile = os.path.join(path, 'compu', 'baseline_eqdsk')
+    elif case == 2:
+        gfile = os.path.join(path, 'compu', 'scenario_1_baseline_upward_eqdsk')
+    else:
+        gfile = os.path.join(path, 'compu', 'DoubleNull_eqdsk')
+
+    limiterfile = os.path.join(path, 'compu', 'limiter_v3_1_iba.dat')
 
     eq_xr = readeqdsk_xarray(gfile)
     limiter = np.loadtxt(limiterfile)
