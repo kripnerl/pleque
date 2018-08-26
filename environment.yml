@@ -1,0 +1,16 @@
+name: pleque
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.6
+  - numpy
+  - ipython
+  - scipy
+  - notebook
+  - matplotlib
+  - shapely
+  - scikit-image
+  - xarray
+  - pip:
+    - git+https://github.com/coobas/pyTokamak
