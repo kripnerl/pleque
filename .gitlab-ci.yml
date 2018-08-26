@@ -1,0 +1,7 @@
+test-conda:
+  image: continuumio/miniconda3
+  script:
+    - conda env create -f environment.yml
+    - pylint pleque
+    - flake8 pleque
+    # TODO add pytest
