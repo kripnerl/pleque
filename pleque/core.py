@@ -211,8 +211,9 @@ class Equilibrium(object):
 
         return B_abs
 
-    def fluxSurface(self, *coordinates, resolution = [1e-3, 1e-3], dim = "step",
-                    closed = True, inlcfs = True, **coords):
+    def fluxSurface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
+                    closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                    coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
@@ -235,15 +236,17 @@ class Equilibrium(object):
 
         from pleque.fluxsurface import FluxSurface
 
+        coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
+
         # get the grid for psi map to find the contour in.
         grid = self.get_grid_RZ(resolution=resolution, dim=dim)
 
         # create coordinates
-        #coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
+        # coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
 
         # get the coordinates of the contours with requested leve and convert them into
         # instances of FluxSurface class
-        contour = self._get_surface(grid, level = coordinates.psi_n, norm=True)
+        contour = self._get_surface(grid, level=coordinates.psi_n[0], norm=True)
 
         for i in range(len(contour)):
             contour[i] = FluxSurface(contour[i])
@@ -254,37 +257,49 @@ class Equilibrium(object):
 
         # find fluxsurfaces with requested parameters
         fluxsurface = []
-        for i in range(len(contour)):
-            if inlcfs and contour[i].closed and contour[i].contains(magaxis):
-                fluxsurface.append(contour[i])
-                return fluxsurface
-            elif not inlcfs and closed and contour[i].closed:
-                fluxsurface.append(contour[i])
-            elif not inlcfs and not closed and not contour[i].closed:
-                fluxsurface.append(contour[i])
+
+        if coordinates.dim == 1:
+            for i in range(len(contour)):
+                if inlcfs and contour[i].closed and contour[i].contains(magaxis):
+                    fluxsurface.append(contour[i])
+                    return fluxsurface
+                elif not inlcfs and closed and contour[i].closed:
+                    fluxsurface.append(contour[i])
+                elif not inlcfs and not closed and not contour[i].closed:
+                    fluxsurface.append(contour[i])
+        elif coordinates.dim == 2:
+            # Sadly contour des not go through the point due to mesh resolution :-(
+            dist = np.inf
+            for i in range(len(contour)):
+                tmp = contour[i].distance(coordinates)
+                if tmp < dist:
+                    dist = tmp
+                    tmp2 = contour[i]
+
+            fluxsurface.append(tmp2)
 
         return fluxsurface
 
-    def _get_surface(self, *coordinates, R = None, Z = None, level=0.5, norm=True, coord_type=None, **coords):
+    def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
         :return: list of coordinates of contours on a requested level
         """
         from pleque.utils.surfaces import find_contour
 
-        coordinates = self.coordinates(coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
+        coordinates = self.coordinates(*coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
 
         if norm == True:
-            contour = find_contour(coords.psi_n, level=level, r=coords.R, z=coords.Z)
+            contour = find_contour(coordinates.psi_n, level=level, r=coordinates.R, z=coordinates.Z)
         else:
-            contour = find_contour(coords.psi, level=level, r=coordinates.R, z=coordinates.Z)
+            contour = find_contour(coordinates.psi, level=level, r=coordinates.R, z=coordinates.Z)
 
         for i in range(len(contour)):
             contour[i] = Coordinates(self, contour[i])
 
         return contour
 
-    def get_grid_RZ(self, resolution = None, dim="step"):
+    def get_grid_RZ(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
@@ -306,7 +321,7 @@ class Equilibrium(object):
             res_R = resolution
             res_Z = resolution
 
-        if isinstance(dim,Iterable) and len(dim) == 2:
+        if isinstance(dim, Iterable) and len(dim) == 2:
             if res_R is None:
                 R = self._basedata.R.data
             elif dim[0] == "step":
@@ -461,7 +476,7 @@ class Equilibrium(object):
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(self, coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_in_first_wall
@@ -488,7 +503,6 @@ class Equilibrium(object):
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
-
 
         # for sure not the best algorithm ever...
         rs = np.linspace(self.r_min, self.r_max, 300)
@@ -591,7 +605,6 @@ class Equilibrium(object):
         xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
         xp_dist = (xp_dist - np.min(xp_dist)) / (np.max(xp_dist) - np.min(xp_dist))
 
-
         # idx = np.argmin(psi_diff)
         sortidx = np.argsort(psi_diff * xp_dist)
 
@@ -693,7 +706,6 @@ class Coordinates(object):
         r_mgax, z_mgax = self._eq._mg_axis
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
 
-
     # todo
     # @property
     # def r_mid(self):
@@ -718,8 +730,6 @@ class Coordinates(object):
             return self.x1
         elif self.dim == 2:
             return np.array([self.x1, self.x2]).T
-
-
 
     def getAs(self, coord_type=None):
         if self.dim == 0:
