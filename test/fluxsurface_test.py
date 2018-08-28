@@ -1,33 +1,37 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+from shapely import geometry
 from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, point_inside_curve
 from test.testing_utils import load_testing_equilibrium
 from pleque.core import Equilibrium, Coordinates
 
 eq = load_testing_equilibrium()
 
-surf_inlcfs = [eq.fluxSurface(level=0.1, inlcfs=True),
-               eq.fluxSurface(level=0.5, inlcfs=True),
-               eq.fluxSurface(level=0.9, inlcfs=True)]
+surf_inlcfs = [eq.fluxSurface(eq.coordinates(psi_n = 0.1), inlcfs=True),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.5), inlcfs=True),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.9), inlcfs=True)]
 
 
-surf_closed = [eq.fluxSurface(level=0.1, inlcfs=False, closed=True),
-               eq.fluxSurface(level=0.5, inlcfs=False, closed=True),
-               eq.fluxSurface(level=0.9, inlcfs=False, closed=True)]
+surf_closed = [eq.fluxSurface(eq.coordinates(psi_n = 0.1), inlcfs=False, closed=True),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.5), inlcfs=False, closed=True),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.9), inlcfs=False, closed=True)]
 
-surf_opened = [eq.fluxSurface(level=1.05, inlcfs=False, closed=False),
-               eq.fluxSurface(level=1.1, inlcfs=False, closed=False),
-               eq.fluxSurface(level=1.2, inlcfs=False, closed=False)]
+surf_opened = [eq.fluxSurface(eq.coordinates(psi_n = 0.1), inlcfs=False, closed=False),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.5), inlcfs=False, closed=False),
+               eq.fluxSurface(eq.coordinates(psi_n = 0.9), inlcfs=False, closed=False)]
 
-surf_lcfs = eq.fluxSurface(level=1-1e-6)[0]
+surf_lcfs = eq.fluxSurface(psi_n=1-1e-6)[0]
 
-r, z = eq.get_grid_RZ(resolution=[1e-3, 2e-3], dim="step")
-psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
+point = eq.coordinates(R=0.83, Z = -0.3)
+surf_frompoint = eq.fluxSurface(point)
+
+
+grid = eq.get_grid_RZ(resolution=[1e-3, 2e-3], dim="step")
+#psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
 
 
 figx, ax = plt.subplots()
-cl = ax.contourf(psipol_map.R, psipol_map.Z, psipol_map.psi_n.T, 50)
+cl = ax.contourf(grid.R, grid.Z, grid.psi_n.T, 50)
 plt.colorbar(cl)
 ax.plot(surf_lcfs.contour.as_array()[:,0], surf_lcfs.contour.as_array()[:,1], "-C3")
 for i in range(len(surf_inlcfs)):
@@ -41,6 +45,10 @@ for i in range(len(surf_closed)):
 for i in range(len(surf_opened)):
     for j in range(len(surf_opened[i])):
         ax.plot(surf_opened[i][j].contour.as_array()[:,0], surf_opened[i][j].contour.as_array()[:,1], "--C5")
+ax.plot(surf_frompoint[0].contour.as_array()[:,0], surf_frompoint[0].contour.as_array()[:,1], "--C6",
+        label = "surface throught point")
+ax.plot(point.R, point.Z, "xC6")
+ax.plot(eq._first_wall[:,0], eq._first_wall[:,1], "k")
 
 ax.plot([],[],"-C3",
         label = "lcfs:\n    length = {0:1.2f},\n"
