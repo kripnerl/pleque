@@ -92,3 +92,8 @@ class FluxSurface:
             return self.__poly.contains(pnt)
         else:
             raise Exception("Opened Flux Surface does not have area")
+
+    def distance(self, coords: Coordinates):
+        point = geometry.Point(coords.as_array()[0])
+        distance = self.__string.distance(point)
+        return distance
