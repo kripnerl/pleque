@@ -270,6 +270,8 @@ class Equilibrium(object):
         elif coordinates.dim == 2:
             # Sadly contour des not go through the point due to mesh resolution :-(
             dist = np.inf
+            tmp2 = None
+            
             for i in range(len(contour)):
                 tmp = contour[i].distance(coordinates)
                 if tmp < dist:
