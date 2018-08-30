@@ -1,8 +1,8 @@
-# Pleque - PLasma EQUilibrium module
+# Pleque - PLasma EQUilibrium Enjoyment module \[pleɪɡ\]
+[![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://img.shields.io/github/license/mashape/apistatus.svg)
+[![py3comp](https://img.shields.io/badge/py3-compatible-brightgreen.svg)](https://img.shields.io/badge/py3-compatible-brightgreen.svg)
 
-Template of the future README file. 
-
-One Paragraph of project description goes here
+Python module for the simple manipulation with the tokamak plasma equilibrium.
 
 ## Getting Started
 
@@ -64,17 +64,15 @@ Add additional notes about how to deploy this on a live system
 * [Maven](https://maven.apache.org/) - Dependency Management
 * [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
 
-## Contributing
 
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
+## Version
 
-## Versioning
+0.0
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
 
 ## Authors
 
-* **Lukas Kripner** - *Initial work* - [kripnerl](https://github.com/kripnerl)
+* **Lukas Kripner** - [kripnerl](https://github.com/kripnerl)
 
 See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
@@ -87,3 +85,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 * Hat tip to anyone whose code was used
 * Inspiration
 * etc
+
+## References
+* [Sauter, O. & Medvedev, S. Y. "Tokamak coordinate conventions: COCOS." Comput. Phys. Commun. **184**, 293–302 (2013).](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
+* S. Jardin "Computational Methods in Plasma Physics" CRC Press.
