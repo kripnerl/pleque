@@ -34,9 +34,8 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-        return self._q_spl(psi_n)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._q_spl(coord.psi_n)
 
     # noinspection PyPep8Naming
     def diff_q(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
@@ -52,16 +51,13 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         :param coords:
         :return: Derivative of q with respect to psi.
         """
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-        return self._dq_dpsin_spl(psi_n) * self._diff_psiN
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
 
     # noinspection PyPep8Naming
     def tor_flux(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-
-        return eq._q_anideriv_spl(psi_n) * (1 / self._diff_psi_n)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return eq._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     # eq.q = q
     # eq.diff_q = diff_q

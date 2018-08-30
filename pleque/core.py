@@ -83,7 +83,7 @@ class Equilibrium(object):
         self._psi_lcfs = psi_lcfs
         self._x_points = x_points
         self._strike_point = strike_points
-        self._spline_order = 5
+        self._spline_order = spline_order
         self._cocos = cocos
 
         # todo: resolve this from input
@@ -216,9 +216,9 @@ class Equilibrium(object):
         :return: Absolute value of magnetic field in Tesla.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        B_R = self.B_R(R=coord.R, Z=coord.Z, grid=grid)
-        B_Z = self.B_Z(R=coord.R, Z=coord.Z, grid=grid)
-        B_T = self.B_tor(R=coord.R, Z=coord.Z, grid=grid)
+        B_R = self.B_R(coord)
+        B_Z = self.B_Z(coord)
+        B_T = self.B_tor(coord)
         B_abs = np.sqrt(B_R ** 2 + B_Z ** 2 + B_T ** 2)
 
         return B_abs
@@ -403,12 +403,8 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        if grid:
-            Rs, Zs = np.meshgrid(R, Z)
-        else:
-            Rs = R
-        return -self._spl_psi(R, Z, dy=1, grid=grid).T / Rs * self._Bpol_sign
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return -self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -422,13 +418,8 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        if grid:
-            Rs, Zs = np.meshgrid(R, Z)
-        else:
-            Rs = R
-
-        return self._spl_psi(R, Z, dx=1, grid=grid).T / Rs * self._Bpol_sign
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -442,9 +433,9 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        B_R = self.B_R(R=R, Z=Z)
-        B_Z = self.B_Z(R=R, Z=Z)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        B_R = self.B_R(coord)
+        B_Z = self.B_Z(coord)
         B_pol = np.sqrt(B_R ** 2 + B_Z ** 2)
         return B_pol
 
@@ -460,12 +451,20 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        coord = Coordinates(self, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        if grid:
-            R_mesh = R[:, None]
-        else:
-            R_mesh = R
-        return self.fpol(R=R, Z=Z, grid=grid) / R_mesh.T
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self.fpol(coord) / coord.R
+
+    def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
+
+    def diff_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        raise NotImplementedError("This method hasn't been implemented yet. "
+                                  "Use monkey patching in the specific cases.")
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
