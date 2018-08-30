@@ -176,6 +176,7 @@ def plot_psi_derivatives(eq: Equilibrium):
     ax.set_aspect('equal')
 
 
+# noinspection PyTypeChecker
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
@@ -200,20 +201,36 @@ def plot_overview(eq: Equilibrium):
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
-    plt.contour(r, z, eq.B_pol(R=r, Z=z), 20)
+    cs = plt.contour(r, z, eq.B_pol(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+
     plt.title(r'$B_\mathrm{pol}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
-    plt.contour(r, z, eq.B_tor(R=r, Z=z), 20)
+    cs = plt.contour(r, z, eq.B_tor(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
+
+    # number of points
+    n = 100
+    # module automaticaly identify the type of the input:
+    midplane = eq.coordinates(r=np.linspace(-0.3, 0.3, n), theta=np.zeros(n))
+
+    fig, axs = plt.subplots(3, 1, sharex=True)
+
+    ax = axs[0]
+    # Profile of toroidal field:
+    ax.plot(midplane.r, eq.B_tor(midplane))
+    # Profile of poloidal field:
+    ax.plot(midplane.r, eq.B_pol(midplane))
 
     # # ----
     # plt.figure(figsize=(8, 4))
