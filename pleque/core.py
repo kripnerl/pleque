@@ -255,7 +255,7 @@ class Equilibrium(object):
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
 
         # get the grid for psi map to find the contour in.
-        grid = self.get_grid_RZ(resolution=resolution, dim=dim)
+        grid = self.grid(resolution=resolution, dim=dim)
 
         # create coordinates
         # coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
@@ -315,7 +315,7 @@ class Equilibrium(object):
 
         return contour
 
-    def get_grid_RZ(self, resolution=None, dim="step"):
+    def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
@@ -328,66 +328,65 @@ class Equilibrium(object):
         values in resolution are interpreted as requested number of points in a dimension. If string is passed,
          same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
          achieved by passing an iterable of shape 2.
-        :return: tuple of two 1d arrays with r and z coordinate
+        :return: Instance of `Coordinates` class with grid data
         """
-        if isinstance(resolution, Iterable):
-            if not len(resolution) == 2:
-                raise ValueError("if iterable, resolution has to be of size 2")
-            res_R = resolution[0]
-            res_Z = resolution[1]
+        if resolution is None:
+            R = self._basedata.R.data
+            Z = self._basedata.Z.data
         else:
-            res_R = resolution
-            res_Z = resolution
-
-        if isinstance(dim, Iterable) and len(dim) == 2:
-            if res_R is None:
-                R = self._basedata.R.data
-            elif dim[0] == "step":
-                R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
-            elif dim[0] == "size":
-                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
+            if isinstance(resolution, Sequence):
+                if not len(resolution) == 2:
+                    raise ValueError("if iterable, resolution has to be of size 2")
+                res_R = resolution[0]
+                res_Z = resolution[1]
             else:
-                raise ValueError("Wrong dim[0] value passed")
+                res_R = resolution
+                res_Z = resolution
 
-            if res_Z is None:
-                Z = self._basedata.Z.data
-            elif dim[1] == "step":
-                Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
-            elif dim[1] == "size":
-                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
-            else:
-                raise ValueError("Wrong dim[1] value passed")
-        elif isinstance(dim, str):
-            if dim == "step":
+            if isinstance(dim, Sequence) and len(dim) == 2:
                 if res_R is None:
                     R = self._basedata.R.data
-                else:
+                elif dim[0] == "step":
                     R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                elif dim[0] == "size":
+                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
+                else:
+                    raise ValueError("Wrong dim[0] value passed")
+
                 if res_Z is None:
                     Z = self._basedata.Z.data
-                else:
-                    Z = np.arange(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
-            elif dim == "size":
-                if res_R is None:
-                    R = self._basedata.R.data
-                else:
-                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_R)
-                if res_Z is None:
-                    Z = self._basedata.Z.data
-                else:
+                elif dim[1] == "step":
+                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
+                elif dim[1] == "size":
                     Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                else:
+                    raise ValueError("Wrong dim[1] value passed")
+            elif isinstance(dim, str):
+                if dim == "step":
+                    if res_R is None:
+                        R = self._basedata.R.data
+                    else:
+                        R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                    if res_Z is None:
+                        Z = self._basedata.Z.data
+                    else:
+                        Z = np.arange(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                elif dim == "size":
+                    if res_R is None:
+                        R = self._basedata.R.data
+                    else:
+                        R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                    if res_Z is None:
+                        Z = self._basedata.Z.data
+                    else:
+                        Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                else:
+                    raise ValueError("Wrong dim value passed")
             else:
                 raise ValueError("Wrong dim value passed")
-        else:
-            raise ValueError("Wrong dim value passed")
 
-        rz = self.coordinates(R=R, Z=Z, grid=True)
+        coords = self.coordinates(R=R, Z=Z, grid=True)
 
-        return rz
-
-    def get_grid(self, resolution=None, dim="step"):
-        R, Z = self.get_grid_RZ(resolution, dim)
-        coords = Coordinates(self, R=R, Z=Z, grid=True)
         return coords
 
     # todo: resolve the grids
@@ -485,6 +484,14 @@ class Equilibrium(object):
     @property
     def lcfs(self):
         return self.coordinates(self._lcfs)
+
+    @property
+    def first_wall(self):
+        return self.coordinates(self._first_wall)
+
+    @property
+    def magnetic_axis(self):
+        return self.coordinates(self._mg_axis)
 
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """

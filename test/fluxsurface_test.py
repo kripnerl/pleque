@@ -22,9 +22,8 @@ surf_lcfs = eq.fluxSurface(psi_n=1-1e-6)[0]
 point = eq.coordinates(R=0.83, Z = -0.3)
 surf_frompoint = eq.fluxSurface(point)
 
-
-grid = eq.get_grid_RZ(resolution=[1e-3, 2e-3], dim="step")
-#psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
+grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
+# psipol_map = Coordinates(eq, R = r, Z=z, grid=True)
 
 
 figx, ax = plt.subplots()
