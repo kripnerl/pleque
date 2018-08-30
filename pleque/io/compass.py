@@ -9,7 +9,8 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     `/compass/Shared/Common/COMPASS-UPGRADE/RP1 Design/Equilibria/v3.1`
 
     :param filepath: Path to fiesta g-file equilibria
-    :param first_wall: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file). If `None` IBA limiter v 3.1 is taken.
+    :param first_wall: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file).
+        If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
     from pleque.io.readgeqdsk import readeqdsk_xarray
@@ -17,7 +18,6 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     import pkg_resources
 
     resource_package = __name__
-
 
     if first_wall is None:
         first_wall = '../../test/test_files/compu/limiter_v3_1_iba.dat'
@@ -32,11 +32,13 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
 
+    # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
             psi_n = self.psi_n(R=R, Z=Z, grid=grid)
         return self._q_spl(psi_n)
 
+    # noinspection PyPep8Naming
     def diff_q(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
 
@@ -54,6 +56,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
             psi_n = self.psi_n(R=R, Z=Z, grid=grid)
         return self._dq_dpsin_spl(psi_n) * self._diff_psiN
 
+    # noinspection PyPep8Naming
     def tor_flux(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         if R is not None and Z is not None:
             psi_n = self.psi_n(R=R, Z=Z, grid=grid)

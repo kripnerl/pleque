@@ -8,9 +8,9 @@ class FluxSurface:
     def __init__(self, coords: Coordinates):
         """
         Calculates geometrical properties of the flux surface. To make the conrour colsed, the first and last points in
-        the passed coordinates have to be the same
-        :param points_RZ: vector (N,2), where N is the number of points in the contour of the flux surface and dim1 are the
-        r, z coordinates of the contour points.
+        the passed coordinates have to be the same.
+        Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
+        :param coords: Instance of coordinate class
         """
         self.coords = coords
         points_RZ = coords.as_array(('R', 'Z'))
@@ -63,7 +63,7 @@ class FluxSurface:
     @property
     def centroid(self):
         return self.coords._eq.coordinates(R=np.array(self.__string.centroid.coords)[0][0],
-                                           Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R","Z"])
+                                           Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R", "Z"])
 
     @property
     def volume(self):
@@ -86,7 +86,7 @@ class FluxSurface:
         return self.coords
 
     def contains(self, coords: Coordinates):
-        points_RZ = coords.as_array(('R', 'Z'))[0,:]
+        points_RZ = coords.as_array(('R', 'Z'))[0, :]
         if self.__closed:
             pnt = geometry.point.Point(points_RZ)
             return self.__poly.contains(pnt)

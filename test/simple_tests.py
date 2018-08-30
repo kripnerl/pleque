@@ -196,7 +196,6 @@ def plot_overview(eq: Equilibrium):
     plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r', markersize=10)
     return_axis = plt.gca()
 
-
     plt.title(r'$\psi$')
     plt.gca().set_aspect('equal')
 
@@ -264,6 +263,7 @@ def plot_overview(eq: Equilibrium):
 
     return return_axis
 
+
 def main():
     import matplotlib.pyplot as plt
 
@@ -292,7 +292,6 @@ def main():
     # #                 coords={'R': r,
     # #                         'Z': z})
 
-
     ## Load the equilibrium directly from gfile
 
     # # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
@@ -318,6 +317,7 @@ def main():
 
     # Show all plots generated during tests
     plt.show()
+
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Sequence
 
 import numpy as np
 import xarray
@@ -38,6 +38,7 @@ class Equilibrium(object):
     """
     Equilibrium class ...
     """
+
     # def __init__(self,
     #              basedata: xarray.Dataset,
     #              first_wall=None: Iterable[(float, float)],
@@ -59,8 +60,10 @@ class Equilibrium(object):
                  verbose=True
                  ):
         """
+        Equilibrium class instance should be obtained generally by functions in pleque.io
+        package.
 
-        Optional argumets may help the initialization.
+        Optional arguments may help the initialization.
     
         Arguments
         ---------
@@ -104,11 +107,13 @@ class Equilibrium(object):
                                   s=spline_smooth)
         self._spl_psi = spl
 
+        if verbose:
+            print('--- Looking for extremes ---')
         # find extremes:
         self.__find_extremes__()
 
         # generate 1d profiles:
-        if (self._psi_lcfs - self._psi_axis > 0):
+        if self._psi_lcfs - self._psi_axis > 0:
             self._psi_sign = +1
         else:
             self._psi_sign = -1
@@ -118,6 +123,8 @@ class Equilibrium(object):
         fpol = basedata.fpol.data
         self.BvacR = fpol[-1]
 
+        if verbose:
+            print('--- Generate 1D splines ---')
         self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
         self._df_dpsin_spl = self._fpol_spl.derivative()
         self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
@@ -130,6 +137,7 @@ class Equilibrium(object):
         """
         Psi value
 
+        :param psi_n:
         :param coordinates:
         :param R:
         :param Z:
@@ -199,6 +207,7 @@ class Equilibrium(object):
         """
         Absolute value of magnetic field in Tesla.
 
+        :param grid:
         :param coordinates:
         :param R:
         :param Z:
@@ -221,6 +230,10 @@ class Equilibrium(object):
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
         closed are possible.
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
         If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
         Coordinates.grid must be False.
@@ -292,7 +305,7 @@ class Equilibrium(object):
 
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, grid=True, coord_type=coord_type, **coords)
 
-        if norm == True:
+        if norm:
             contour = find_contour(coordinates.psi_n, level=level, r=coordinates.R, z=coordinates.Z)
         else:
             contour = find_contour(coordinates.psi, level=level, r=coordinates.R, z=coordinates.Z)
@@ -307,8 +320,10 @@ class Equilibrium(object):
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
          R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-          resolutions or dimension sizes can be required by passing an iterable of size 2
-        :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
+          resolutions or dimension sizes can be required by passing an iterable of size 2.
+          If None, default grid is returned.
+        :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
+            of the resolution.
          If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
         values in resolution are interpreted as requested number of points in a dimension. If string is passed,
          same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
@@ -399,6 +414,7 @@ class Equilibrium(object):
         """
         Poloidal value of magnetic field in Tesla.
 
+        :param grid:
         :param coordinates:
         :param R:
         :param Z:
@@ -418,6 +434,7 @@ class Equilibrium(object):
         """
         Absolute value of magnetic field in Tesla.
 
+        :param grid:
         :param coordinates:
         :param R:
         :param Z:
@@ -435,6 +452,7 @@ class Equilibrium(object):
         """
         Toroidal value of magnetic field in Tesla.
 
+        :param grid:
         :param coordinates:
         :param R:
         :param Z:
@@ -592,7 +610,7 @@ class Equilibrium(object):
         op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
         op_in_first_wall = np.ones_like(op_dist)
-        if (self._first_wall is not None):
+        if self._first_wall is not None:
             op_in_first_wall = self.in_first_wall(R=o_points[:, 0],
                                                   Z=o_points[:, 1],
                                                   grid=False) * 1
@@ -638,13 +656,13 @@ class Equilibrium(object):
 
         if self._x_point[1] < self._x_point2[1]:
             if self._verbose:
-                print('>>> found lower x-point configuration')
+                print('>>> lower x-point configuration found')
             v = v[v[:, 1] > self._x_point[1], :]
             v = v[v[:, 1] < self._x_point2[1], :]
 
         else:
             if self._verbose:
-                print('>>> found upper x-point configuration')
+                print('>>> upper x-point configuration found')
             v = v[v[:, 1] < self._x_point[1], :]
             v = v[v[:, 1] > self._x_point2[1], :]
 
@@ -670,14 +688,20 @@ class Coordinates(object):
 
         self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
 
-    def __call__(self, *args, **kwargs):
-        pass
+    # def __call__(self, *args, **kwargs):
+    #     pass
+    #
+    # def __iter__(self):
+    #     pass
 
-    def __iter__(self):
-        pass
+    def __len__(self):
+        if self.grid:
+            return len(self.x1) * len(self.x2)
+        else:
+            return len(self.x1)
 
-    def sort(self, order):
-        pass
+    # def sort(self, order):
+    #     pass
 
     @property
     def R(self):
