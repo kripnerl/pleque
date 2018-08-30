@@ -1,5 +1,7 @@
-from pleque import Equilibrium
 import numpy as np
+
+from pleque import Equilibrium
+
 
 def read_fiesta_equilibrium(filepath, first_wall=None):
     """
@@ -7,20 +9,26 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     `/compass/Shared/Common/COMPASS-UPGRADE/RP1 Design/Equilibria/v3.1`
 
     :param filepath: Path to fiesta g-file equilibria
-    :param limiter: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file). If `None` IBA limiter v 3.1 is taken.
+    :param first_wall: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file). If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
     from pleque.io.readgeqdsk import readeqdsk_xarray
+    from scipy.interpolate import UnivariateSpline
+    import pkg_resources
+
+    resource_package = __name__
+
 
     if first_wall is None:
-        first_wall = '/compass/home/kripner/Projects/equilibrium_module/test/test_files/compu/limiter_v3_1_iba.dat'
+        first_wall = '../../test/test_files/compu/limiter_v3_1_iba.dat'
+        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
 
     ds = readeqdsk_xarray(filepath)
     first_wall = np.loadtxt(first_wall)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    eq._q_spl = UnivariateSpline(psi_n, qpsi, s=0, k=3)
+    eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
 
