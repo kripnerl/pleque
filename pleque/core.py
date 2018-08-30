@@ -223,9 +223,9 @@ class Equilibrium(object):
 
         return B_abs
 
-    def fluxSurface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
-                    closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
-                    coord_type=None, **coords):
+    def flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
+                     closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                     coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
