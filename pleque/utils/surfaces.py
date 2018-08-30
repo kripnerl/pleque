@@ -16,8 +16,8 @@ def find_contour(array, level, r=None, z=None, fully_connected="low", positive_o
     :return: list of arrays with contour coordinates
     """
     # calling skimage function to get counturs
-    coords = measure.find_contours(array, level, fully_connected=fully_connected,
-                                   positive_orientation=positive_orientation)
+    coords = measure.find_contours(array.T, level, fully_connected=fully_connected,
+                                   positive_orientation = positive_orientation)
 
     # if r, z coordinates are passed contour points are recalculated
     if isinstance(r, np.ndarray) or r is not None:

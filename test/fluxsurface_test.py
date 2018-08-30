@@ -26,7 +26,7 @@ grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 
 
 figx, ax = plt.subplots()
-cl = ax.contourf(grid.R, grid.Z, grid.psi_n.T, 50)
+cl = ax.contourf(grid.R, grid.Z, grid.psi_n, 50)
 plt.colorbar(cl)
 ax.plot(surf_lcfs.contour.as_array()[:, 0], surf_lcfs.contour.as_array()[:, 1], "-C3")
 for i in range(len(surf_inlcfs)):
@@ -56,3 +56,5 @@ ax.plot([], [], "--C4", label="closed surface")
 ax.plot([], [], "--C5", label="opened surface")
 ax.set_aspect(1)
 ax.legend(loc=(-1.5, 0.5))
+
+plt.show()
