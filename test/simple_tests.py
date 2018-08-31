@@ -176,6 +176,7 @@ def plot_psi_derivatives(eq: Equilibrium):
     ax.set_aspect('equal')
 
 
+# noinspection PyTypeChecker
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
@@ -186,8 +187,9 @@ def plot_overview(eq: Equilibrium):
 
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
-    plt.contour(r, z, psi.T, 20)
-    plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.contour(r, z, psi, 20)
+    # plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.plot(eq.lcfs.R, eq.lcfs.Z, label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b', markersize=10)
@@ -195,25 +197,40 @@ def plot_overview(eq: Equilibrium):
     plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r', markersize=10)
     return_axis = plt.gca()
 
-
     plt.title(r'$\psi$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
-    plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 20)
+    cs = plt.contour(r, z, eq.B_pol(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+
     plt.title(r'$B_\mathrm{pol}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
-    plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 20)
+    cs = plt.contour(r, z, eq.B_tor(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
+
+    # number of points
+    n = 100
+    # module automaticaly identify the type of the input:
+    midplane = eq.coordinates(r=np.linspace(-0.3, 0.3, n), theta=np.zeros(n))
+
+    fig, axs = plt.subplots(3, 1, sharex=True)
+
+    ax = axs[0]
+    # Profile of toroidal field:
+    ax.plot(midplane.r, eq.B_tor(midplane))
+    # Profile of poloidal field:
+    ax.plot(midplane.r, eq.B_pol(midplane))
 
     # # ----
     # plt.figure(figsize=(8, 4))
@@ -263,7 +280,10 @@ def plot_overview(eq: Equilibrium):
 
     return return_axis
 
+
 def main():
+    import matplotlib.pyplot as plt
+
     ## Here is only some testing equilibirum prepared:
 
     # r = np.linspace(0.5, 2.5, 100)
@@ -289,7 +309,6 @@ def main():
     # #                 coords={'R': r,
     # #                         'Z': z})
 
-
     ## Load the equilibrium directly from gfile
 
     # # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
@@ -304,7 +323,7 @@ def main():
     gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
     eq = load_testing_equilibrium(1)
 
-    # ax = plot_overview(eq)
+    ax = plot_overview(eq)
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
@@ -314,7 +333,8 @@ def main():
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
-    #plt.show()
+    plt.show()
+
 
 if __name__ == '__main__':
     main()

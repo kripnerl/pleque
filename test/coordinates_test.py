@@ -5,8 +5,8 @@ from test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 
-def test_coords_2d(*coordinates, R = None, Z = None, coord_type=None, grid=False, **coords):
 
+def test_coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **coords):
     print('--------')
     # xy = Coordinates(eq, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
     xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -21,7 +21,8 @@ def test_coords_2d(*coordinates, R = None, Z = None, coord_type=None, grid=False
     print()
     return xy
 
-def test_coords_1d(*coordinates, psi_n = None, coord_type=None, grid=False, **coords):
+
+def test_coords_1d(*coordinates, psi_n=None, coord_type=None, grid=False, **coords):
     # xy = Coordinates(eq, *coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
     xy = eq.coordinates(*coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
@@ -43,6 +44,7 @@ def test_arrays(a1, a2):
 
 
 if __name__ == '__main__':
+    # coord = eq.coordinates(eq._lcfs)
 
     # 2d tests (R, Z)
     #
