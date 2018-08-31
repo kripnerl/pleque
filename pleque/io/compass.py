@@ -19,12 +19,19 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     resource_package = __name__
 
+    ds = readeqdsk_xarray(filepath)
+
+    # If there are some limiter data. Use them as and limiter.
+    if 'r_lim' in ds and 'z_lim' in ds and ds.r_lim.size > 3 and first_wall is None:
+        first_wall = np.stack(ds.r_lim.data, ds.z_lim.data)
+
     if first_wall is None:
+        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall = '../../test/test_files/compu/limiter_v3_1_iba.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
 
-    ds = readeqdsk_xarray(filepath)
-    first_wall = np.loadtxt(first_wall)
+    if isinstance(first_wall, str):
+        first_wall = np.loadtxt(first_wall)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
