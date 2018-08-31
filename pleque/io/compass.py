@@ -13,7 +13,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
-    from pleque.io.readgeqdsk import readeqdsk_xarray
+    from pleque.io._readgeqdsk import readeqdsk_xarray
     from scipy.interpolate import UnivariateSpline
     import pkg_resources
 
