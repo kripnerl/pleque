@@ -93,10 +93,10 @@ class Equilibrium(object):
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
 
-        self.r_min = np.min(r)
-        self.r_max = np.max(r)
-        self.z_min = np.min(z)
-        self.z_max = np.max(z)
+        self.R_min = np.min(r)
+        self.R_max = np.max(r)
+        self.Z_min = np.min(z)
+        self.Z_max = np.max(z)
 
         if verbose:
             print('--- Generate 2D spline ---')
@@ -544,8 +544,8 @@ class Equilibrium(object):
         from scipy.optimize import minimize
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 300)
-        zs = np.linspace(self.z_min, self.z_max, 400)
+        rs = np.linspace(self.R_min, self.R_max, 300)
+        zs = np.linspace(self.Z_min, self.Z_max, 400)
 
         psi = self._spl_psi(rs, zs)
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
@@ -577,10 +577,10 @@ class Equilibrium(object):
                     x0 = np.array((r_ex, z_ex))
 
                     # minimize in the vicinity:
-                    bounds = ((np.max((self.r_min, r_ex - 0.1)),
-                               np.min((self.r_max, r_ex + 0.1))),
-                              (np.max((self.z_min, z_ex - 0.1)),
-                               np.min((self.z_max, z_ex + 0.1))))
+                    bounds = ((np.max((self.R_min, r_ex - 0.1)),
+                               np.min((self.R_max, r_ex + 0.1))),
+                              (np.max((self.Z_min, z_ex - 0.1)),
+                               np.min((self.Z_max, z_ex + 0.1))))
 
                     res = minimize(psi_xysq_func, x0, bounds=bounds)
                     # Remove bad candidates for extreme
@@ -607,8 +607,8 @@ class Equilibrium(object):
         # todo: After beeing function written, check whether are points inside limiter
 
         # First identify the o-point nearest the operation range as center of plasma
-        r_centr = (self.r_min + self.r_max) / 2
-        z_centr = (self.z_min + self.z_max) / 2
+        r_centr = (self.R_min + self.R_max) / 2
+        z_centr = (self.Z_min + self.Z_max) / 2
         o_points = np.array(o_points)
         x_points = np.array(x_points)
 
