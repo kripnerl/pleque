@@ -12,24 +12,26 @@ class FluxFuncs:
     def __init__(self, equi):
         # _flux_funcs = ['psi', 'rho']
         _flux_funcs = ['psi_n', 'psi', 'rho']
+        _coordinates_funcs = ['coordinates']
         self._equi = equi
         # self.__dict__.update(_flux_funcs)  # at class level?
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
+        for fn in _coordinates_funcs:
+            setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
-                      **coords):
+
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
         from scipy.interpolate import UnivariateSpline
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z)
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
         # interp = interpolate(psi_n, data)
-        interp = UnivariateSpline(psi_n, data, s=0, k=3)
+        interp = UnivariateSpline(coord.psi_n, data, s=0, k=3)
         setattr(self, '_interp_' + name, interp)
 
-        def new_func(self: Equilibrium, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
-            if R is not None and Z is not None:
-                psi_n = self.psi_n(R=R, Z=Z)
-            return interp(psi_n)
+        def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
+            coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
+            return interp(coord.psi_n)
 
         setattr(type(self), name, new_func)
 
@@ -125,6 +127,15 @@ class Equilibrium(object):
 
         if verbose:
             print('--- Generate 1D splines ---')
+
+        if verbose:
+            print('--- Mapping midplane to psi_n ---')
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        psi_mid = self.psi(r_mid+self._mg_axis[0], self._mg_axis[1]*np.ones_like(r_mid))
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
+        if verbose:
+            print('--- Mapping pressure and f func to psi_n ---')
+
         self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
         self._df_dpsin_spl = self._fpol_spl.derivative()
         self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
