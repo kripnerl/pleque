@@ -130,9 +130,9 @@ class Equilibrium(object):
 
         if verbose:
             print('--- Mapping midplane to psi_n ---')
-        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
-        psi_mid = self.psi(r_mid+self._mg_axis[0], self._mg_axis[1]*np.ones_like(r_mid))
-        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
+
+        self.__map_midplane2psi__()
+
         if verbose:
             print('--- Mapping pressure and f func to psi_n ---')
 
@@ -694,6 +694,25 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
+    def __map_midplane2psi__(self):
+        from scipy.interpolate import UnivariateSpline
+
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid))
+        diff_psi = np.diff(psi_mid)
+
+        # todo: add elegance here
+        if self._psi_axis < self._psi_lcfs:
+            # psi increasing:
+            pass
+        else:
+            # psi decreasing
+
+        try:
+            self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
+        except ValueError:
+            self._rmid_spl = UnivariateSpline(psi_mid[::-1], r_mid[::-1], k=3, s=1)
+
 
 class Coordinates(object):
 
@@ -764,6 +783,10 @@ class Coordinates(object):
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
+    @property
+    def r_mid(self):
+        return self._eq._rmid_spl(self.psi_n)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:

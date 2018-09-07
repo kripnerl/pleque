@@ -96,6 +96,9 @@ if __name__ == '__main__':
     coord2 = eq.coordinates(coord)
     assert coord is coord2
 
+    coord = eq.coordinates(psi_n = np.linspace(0, 1.2, 10))
+    print('r_mid = {}'.format(coord.r_mid))
+
     # 0d case
     xy = Coordinates(eq)
     assert xy.dim == 0
