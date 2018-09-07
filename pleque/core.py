@@ -56,7 +56,7 @@ class Equilibrium(object):
                  psi_lcfs=None,
                  x_points=None,
                  strike_points=None,
-                 spline_order=5,
+                 spline_order=3,
                  spline_smooth=0,
                  cocos=-1,
                  verbose=True
@@ -136,9 +136,9 @@ class Equilibrium(object):
         if verbose:
             print('--- Mapping pressure and f func to psi_n ---')
 
-        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
+        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=0)
         self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
         self._dp_dpsin_spl = self._pressure_spl.derivative()
 
         self.fluxfuncs.add_flux_func('fpol', fpol, psi_n=psi_n)
@@ -712,7 +712,7 @@ class Equilibrium(object):
 
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
-        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
 
 
 class Coordinates(object):
@@ -751,7 +751,6 @@ class Coordinates(object):
     @property
     def Z(self):
         if self.dim >= 2:
-            # todo
             return self.x2
 
     @property
@@ -796,11 +795,13 @@ class Coordinates(object):
     
     @property
     def X(self):
-        return self.R * np.cos(self.phi)
+        if self.dim >= 2:
+            return self.R * np.cos(self.phi)
 
     @property
     def Y(self):
-        return self.R * np.sin(self.phi)
+        if self.dim >= 2:
+            return self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:

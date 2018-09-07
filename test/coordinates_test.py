@@ -99,9 +99,11 @@ if __name__ == '__main__':
     coord2 = eq.coordinates(coord)
     assert coord is coord2
 
-    coord = eq.coordinates(psi_n = np.linspace(0, 1.2, 10))
-    # todo: there are 2 cm! and it is wrong! 
+    coord = eq.coordinates(psi_n = np.linspace(0, 1, 10))
     print('r_mid = {}'.format(coord.r_mid))
+
+    coord = eq.coordinates(eq._mg_axis[0], eq._mg_axis[1])
+    test_arrays(coord.psi_n, [0])
 
     # 3d case:
     coord = test_coords_3d(np.linspace(1, 5, 11), np.zeros(11), np.zeros(11))
