@@ -688,9 +688,10 @@ class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'Z'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
         self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
+        self._valid_coordinates_3d = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
         self.dim = -1  # init only
         self.grid = grid
 
@@ -713,12 +714,12 @@ class Coordinates(object):
 
     @property
     def R(self):
-        if self.dim == 2:
+        if self.dim >= 2:
             return self.x1
 
     @property
     def Z(self):
-        if self.dim == 2:
+        if self.dim >= 2:
             # todo
             return self.x2
 
@@ -726,7 +727,7 @@ class Coordinates(object):
     def psi(self):
         if self.dim == 1:
             return self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
-        elif self.dim == 2:
+        elif self.dim >= 2:
             psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
             if self.grid:
                 return psi.T
@@ -737,7 +738,7 @@ class Coordinates(object):
     def psi_n(self):
         if self.dim == 1:
             return self.x1
-        elif self.dim == 2:
+        elif self.dim >= 2:
             return (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
 
     @property
@@ -753,6 +754,18 @@ class Coordinates(object):
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
+    @property
+    def phi(self):
+        return self.x3
+    
+    @property
+    def X(self):
+        return self.R * np.cos(self.phi)
+
+    @property
+    def Y(self):
+        return self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
@@ -780,7 +793,7 @@ class Coordinates(object):
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
         elif self.dim == 1:
-            return self.x1
+            return self.x1 
         elif self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
@@ -790,15 +803,9 @@ class Coordinates(object):
                 # return np.array([x1, x2]).T
             else:
                 return np.array([self.x1, self.x2]).T
-
-    def getAs(self, coord_type=None):
-        if self.dim == 0:
-            return np.array(())
-        coord_type_ = self._verify_coord_type(coord_type)
-
-        if self.dim < len(coord_type):
-            raise ValueError('Can not return 2d from 1d data.')
-        raise ValueError('Not implemented yet.')
+        elif self.dim == 3:
+            # todo: replace this by split method
+            return np.array([self.x1, self.x2, self.x3]).T
 
     def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
@@ -839,6 +846,13 @@ class Coordinates(object):
                         raise ValueError('All coordinates should contain same dimension.')
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
+            elif self.dim == 3:
+                if tuple(xy_name) in self._valid_coordinates_2d:
+                    # todo: implement various order of coordinates
+                    self._x1_input = xy[0]
+                    self._x2_input = xy[1]
+                    self._x3_input = xy[2]
+                    coord_type_ = tuple(xy_name)
 
             else:
                 # self._incompatible_dimension_error(self.dim)
@@ -869,6 +883,10 @@ class Coordinates(object):
                     elif self.dim == 2:
                         self._x1_input = xy[:, 0]
                         self._x2_input = xy[:, 1]
+                    elif self.dim == 3:
+                        self._x1_input = xy[:, 0]
+                        self._x2_input = xy[:, 1]
+                        self._x3_input = xy[:, 2]
                     else:
                         self._incompatible_dimension_error(self.dim)
                 else:
@@ -887,12 +905,34 @@ class Coordinates(object):
                     x2 = np.array(x2, ndmin=1)
                 self._x1_input = x1
                 self._x2_input = x2
+            elif len(coordinates) == 3:
+                self.dim = 3
+                x1 = coordinates[0]
+                x2 = coordinates[1]
+                x3 = coordinates[2]
+
+                # assume _x1_input and _x2_input to be arrays of size (N)
+                if not isinstance(x1, np.ndarray):
+                    x1 = np.array(x1, ndmin=1)
+                if not isinstance(x2, np.ndarray):
+                    x2 = np.array(x2, ndmin=1)
+                if not isinstance(x3, np.ndarray):
+                    x3 = np.array(x3, ndmin=1)
+                self._x1_input = x1
+                self._x2_input = x2
+                self._x3_input = x3
 
             else:
                 self._incompatible_dimension_error(len(coordinates))
 
             self._coord_type_input = self._verify_coord_type(coord_type)
+
         self._convert_to_default_coord_type()
+
+        if self.dim != 2 and self.grid:
+            print('WARNING: grid == True is not allowed for dim != 2 (yet).'
+                  'Turning grid = False.')
+            self.grid = False
 
     def _verify_coord_type(self, coord_type):
         if isinstance(coord_type, str):
@@ -924,6 +964,18 @@ class Coordinates(object):
                       "{} is not allowed \n"
                       "Force set _coord_type_input = ('R', 'Z')"
                       .format(tuple(coord_type)))
+        elif self.dim == 3:
+            if coord_type is None:
+                ret_coord_type = ('R', 'Z', 'phi')
+            elif tuple(coord_type) in self._valid_coordinates_3d:
+                ret_coord_type = tuple(coord_type)
+            else:
+                ret_coord_type = ('R', 'Z', 'phi')
+                print("WARNING: _coord_type_input is not correct. \n"
+                      "{} is not allowed \n"
+                      "Force set _coord_type_input = ('R', 'Z', 'phi')"
+                      .format(tuple(coord_type)))
+
         else:
             raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
                              .format(self.dim))
@@ -960,3 +1012,17 @@ class Coordinates(object):
                 r_mgax, z_mgax = self._eq._mg_axis
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
+        elif self.dim == 3:
+            # only (R, Z) coordinates are implemented now
+            if self._coord_type_input == ('R', 'Z', 'phi'):
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+                self.x3 = self._x3_input
+            elif self._coord_type_input == ('R', 'Z', 'phi'):
+                # todo: COCOS
+                # R(1)**2 = X(1)**2 + Y(2)**2
+                # Z(2) = Z(3)
+                # phi(3) = atan2(Y(2), X(1)]
+                self.x1 = np.sqrt(self._x1_input**2 + self._x2_input**2)
+                self.x2 = self._x3_input
+                self.x3 = np.arctan2(self._x2_input, self._x1_input)
