@@ -719,7 +719,7 @@ class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'Z'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
         self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
         self._valid_coordinates_3d = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
@@ -883,7 +883,7 @@ class Coordinates(object):
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
             elif self.dim == 3:
-                if tuple(xy_name) in self._valid_coordinates_2d:
+                if tuple(xy_name) in self._valid_coordinates_3d:
                     # todo: implement various order of coordinates
                     self._x1_input = xy[0]
                     self._x2_input = xy[1]
@@ -1054,7 +1054,7 @@ class Coordinates(object):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
                 self.x3 = self._x3_input
-            elif self._coord_type_input == ('R', 'Z', 'phi'):
+            elif self._coord_type_input == ('X', 'Y', 'Z'):
                 # todo: COCOS
                 # R(1)**2 = X(1)**2 + Y(2)**2
                 # Z(2) = Z(3)

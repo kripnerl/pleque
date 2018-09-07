@@ -29,6 +29,7 @@ def arglis(seq):
         k = p[k]
     return s[::-1]
 
+
 def lis(seq):
     """Returns the Longest Increasing Subsequence in the Given List/Array"""
     return [seq[i] for i in arglis(seq)]
