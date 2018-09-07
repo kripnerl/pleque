@@ -100,6 +100,7 @@ if __name__ == '__main__':
     assert coord is coord2
 
     coord = eq.coordinates(psi_n = np.linspace(0, 1.2, 10))
+    # todo: there are 2 cm! and it is wrong! 
     print('r_mid = {}'.format(coord.r_mid))
 
     # 3d case:

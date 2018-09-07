@@ -698,20 +698,21 @@ class Equilibrium(object):
         from scipy.interpolate import UnivariateSpline
 
         r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
-        psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid))
-        diff_psi = np.diff(psi_mid)
+        psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
 
-        # todo: add elegance here
+        from .utils.tools import arglis
+
         if self._psi_axis < self._psi_lcfs:
             # psi increasing:
-            pass
+            idxs = arglis(psi_mid)
         else:
             # psi decreasing
+            idxs = arglis(psi_mid[::-1])
+            idxs = idxs[::-1]
 
-        try:
-            self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
-        except ValueError:
-            self._rmid_spl = UnivariateSpline(psi_mid[::-1], r_mid[::-1], k=3, s=1)
+        psi_mid = psi_mid[idxs]
+        r_mid = r_mid[idxs]
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=1)
 
 
 class Coordinates(object):
@@ -787,7 +788,7 @@ class Coordinates(object):
 
     @property
     def r_mid(self):
-        return self._eq._rmid_spl(self.psi_n)
+        return self._eq._rmid_spl(self.psi)
 
     @property
     def phi(self):
