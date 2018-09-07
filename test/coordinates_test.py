@@ -6,9 +6,23 @@ from test.testing_utils import load_testing_equilibrium
 eq = load_testing_equilibrium()
 
 
+def test_coords_3d(*coordinates, coord_type=None, **coords):
+    print('--------')
+    xy = eq.coordinates(*coordinates, coord_type=coord_type, grid=False, **coords)
+    print('dim = {}'.format(xy.dim))
+    print('_x1_input = {}'.format(xy._x1_input))
+    print('_x2_input = {}'.format(xy._x2_input))
+    print('_coord_type_input = {}'.format(xy._coord_type_input))
+    assert xy.dim == 2
+    assert isinstance(xy._x1_input, np.ndarray)
+    assert isinstance(xy._x2_input, np.ndarray)
+    print('--------')
+    print()
+    return xy
+
+
 def test_coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **coords):
     print('--------')
-    # xy = Coordinates(eq, *coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
     xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
     print('dim = {}'.format(xy.dim))
     print('_x1_input = {}'.format(xy._x1_input))
@@ -23,7 +37,6 @@ def test_coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **
 
 
 def test_coords_1d(*coordinates, psi_n=None, coord_type=None, grid=False, **coords):
-    # xy = Coordinates(eq, *coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
     xy = eq.coordinates(*coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
     print('--------')
