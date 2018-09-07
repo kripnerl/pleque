@@ -927,7 +927,7 @@ class Coordinates(object):
 
             self._coord_type_input = self._verify_coord_type(coord_type)
 
-        self._covert_to_default_coord_type()
+        self._convert_to_default_coord_type()
 
         if self.dim != 2 and self.grid:
             print('WARNING: grid == True is not allowed for dim != 2 (yet).'

@@ -7,26 +7,16 @@ eq = load_testing_equilibrium()
 
 
 def test_coords_3d(*coordinates, coord_type=None, **coords):
-    print('--------')
     xy = eq.coordinates(*coordinates, coord_type=coord_type, grid=False, **coords)
-    print('dim = {}'.format(xy.dim))
-    print('_x1_input = {}'.format(xy._x1_input))
-    print('_x2_input = {}'.format(xy._x2_input))
-    print('_coord_type_input = {}'.format(xy._coord_type_input))
-    assert xy.dim == 2
+    assert xy.dim == 3
     assert isinstance(xy._x1_input, np.ndarray)
     assert isinstance(xy._x2_input, np.ndarray)
-    print('--------')
-    print()
     return xy
 
 
 def test_coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **coords):
     print('--------')
     xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-    print('dim = {}'.format(xy.dim))
-    print('_x1_input = {}'.format(xy._x1_input))
-    print('_x2_input = {}'.format(xy._x2_input))
     print('_coord_type_input = {}'.format(xy._coord_type_input))
     assert xy.dim == 2
     assert isinstance(xy._x1_input, np.ndarray)
@@ -108,6 +98,13 @@ if __name__ == '__main__':
 
     coord2 = eq.coordinates(coord)
     assert coord is coord2
+
+    # 3d case:
+    coord = test_coords_3d(np.linspace(1, 5, 11), np.zeros(11), np.zeros(11))
+    test_arrays(coord.X, coord.R)
+
+    coord = test_coords_3d(np.linspace(1, 5, 11), np.zeros(11), np.ones(11)*np.pi/2)
+    test_arrays(coord.Y, coord.R)
 
     # 0d case
     xy = Coordinates(eq)
