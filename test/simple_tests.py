@@ -57,8 +57,8 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     print(eq_gfile.keys())
 
     psin_axis = np.linspace(0, 1, 100)
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
     psi = eq.psi(R=r, Z=z)
 
     plt.figure()
@@ -116,8 +116,8 @@ def plot_extremes(eq: Equilibrium, ax=None):
 def plot_psi_derivatives(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
 
     psi = eq.psi(R=r, Z=z)
 
@@ -180,8 +180,8 @@ def plot_psi_derivatives(eq: Equilibrium):
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
 
     psi = eq.psi(R=r, Z=z)
 

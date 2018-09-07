@@ -12,24 +12,26 @@ class FluxFuncs:
     def __init__(self, equi):
         # _flux_funcs = ['psi', 'rho']
         _flux_funcs = ['psi_n', 'psi', 'rho']
+        _coordinates_funcs = ['coordinates']
         self._equi = equi
         # self.__dict__.update(_flux_funcs)  # at class level?
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
+        for fn in _coordinates_funcs:
+            setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
-                      **coords):
+
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
         from scipy.interpolate import UnivariateSpline
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z)
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
         # interp = interpolate(psi_n, data)
-        interp = UnivariateSpline(psi_n, data, s=0, k=3)
+        interp = UnivariateSpline(coord.psi_n, data, s=0, k=3)
         setattr(self, '_interp_' + name, interp)
 
-        def new_func(self: Equilibrium, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
-            if R is not None and Z is not None:
-                psi_n = self.psi_n(R=R, Z=Z)
-            return interp(psi_n)
+        def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
+            coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
+            return interp(coord.psi_n)
 
         setattr(type(self), name, new_func)
 
@@ -54,7 +56,7 @@ class Equilibrium(object):
                  psi_lcfs=None,
                  x_points=None,
                  strike_points=None,
-                 spline_order=5,
+                 spline_order=3,
                  spline_smooth=0,
                  cocos=-1,
                  verbose=True
@@ -93,10 +95,10 @@ class Equilibrium(object):
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
 
-        self.r_min = np.min(r)
-        self.r_max = np.max(r)
-        self.z_min = np.min(z)
-        self.z_max = np.max(z)
+        self.R_min = np.min(r)
+        self.R_max = np.max(r)
+        self.Z_min = np.min(z)
+        self.Z_max = np.max(z)
 
         if verbose:
             print('--- Generate 2D spline ---')
@@ -125,9 +127,18 @@ class Equilibrium(object):
 
         if verbose:
             print('--- Generate 1D splines ---')
-        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
+
+        if verbose:
+            print('--- Mapping midplane to psi_n ---')
+
+        self.__map_midplane2psi__()
+
+        if verbose:
+            print('--- Mapping pressure and f func to psi_n ---')
+
+        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=0)
         self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
         self._dp_dpsin_spl = self._pressure_spl.derivative()
 
         self.fluxfuncs.add_flux_func('fpol', fpol, psi_n=psi_n)
@@ -544,8 +555,8 @@ class Equilibrium(object):
         from scipy.optimize import minimize
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 300)
-        zs = np.linspace(self.z_min, self.z_max, 400)
+        rs = np.linspace(self.R_min, self.R_max, 300)
+        zs = np.linspace(self.Z_min, self.Z_max, 400)
 
         psi = self._spl_psi(rs, zs)
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
@@ -577,10 +588,10 @@ class Equilibrium(object):
                     x0 = np.array((r_ex, z_ex))
 
                     # minimize in the vicinity:
-                    bounds = ((np.max((self.r_min, r_ex - 0.1)),
-                               np.min((self.r_max, r_ex + 0.1))),
-                              (np.max((self.z_min, z_ex - 0.1)),
-                               np.min((self.z_max, z_ex + 0.1))))
+                    bounds = ((np.max((self.R_min, r_ex - 0.1)),
+                               np.min((self.R_max, r_ex + 0.1))),
+                              (np.max((self.Z_min, z_ex - 0.1)),
+                               np.min((self.Z_max, z_ex + 0.1))))
 
                     res = minimize(psi_xysq_func, x0, bounds=bounds)
                     # Remove bad candidates for extreme
@@ -607,8 +618,8 @@ class Equilibrium(object):
         # todo: After beeing function written, check whether are points inside limiter
 
         # First identify the o-point nearest the operation range as center of plasma
-        r_centr = (self.r_min + self.r_max) / 2
-        z_centr = (self.z_min + self.z_max) / 2
+        r_centr = (self.R_min + self.R_max) / 2
+        z_centr = (self.Z_min + self.Z_max) / 2
         o_points = np.array(o_points)
         x_points = np.array(x_points)
 
@@ -683,6 +694,26 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
+    def __map_midplane2psi__(self):
+        from scipy.interpolate import UnivariateSpline
+
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
+
+        from .utils.tools import arglis
+
+        if self._psi_axis < self._psi_lcfs:
+            # psi increasing:
+            idxs = arglis(psi_mid)
+        else:
+            # psi decreasing
+            idxs = arglis(psi_mid[::-1])
+            idxs = idxs[::-1]
+
+        psi_mid = psi_mid[idxs]
+        r_mid = r_mid[idxs]
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+
 
 class Coordinates(object):
 
@@ -720,7 +751,6 @@ class Coordinates(object):
     @property
     def Z(self):
         if self.dim >= 2:
-            # todo
             return self.x2
 
     @property
@@ -756,16 +786,22 @@ class Coordinates(object):
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
 
     @property
+    def r_mid(self):
+        return self._eq._rmid_spl(self.psi)
+
+    @property
     def phi(self):
         return self.x3
     
     @property
     def X(self):
-        return self.R * np.cos(self.phi)
+        if self.dim >= 2:
+            return self.R * np.cos(self.phi)
 
     @property
     def Y(self):
-        return self.R * np.sin(self.phi)
+        if self.dim >= 2:
+            return self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
