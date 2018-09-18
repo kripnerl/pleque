@@ -12,24 +12,26 @@ class FluxFuncs:
     def __init__(self, equi):
         # _flux_funcs = ['psi', 'rho']
         _flux_funcs = ['psi_n', 'psi', 'rho']
+        _coordinates_funcs = ['coordinates']
         self._equi = equi
         # self.__dict__.update(_flux_funcs)  # at class level?
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
+        for fn in _coordinates_funcs:
+            setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
 
-    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None,
-                      **coords):
+
+    def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
         from scipy.interpolate import UnivariateSpline
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z)
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
         # interp = interpolate(psi_n, data)
-        interp = UnivariateSpline(psi_n, data, s=0, k=3)
+        interp = UnivariateSpline(coord.psi_n, data, s=0, k=3)
         setattr(self, '_interp_' + name, interp)
 
-        def new_func(self: Equilibrium, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
-            if R is not None and Z is not None:
-                psi_n = self.psi_n(R=R, Z=Z)
-            return interp(psi_n)
+        def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
+            coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
+            return interp(coord.psi_n)
 
         setattr(type(self), name, new_func)
 
@@ -54,7 +56,7 @@ class Equilibrium(object):
                  psi_lcfs=None,
                  x_points=None,
                  strike_points=None,
-                 spline_order=5,
+                 spline_order=3,
                  spline_smooth=0,
                  cocos=-1,
                  verbose=True
@@ -93,10 +95,10 @@ class Equilibrium(object):
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
 
-        self.r_min = np.min(r)
-        self.r_max = np.max(r)
-        self.z_min = np.min(z)
-        self.z_max = np.max(z)
+        self.R_min = np.min(r)
+        self.R_max = np.max(r)
+        self.Z_min = np.min(z)
+        self.Z_max = np.max(z)
 
         if verbose:
             print('--- Generate 2D spline ---')
@@ -125,9 +127,18 @@ class Equilibrium(object):
 
         if verbose:
             print('--- Generate 1D splines ---')
-        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=1)
+
+        if verbose:
+            print('--- Mapping midplane to psi_n ---')
+
+        self.__map_midplane2psi__()
+
+        if verbose:
+            print('--- Mapping pressure and f func to psi_n ---')
+
+        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=0)
         self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=1)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
         self._dp_dpsin_spl = self._pressure_spl.derivative()
 
         self.fluxfuncs.add_flux_func('fpol', fpol, psi_n=psi_n)
@@ -544,8 +555,8 @@ class Equilibrium(object):
         from scipy.optimize import minimize
 
         # for sure not the best algorithm ever...
-        rs = np.linspace(self.r_min, self.r_max, 300)
-        zs = np.linspace(self.z_min, self.z_max, 400)
+        rs = np.linspace(self.R_min, self.R_max, 300)
+        zs = np.linspace(self.Z_min, self.Z_max, 400)
 
         psi = self._spl_psi(rs, zs)
         psi_x = self._spl_psi(rs, zs, dx=1, dy=0)
@@ -577,10 +588,10 @@ class Equilibrium(object):
                     x0 = np.array((r_ex, z_ex))
 
                     # minimize in the vicinity:
-                    bounds = ((np.max((self.r_min, r_ex - 0.1)),
-                               np.min((self.r_max, r_ex + 0.1))),
-                              (np.max((self.z_min, z_ex - 0.1)),
-                               np.min((self.z_max, z_ex + 0.1))))
+                    bounds = ((np.max((self.R_min, r_ex - 0.1)),
+                               np.min((self.R_max, r_ex + 0.1))),
+                              (np.max((self.Z_min, z_ex - 0.1)),
+                               np.min((self.Z_max, z_ex + 0.1))))
 
                     res = minimize(psi_xysq_func, x0, bounds=bounds)
                     # Remove bad candidates for extreme
@@ -607,8 +618,8 @@ class Equilibrium(object):
         # todo: After beeing function written, check whether are points inside limiter
 
         # First identify the o-point nearest the operation range as center of plasma
-        r_centr = (self.r_min + self.r_max) / 2
-        z_centr = (self.z_min + self.z_max) / 2
+        r_centr = (self.R_min + self.R_max) / 2
+        z_centr = (self.Z_min + self.Z_max) / 2
         o_points = np.array(o_points)
         x_points = np.array(x_points)
 
@@ -683,14 +694,35 @@ class Equilibrium(object):
     def fluxfuncs(self):
         return FluxFuncs(self)  # filters out methods from self
 
+    def __map_midplane2psi__(self):
+        from scipy.interpolate import UnivariateSpline
+
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
+
+        from .utils.tools import arglis
+
+        if self._psi_axis < self._psi_lcfs:
+            # psi increasing:
+            idxs = arglis(psi_mid)
+        else:
+            # psi decreasing
+            idxs = arglis(psi_mid[::-1])
+            idxs = idxs[::-1]
+
+        psi_mid = psi_mid[idxs]
+        r_mid = r_mid[idxs]
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+
 
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         self._eq = equilibrium
-        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta'}
+        self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
         self._valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
+        self._valid_coordinates_3d = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
         self.dim = -1  # init only
         self.grid = grid
 
@@ -713,20 +745,19 @@ class Coordinates(object):
 
     @property
     def R(self):
-        if self.dim == 2:
+        if self.dim >= 2:
             return self.x1
 
     @property
     def Z(self):
-        if self.dim == 2:
-            # todo
+        if self.dim >= 2:
             return self.x2
 
     @property
     def psi(self):
         if self.dim == 1:
             return self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
-        elif self.dim == 2:
+        elif self.dim >= 2:
             psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
             if self.grid:
                 return psi.T
@@ -737,7 +768,7 @@ class Coordinates(object):
     def psi_n(self):
         if self.dim == 1:
             return self.x1
-        elif self.dim == 2:
+        elif self.dim >= 2:
             return (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
 
     @property
@@ -753,6 +784,24 @@ class Coordinates(object):
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
         return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+
+    @property
+    def r_mid(self):
+        return self._eq._rmid_spl(self.psi)
+
+    @property
+    def phi(self):
+        return self.x3
+    
+    @property
+    def X(self):
+        if self.dim >= 2:
+            return self.R * np.cos(self.phi)
+
+    @property
+    def Y(self):
+        if self.dim >= 2:
+            return self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
@@ -780,7 +829,7 @@ class Coordinates(object):
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
         elif self.dim == 1:
-            return self.x1
+            return self.x1 
         elif self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
@@ -790,15 +839,9 @@ class Coordinates(object):
                 # return np.array([x1, x2]).T
             else:
                 return np.array([self.x1, self.x2]).T
-
-    def getAs(self, coord_type=None):
-        if self.dim == 0:
-            return np.array(())
-        coord_type_ = self._verify_coord_type(coord_type)
-
-        if self.dim < len(coord_type):
-            raise ValueError('Can not return 2d from 1d data.')
-        raise ValueError('Not implemented yet.')
+        elif self.dim == 3:
+            # todo: replace this by split method
+            return np.array([self.x1, self.x2, self.x3]).T
 
     def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
@@ -839,6 +882,13 @@ class Coordinates(object):
                         raise ValueError('All coordinates should contain same dimension.')
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
+            elif self.dim == 3:
+                if tuple(xy_name) in self._valid_coordinates_3d:
+                    # todo: implement various order of coordinates
+                    self._x1_input = xy[0]
+                    self._x2_input = xy[1]
+                    self._x3_input = xy[2]
+                    coord_type_ = tuple(xy_name)
 
             else:
                 # self._incompatible_dimension_error(self.dim)
@@ -869,6 +919,10 @@ class Coordinates(object):
                     elif self.dim == 2:
                         self._x1_input = xy[:, 0]
                         self._x2_input = xy[:, 1]
+                    elif self.dim == 3:
+                        self._x1_input = xy[:, 0]
+                        self._x2_input = xy[:, 1]
+                        self._x3_input = xy[:, 2]
                     else:
                         self._incompatible_dimension_error(self.dim)
                 else:
@@ -887,12 +941,34 @@ class Coordinates(object):
                     x2 = np.array(x2, ndmin=1)
                 self._x1_input = x1
                 self._x2_input = x2
+            elif len(coordinates) == 3:
+                self.dim = 3
+                x1 = coordinates[0]
+                x2 = coordinates[1]
+                x3 = coordinates[2]
+
+                # assume _x1_input and _x2_input to be arrays of size (N)
+                if not isinstance(x1, np.ndarray):
+                    x1 = np.array(x1, ndmin=1)
+                if not isinstance(x2, np.ndarray):
+                    x2 = np.array(x2, ndmin=1)
+                if not isinstance(x3, np.ndarray):
+                    x3 = np.array(x3, ndmin=1)
+                self._x1_input = x1
+                self._x2_input = x2
+                self._x3_input = x3
 
             else:
                 self._incompatible_dimension_error(len(coordinates))
 
             self._coord_type_input = self._verify_coord_type(coord_type)
+
         self._convert_to_default_coord_type()
+
+        if self.dim != 2 and self.grid:
+            print('WARNING: grid == True is not allowed for dim != 2 (yet).'
+                  'Turning grid = False.')
+            self.grid = False
 
     def _verify_coord_type(self, coord_type):
         if isinstance(coord_type, str):
@@ -924,6 +1000,18 @@ class Coordinates(object):
                       "{} is not allowed \n"
                       "Force set _coord_type_input = ('R', 'Z')"
                       .format(tuple(coord_type)))
+        elif self.dim == 3:
+            if coord_type is None:
+                ret_coord_type = ('R', 'Z', 'phi')
+            elif tuple(coord_type) in self._valid_coordinates_3d:
+                ret_coord_type = tuple(coord_type)
+            else:
+                ret_coord_type = ('R', 'Z', 'phi')
+                print("WARNING: _coord_type_input is not correct. \n"
+                      "{} is not allowed \n"
+                      "Force set _coord_type_input = ('R', 'Z', 'phi')"
+                      .format(tuple(coord_type)))
+
         else:
             raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
                              .format(self.dim))
@@ -960,3 +1048,17 @@ class Coordinates(object):
                 r_mgax, z_mgax = self._eq._mg_axis
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
+        elif self.dim == 3:
+            # only (R, Z) coordinates are implemented now
+            if self._coord_type_input == ('R', 'Z', 'phi'):
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+                self.x3 = self._x3_input
+            elif self._coord_type_input == ('X', 'Y', 'Z'):
+                # todo: COCOS
+                # R(1)**2 = X(1)**2 + Y(2)**2
+                # Z(2) = Z(3)
+                # phi(3) = atan2(Y(2), X(1)]
+                self.x1 = np.sqrt(self._x1_input**2 + self._x2_input**2)
+                self.x2 = self._x3_input
+                self.x3 = np.arctan2(self._x2_input, self._x1_input)

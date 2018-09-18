@@ -75,7 +75,7 @@ def _readeqdsk(filepath, order="F"):
     # attribute names and positions
     attrs = ["rdim", "zdim", "rcentr", "rleft", "zmid", "rmagaxis", "zmagaxis", "psimagaxis",
              "psibdry", "bcentr", "cpasma", "psimagaxis", "rmagaxis", "zmagaxis", "psibdry"]
-    attrs_pos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 10, 11, 13, 15, 17]
+    attrs_pos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17]
 
     # get the attributes
     for i in range(len(attrs)):
