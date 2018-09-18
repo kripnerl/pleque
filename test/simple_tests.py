@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from test.testing_utils import load_testing_equilibrium
+from test.testing_utils import load_testing_equilibrium, get_test_equilibria
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
@@ -14,8 +14,8 @@ if not modpath in sys.path:  # not to stack same paths continuously if it is alr
 
 # noinspection PyUnreachableCode
 def load_gfile(g_file):
-    from tokamak.formats import geqdsk
-    eq_gfile = geqdsk.read(g_file)
+    from pleque.io._geqdsk import read
+    eq_gfile = read(g_file)
 
     psi = eq_gfile['psi']
     r = eq_gfile['r'][:, 0]
@@ -65,7 +65,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     plt.subplot(121)
     ax = plt.gca()
 
-    ax.contour(r, z, psi.T, 30)
+    ax.contour(r, z, psi, 30)
     ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -284,50 +284,15 @@ def plot_overview(eq: Equilibrium):
 def main():
     import matplotlib.pyplot as plt
 
-    ## Here is only some testing equilibirum prepared:
-
-    # r = np.linspace(0.5, 2.5, 100)
-    # z = np.linspace(-1.5, 1.5, 200)
-    #
-    # r_grid, z_grid = np.meshgrid(r, z)
-    # el_r = 1 / 2
-    # el_z = 1 / 1
-    #
-    # def foofunc(r, z, par_r, par_z): return np.exp(-(r / par_r) ** 2 - (z / par_z) ** 2)
-    #
-    # # simple circle equilibrium
-    # psi_circle = foofunc(r_grid - 1.5, z_grid, el_r, el_z)
-    # # test x-point equilibrium done from 'three hills':
-    # psi_xpoint = 0.5 * foofunc(r_grid - 1.5, z_grid - 1.5, el_r, el_z * .5) + \
-    #              foofunc(r_grid - 1.5, z_grid + 1.5, el_r, el_z * .5) + \
-    #              psi_circle
-    #
-    # # psi = psi_circle.copy()
-    # psi = psi_xpoint.copy()
-    #
-    # # eq_ds = Dataset({'psi': (['Z', 'R'], psi)},
-    # #                 coords={'R': r,
-    # #                         'Z': z})
-
-    ## Load the equilibrium directly from gfile
-
-    # # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
-    # gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    # eq_ds = load_gfile(gfile)
-    #
-    # print(eq_ds)
-    # # eq = Equilibrium(eq_ds)
-
-    ## Load the equilibrium from fiesta generated g-filem using module routine
-
-    gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    eq = load_testing_equilibrium(1)
+    test_case = 0
+    gfile = get_test_equilibria()[test_case]
+    eq = load_testing_equilibrium(test_case)
 
     ax = plot_overview(eq)
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
-    # test_qprofiles(gfile, eq)
+    test_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
