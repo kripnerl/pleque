@@ -504,7 +504,7 @@ class Equilibrium(object):
 
     @property
     def magnetic_axis(self):
-        return self.coordinates(self._mg_axis)
+        return self.coordinates(self._mg_axis[0], self._mg_axis[1])
 
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
