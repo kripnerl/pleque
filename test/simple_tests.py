@@ -46,10 +46,12 @@ def load_gfile(g_file):
 # todo: add plotting function for various derivatives of psi
 
 def test_qprofiles(g_file: str, eq: Equilibrium):
-    from tokamak.formats import geqdsk
+    # from tokamak.formats import geqdsk
+    from pleque.io._geqdsk import read
     import matplotlib.pyplot as plt
 
-    eq_gfile = geqdsk.read(g_file)
+    with open(g_file, 'r') as f:
+        eq_gfile = read(f)
 
     qpsi = eq_gfile['qpsi']
     psi_n = np.linspace(0, 1, len(qpsi))
