@@ -14,6 +14,7 @@ class FluxFuncs:
         _flux_funcs = ['psi_n', 'psi', 'rho']
         _coordinates_funcs = ['coordinates']
         self._equi = equi
+        self._func_names = []
         # self.__dict__.update(_flux_funcs)  # at class level?
         for fn in _flux_funcs:
             setattr(self, fn, getattr(self._equi, fn))  # methods are bound to _equi
@@ -34,6 +35,9 @@ class FluxFuncs:
         psi_n, idxs = np.unique(coord.psi_n, return_index=True)
         data = data[idxs]
 
+        #add flux function name to the list
+        self._func_names.append(name)
+
         interp = UnivariateSpline(psi_n, data, s=spline_smooth, k=spline_order)
         setattr(self, '_interp_' + name, interp)
 
@@ -43,6 +47,11 @@ class FluxFuncs:
 
         setattr(type(self), name, new_func)
 
+    def __getitem__(self, item):
+        return getattr(self,item)
+
+    def keys(self):
+        return self._func_names
 
 class Equilibrium(object):
     """
