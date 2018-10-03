@@ -65,7 +65,7 @@ class Equilibrium(object):
     #              X_points=None: Iterable[(float, float)],
     #              strike_points=None: Iterable[(float, float)],
     #              spline_order=5: int,
-    #              cocos=13: int,
+    #              cocos=3: int,
     #             ):
     def __init__(self,
                  basedata: xarray.Dataset,
@@ -75,7 +75,7 @@ class Equilibrium(object):
                  strike_points=None,
                  spline_order=3,
                  spline_smooth=0,
-                 cocos=-1,
+                 cocos=3,
                  verbose=True
                  ):
         """
@@ -83,11 +83,13 @@ class Equilibrium(object):
         package.
 
         Optional arguments may help the initialization.
-    
+
+
         Arguments
         ---------
         basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
         first_wall: required for initialization in case of limiter configuration
+        cocos: At the moment module assume cocos to be 3 (no other option).
         """
         from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 
