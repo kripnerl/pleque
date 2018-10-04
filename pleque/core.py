@@ -260,21 +260,22 @@ class Equilibrium(object):
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
         closed are possible.
+
         :param R:
         :param Z:
         :param psi_n:
         :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
-        If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
-        Coordinates.grid must be False.
-        :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-        R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-        resolutions or dimension sizes can be required by passing an iterable of size 2
+                            If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
+                            Coordinates.grid must be False.
+        :param resolution:  Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
+                            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+                            resolutions or dimension sizes can be required by passing an iterable of size 2
         :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
-        If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
-        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-        same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-        achieved by passing an iterable of shape 2.
+                    If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+                    values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+                    same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+                    achieved by passing an iterable of shape 2.
         :param closed: Are we looking for a closed surface. This parameter is ignored of inlcfs is True.
         :param inlcfs: If True only the surface inside the last closed flux surface is returned.
         :return: list of FluxSurface objects
@@ -330,6 +331,7 @@ class Equilibrium(object):
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
+
         :return: list of coordinates of contours on a requested level
         """
         from pleque.utils.surfaces import find_contour
@@ -349,16 +351,17 @@ class Equilibrium(object):
     def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
+
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-        R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-        resolutions or dimension sizes can be required by passing an iterable of size 2.
-        If None, default grid is returned.
+                           R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+                           resolutions or dimension sizes can be required by passing an iterable of size 2.
+                           If None, default grid is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
-        of the resolution.
-        If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
-        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-        same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-        achieved by passing an iterable of shape 2.
+                    of the resolution.
+                    If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+                    values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+                    same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+                    achieved by passing an iterable of shape 2.
         :return: Instance of `Coordinates` class with grid data
         """
         if resolution is None:
