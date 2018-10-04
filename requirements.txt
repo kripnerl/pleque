@@ -1,0 +1,9 @@
+python=3.5
+numpy
+ipython
+scipy
+notebook
+matplotlib
+shapely
+scikit-image
+xarray
