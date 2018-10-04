@@ -257,18 +257,17 @@ class Equilibrium(object):
         If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
         Coordinates.grid must be False.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-         R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-          resolutions or dimension sizes can be required by passing an iterable of size 2
+        R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+        resolutions or dimension sizes can be required by passing an iterable of size 2
         :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
-         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+        If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
         values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-         achieved by passing an iterable of shape 2.
+        same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+        achieved by passing an iterable of shape 2.
         :param closed: Are we looking for a closed surface. This parameter is ignored of inlcfs is True.
         :param inlcfs: If True only the surface inside the last closed flux surface is returned.
         :return: list of FluxSurface objects
         """
-
         from pleque.fluxsurface import FluxSurface
 
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
@@ -340,15 +339,15 @@ class Equilibrium(object):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
         :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-         R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-          resolutions or dimension sizes can be required by passing an iterable of size 2.
-          If None, default grid is returned.
+        R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+        resolutions or dimension sizes can be required by passing an iterable of size 2.
+        If None, default grid is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
-            of the resolution.
-         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+        of the resolution.
+        If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
         values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-         achieved by passing an iterable of shape 2.
+        same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+        achieved by passing an iterable of shape 2.
         :return: Instance of `Coordinates` class with grid data
         """
         if resolution is None:
