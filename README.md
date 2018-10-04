@@ -67,7 +67,7 @@ Add additional notes about how to deploy this on a live system
 
 ## Version
 
-0.0
+0.0.1
 
 
 ## Authors
