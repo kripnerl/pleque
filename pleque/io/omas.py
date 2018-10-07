@@ -3,7 +3,7 @@ from pleque.core import Coordinates, Equilibrium
 from test.testing_utils import load_testing_equilibrium
 import omas
 import numpy as np
-def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None):
+def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None, time = np.array(0,ndmin=1)):
     """
     Function saving contents of equilibrium into the omas data structure.
     :param equilibrium: Equilibrium object
@@ -29,7 +29,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
-    ods["wall"]["time"] = np.array([0],ndmin=1)
+    ods["wall"]["time"] = np.array(time, ndmin=1)
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"] = equilibrium.first_wall.R
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"] = equilibrium.first_wall.Z
 
@@ -39,7 +39,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ############################
     #time slices
     ods["equilibrium"]["ids_properties"]["homogeneous_time"] = 1
-    ods["equilibrium"]["time"] = np.array([0],ndmin=1)
+    ods["equilibrium"]["time"] = np.array(time, ndmin=1)
 
     #vacuum
     #todo: add vacuum Btor, not in equilibrium
@@ -61,6 +61,11 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     #1d profiles
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["psi"] = equilibrium.psi(grid_1d)
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["rho_tor"] = equilibrium.tor_flux(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.f'] = equilibrium.fpol(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.pressure'] = equilibrium.pressure(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.f_df_dpsi'] = equilibrium.ffprime(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.dpressure_dpsi'] = equilibrium.pprime(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.q']  =equilibrium.q(grid_1d)
 
     #get surface volumes and areas
     surface_volume = np.zeros_like(grid_1d.psi)
@@ -94,5 +99,15 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim1"] = grid_2d.R
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim2"] = grid_2d.Z
+
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
+
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
+
+    #todo: plasma current is not in equilibrium yet
+    try:
+        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
+    except AttributeError:
+        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = 2e6
 
     return ods
