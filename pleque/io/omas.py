@@ -3,7 +3,7 @@ from pleque.core import Coordinates, Equilibrium
 from test.testing_utils import load_testing_equilibrium
 import omas
 import numpy as np
-def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None):
+def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None, time = np.array(0,ndmin=1)):
     """
     Function saving contents of equilibrium into the omas data structure.
     :param equilibrium: Equilibrium object
@@ -29,7 +29,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
-    ods["wall"]["time"] = np.array([0],ndmin=1)
+    ods["wall"]["time"] = np.array(time, ndmin=1)
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"] = equilibrium.first_wall.R
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"] = equilibrium.first_wall.Z
 
@@ -39,12 +39,12 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ############################
     #time slices
     ods["equilibrium"]["ids_properties"]["homogeneous_time"] = 1
-    ods["equilibrium"]["time"] = np.array([0],ndmin=1)
+    ods["equilibrium"]["time"] = np.array(time, ndmin=1)
 
     #vacuum
     #todo: add vacuum Btor, not in equilibrium
-    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = 5 # vacuum B tor at Rmaj
-    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = 0.89 # vacuum B tor at Rmaj
+    #ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array(B0_tor, ndmin=1) # vacuum B tor at Rmaj
+    #ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = np.array(rmaj, ndmin=1) # vacuum B tor at Rmaj
 
     #plasma boundary (lcfs)
     ods["equilibrium"]["time_slice"][0]["boundary"]["outline"]["r"] = equilibrium.lcfs.R
@@ -92,5 +92,9 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim1"] = grid_2d.R
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim2"] = grid_2d.Z
+
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
+
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
 
     return ods
