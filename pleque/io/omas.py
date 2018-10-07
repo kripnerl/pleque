@@ -61,6 +61,11 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     #1d profiles
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["psi"] = equilibrium.psi(grid_1d)
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["rho_tor"] = equilibrium.tor_flux(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.f'] = equilibrium.fpol(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.pressure'] = equilibrium.pressure(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.f_df_dpsi'] = equilibrium.ffprime(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.dpressure_dpsi'] = equilibrium.pprime(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.q']  =equilibrium.q(grid_1d)
 
     #get surface volumes and areas
     surface_volume = np.zeros_like(grid_1d.psi)
@@ -96,5 +101,11 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
 
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
+
+    #todo: plasma current is not in equilibrium yet
+    try:
+        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
+    except AttributeError:
+        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = 2e6
 
     return ods
