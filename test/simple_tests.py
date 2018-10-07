@@ -46,10 +46,12 @@ def load_gfile(g_file):
 # todo: add plotting function for various derivatives of psi
 
 def test_qprofiles(g_file: str, eq: Equilibrium):
-    from tokamak.formats import geqdsk
+    # from tokamak.formats import geqdsk
+    from pleque.io._geqdsk import read
     import matplotlib.pyplot as plt
 
-    eq_gfile = geqdsk.read(g_file)
+    with open(g_file, 'r') as f:
+        eq_gfile = read(f)
 
     qpsi = eq_gfile['qpsi']
     psi_n = np.linspace(0, 1, len(qpsi))
@@ -65,7 +67,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     plt.subplot(121)
     ax = plt.gca()
 
-    ax.contour(r, z, psi, 30)
+    cs = ax.contour(r, z, psi, 30)
     ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -76,27 +78,39 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_ylabel('Z [m]')
     ax.set_aspect('equal')
     ax.set_title(r'$\psi$')
+    plt.colorbar(cs, ax=ax)
 
     psi_mod = eq.psi(psi_n=psin_axis)
     tor_flux = eq.tor_flux(psi_n=psin_axis)
     q_as_grad = np.gradient(tor_flux, psi_mod)
 
-    plt.subplot(222)
+    plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, qpsi, 'x', label='g-file data')
+    ax.plot(psi_n, qpsi * -1, 'x', label='g-file (-1)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
-    ax.plot(psin_axis, q_as_grad, '--', label='Equilibrium data')
+    ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
 
     ax.legend()
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r'$q$')
 
-    plt.subplot(224)
+    plt.subplot(324)
     ax = plt.gca()
-    ax.plot(psi_mod, tor_flux, label='Toroidal flux')
-    ax.set_xlabel(r'$\psi$')
-    ax.set_ylabel(r'$\Phi$')
+    ax.plot(tor_flux, psi_mod, label='Toroidal flux')
+    ax.set_ylabel(r'$\psi$')
+    ax.set_xlabel(r'$\Phi$')
+
+    plt.subplot(326)
+    ax = plt.gca()
+    ax.plot(psi_n, eq.pprime(psi_n=psi_n)/1e3)
+    ax.set_xlabel(r'$\psi_\mathrm{N}$')
+    ax.set_ylabel(r"$p' (\times 10^3)$")
+    ax2 = ax.twinx()
+    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C1')
+    ax2.set_ylabel(r"$ff'$")
+
+
 
 
 def plot_extremes(eq: Equilibrium, ax=None):
