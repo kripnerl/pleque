@@ -348,6 +348,17 @@ class Equilibrium(object):
 
         return contour
 
+    def _plot_overview(self):
+        """
+        Simple routine for plot of plasma overview
+        :return:
+        """
+        from pleque.utils.plotting import  plot_equilibrium
+        import  matplotlib.pyplot as plt
+        plt.figure()
+        plot_equilibrium(self)
+
+
     def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
@@ -673,7 +684,8 @@ class Equilibrium(object):
             psi_diff[i] = np.abs(psi_xp - self._psi_axis)
 
         xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
-        xp_dist = (xp_dist - np.min(xp_dist)) / (np.max(xp_dist) - np.min(xp_dist))
+        #xp_dist = (xp_dist - np.min(xp_dist)) / (np.max(xp_dist) - np.min(xp_dist))
+        xp_dist = (xp_dist) / (np.max(xp_dist) - np.min(xp_dist))
 
         # idx = np.argmin(psi_diff)
         sortidx = np.argsort(psi_diff * xp_dist)
