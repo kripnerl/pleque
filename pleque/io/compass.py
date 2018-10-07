@@ -23,7 +23,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     # If there are some limiter data. Use them as and limiter.
     if 'r_lim' in ds and 'z_lim' in ds and ds.r_lim.size > 3 and first_wall is None:
-        first_wall = np.stack(ds.r_lim.data, ds.z_lim.data)
+        first_wall = np.stack((ds.r_lim.data, ds.z_lim.data)).T
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
@@ -46,6 +46,8 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
+    eq.Ip = ds.attrs['cpasma'] 
+
 
     # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
