@@ -47,8 +47,8 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
     #vacuum
     #todo: add vacuum Btor, not in equilibrium
-    #ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array(B0_tor, ndmin=1) # vacuum B tor at Rmaj
-    #ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = np.array(rmaj, ndmin=1) # vacuum B tor at Rmaj
+    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array([5]) # vacuum B tor at Rmaj
+    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = 0.89 # vacuum B tor at Rmaj
 
     #time slice time
     ods["equilibrium"]["time_slice"][0]["time"] = time
@@ -88,7 +88,9 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
             from pleque.fluxsurface import FluxSurface
             surface = [FluxSurface(equilibrium.lcfs)]
 
-        if len(surface) > 0:
+        # todo: really 0 if open?
+        # todo: fix this 'surface[0].closed' ... maybe calculate it from boundary
+        if len(surface) > 0 and surface[0].closed:
             surface_volume[i] = surface[0].volume
             surface_area[i] = surface[0].area
         else:
