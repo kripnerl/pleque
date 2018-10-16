@@ -107,9 +107,8 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim1"] = grid_2d.R
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim2"] = grid_2d.Z
 
-    # todo: removed .T to be able to load it in omfit (?! findout what is correct ?!)
-    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d)
-    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d)
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
+    ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
 
     #todo: plasma current is not in equilibrium yet
     try:
