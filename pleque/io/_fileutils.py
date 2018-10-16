@@ -57,6 +57,7 @@ def write_1d(val, out):
     """
     Writes a 1D variable val to the file handle out
     """
+    out.newline()
     for i in range(len(val)):
         out.write(val[i])
 
@@ -66,6 +67,7 @@ def write_2d(val, out):
     Writes a 2D array. Note that this transposes
     the array, looping over the first index fastest
     """
+    out.newline()
     nx, ny = val.shape
     for y in range(ny):
         for x in range(nx):
