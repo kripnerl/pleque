@@ -35,9 +35,18 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
+    #todo: now assume cocos = 3 => q < 0
+    if np.sum(ds.qpsi.data) > 0:
+        qpsi = ds.qpsi.data * -1
+    else:
+        qpsi = ds.qpsi.data
+
+
+    #eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
+    eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
+    eq.I_plasma = ds.attrs['cpasma']
 
     # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
