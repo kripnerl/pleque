@@ -661,49 +661,78 @@ class Equilibrium(object):
         # identify THE x-point as the x-point nearest in psi value to mg_axis
         # todo: Ensure that the psi function between x-point and o-point is monotonic (!)
 
-        psi_diff = np.zeros(x_points.shape[0])
-        for i in np.arange(x_points.shape[0]):
-            rxp = x_points[i, 0]
-            zxp = x_points[i, 1]
-            psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
-            psi_diff[i] = np.abs(psi_xp - self._psi_axis)
+        # Limiter vs. x-point plasma:
+        self._limiter_plasma = False
+        in_fwmask = np.ones_like(x_points)
+        if self._first_wall is not None:
+            from pleque.utils.surfaces import point_inside_curve
+            in_fwmask = point_inside_curve(x_points, self._first_wall)
+            if not np.any(in_fwmask):
+                self._limiter_plasma = True
 
-        xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
-        xp_dist = (xp_dist - np.min(xp_dist)) / (np.max(xp_dist) - np.min(xp_dist))
+        # for limiter plasma find the touch point:
+        if self._limiter_plasma:
+            psi_fw = self._spl_psi(self._first_wall[:, 0], self._first_wall[:, 1], grid=False)
+            idx_min = np.argmin(np.asb(self._psi_axis - psi_fw))
 
-        # idx = np.argmin(psi_diff)
-        sortidx = np.argsort(psi_diff * xp_dist)
+            # The choosen x-point is the point, where plasma touch the wall (rename it later?(
+            self._x_point = self._first_wall[idx_min]
+            self._psi_lcfs = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
 
-        self._x_point = x_points[sortidx[0]]
-        self._psi_lcfs = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
-        self._x_points = x_points[sortidx]
+            self._x_point2 = None
+            self._psi_xp2 = None
+        else:
+            psi_diff = np.zeros(x_points.shape[0])
+            for i in np.arange(x_points.shape[0]):
+                rxp = x_points[i, 0]
+                zxp = x_points[i, 1]
+                psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
+                if self._psi_lcfs is None:
+                    psi_diff[i] = np.abs(psi_xp - self._psi_axis)
+                else:
+                    psi_diff[i] = np.abs(psi_xp - self._psi_lcfs)
 
-        self._x_point2 = x_points[sortidx[1]]
-        self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1]))
+            # todo: handle self.x_points (probably 1st/2nd separetly), use np.atleast2d()
+            xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
+            xp_dist = xp_dist / (np.max(xp_dist) - np.min(xp_dist))
+
+            # idx = np.argmin(psi_diff)
+            sortidx = np.argsort(psi_diff * xp_dist)
+
+            self._x_point = x_points[sortidx[0]]
+            self._psi_lcfs = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
+            self._x_points = x_points[sortidx]
+
+            self._x_point2 = x_points[sortidx[1]]
+            self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1]))
 
         # get lcfs, for now using matplotlib contour line
 
-        # todo: replace this by Matisek's function
+        # todo: replace this by Matisek's function (!!!)
         plt.figure(1111)
         cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
         paths = cl.collections[0].get_paths()
         v = np.concatenate([p.vertices for p in paths], axis=0)
         plt.close(1111)
 
-        if self._x_point[1] < self._x_point2[1]:
-            if self._verbose:
-                print('>>> lower x-point configuration found')
-            v = v[v[:, 1] > self._x_point[1], :]
-            v = v[v[:, 1] < self._x_point2[1], :]
-
+        if self._limiter_plasma:
+            mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+            v = v[mask_in, :]
         else:
-            if self._verbose:
-                print('>>> upper x-point configuration found')
-            v = v[v[:, 1] < self._x_point[1], :]
-            v = v[v[:, 1] > self._x_point2[1], :]
+            if self._x_point[1] < self._x_point2[1]:
+                if self._verbose:
+                    print('>>> lower x-point configuration found')
+                v = v[v[:, 1] > self._x_point[1], :]
+                v = v[v[:, 1] < self._x_point2[1], :]
 
-        mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
-        v = v[mask_in, :]
+            else:
+                if self._verbose:
+                    print('>>> upper x-point configuration found')
+                v = v[v[:, 1] < self._x_point[1], :]
+                v = v[v[:, 1] > self._x_point2[1], :]
+
+            mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+            v = v[mask_in, :]
 
         self._lcfs = v
 
