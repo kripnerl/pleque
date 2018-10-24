@@ -3,6 +3,7 @@
 [![py3comp](https://img.shields.io/badge/py3-compatible-brightgreen.svg)](https://img.shields.io/badge/py3-compatible-brightgreen.svg)
 
 Python module for the simple manipulation with the tokamak plasma equilibrium.
+For more information see the documentation at https://pleque.readthedocs.io.
 
 ## Getting Started
 
