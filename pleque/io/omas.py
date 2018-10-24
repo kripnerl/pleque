@@ -3,7 +3,7 @@ from pleque.core import Coordinates, Equilibrium
 from test.testing_utils import load_testing_equilibrium
 import omas
 import numpy as np
-def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None, time = np.array(0,ndmin=1)):
+def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None, time = np.array(0,ndmin=1), cocosio=3):
     """
     Function saving contents of equilibrium into the omas data structure.
     :param equilibrium: Equilibrium object
@@ -18,7 +18,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     """
     # todo: Well for now it is just what ASCOT eats, we will extend this when we pile up more usage....
     if ods is None:
-        ods = omas.ODS()
+        ods = omas.ODS(cocosio=cocosio)
 
     if grid_1d is None:
         grid_1d = equilibrium.coordinates(psi_n = np.linspace(0,1,200))
@@ -26,6 +26,9 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     if grid_2d is None:
         grid_2d = equilibrium.grid(resolution=(1e-3, 1e-3), dim="step")
 
+
+    # shot info todo
+    ods["info"]["shot"] = 0
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
@@ -41,10 +44,14 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ods["equilibrium"]["ids_properties"]["homogeneous_time"] = 1
     ods["equilibrium"]["time"] = np.array(time, ndmin=1)
 
+
     #vacuum
     #todo: add vacuum Btor, not in equilibrium
     ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array([5]) # vacuum B tor at Rmaj
     ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = 0.89 # vacuum B tor at Rmaj
+
+    #time slice time
+    ods["equilibrium"]["time_slice"][0]["time"] = time
 
     #plasma boundary (lcfs)
     ods["equilibrium"]["time_slice"][0]["boundary"]["outline"]["r"] = equilibrium.lcfs.R
@@ -101,7 +108,6 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["grid"]["dim2"] = grid_2d.Z
 
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
-
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
 
     #todo: plasma current is not in equilibrium yet

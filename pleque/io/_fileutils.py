@@ -59,7 +59,7 @@ def write_1d(val, out):
     """
     for i in range(len(val)):
         out.write(val[i])
-
+    out.newline()
 
 def write_2d(val, out):
     """
@@ -70,7 +70,7 @@ def write_2d(val, out):
     for y in range(ny):
         for x in range(nx):
             out.write(val[x, y])
-
+    out.newline()
 
 def next_value(fh):
     """

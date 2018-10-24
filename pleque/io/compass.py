@@ -46,7 +46,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
-    eq.Ip = ds.attrs['cpasma'] 
+    eq.I_plasma = ds.attrs['cpasma']
 
 
     # noinspection PyPep8Naming

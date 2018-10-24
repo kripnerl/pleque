@@ -51,8 +51,8 @@ def _readeqdsk(filepath, order="F"):
     with open(filepath, "r") as f:
         data = f.read()
 
-    pattern_floats = re.compile("[+-]{1}[0-9]+\.\d+e{1}[+-]{1}\d+")  # regexp for float trains
-    pattern_headers = re.compile(" +.+\n{1}")  # regexp for headers which contain spaces
+    pattern_floats = re.compile(r"[+-]{1}[0-9]+\.\d+e{1}[+-]{1}\d+")  # regexp for float trains
+    pattern_headers = re.compile(r" +.+\n{1}")  # regexp for headers which contain spaces
 
     headers = list(re.finditer(pattern_headers, data))
 
