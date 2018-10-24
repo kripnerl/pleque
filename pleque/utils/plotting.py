@@ -3,6 +3,21 @@ import numpy as np
 
 from pleque import Equilibrium
 
+def _plot_extremes(o_points, x_points, ax: plt.Axes = None):
+
+    if ax is None:
+        ax = plt.gca()
+
+    ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue')
+    ax.plot(x_points[:, 0], x_points[:, 1], 'x', color='coral')
+
+def plot_extremes(eq: Equilibrium, ax: plt.Axes = None):
+
+    if ax is None:
+        ax = plt.gca()
+
+    _plot_extremes(eq._o_points, eq._x_points, ax=ax)
+
 
 def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     if ax is None:
