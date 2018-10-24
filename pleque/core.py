@@ -347,6 +347,17 @@ class Equilibrium(object):
 
         return contour
 
+    def _plot_overview(self):
+        """
+        Simple routine for plot of plasma overview
+        :return:
+        """
+        from pleque.utils.plotting import  plot_equilibrium
+        import  matplotlib.pyplot as plt
+        plt.figure()
+        plot_equilibrium(self)
+
+
     def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
