@@ -1,7 +1,8 @@
 import numpy as np
 from skimage import measure
 
-def find_contour(array, level, r = None, z = None, fully_connected = "low", positive_orientation = "low"):
+
+def find_contour(array, level, r=None, z=None, fully_connected="low", positive_orientation="low"):
     """
     Finds contour using skimage,measure.find_contours function.
     :param array: 2d map of function values viz. skimage.measure.find_contours
@@ -15,17 +16,17 @@ def find_contour(array, level, r = None, z = None, fully_connected = "low", posi
     :return: list of arrays with contour coordinates
     """
     # calling skimage function to get counturs
-    coords = measure.find_contours(array, level, fully_connected = fully_connected,
+    coords = measure.find_contours(array.T, level, fully_connected=fully_connected,
                                    positive_orientation = positive_orientation)
 
     # if r, z coordinates are passed contour points are recalculated
-    if isinstance(r,np.ndarray) or not r == None:
+    if isinstance(r, np.ndarray) or r is not None:
         for i in range(len(coords)):
-            coords[i][:, 0] = coords[i][:,0]/r.shape[0] * (r.max() - r.min()) + r.min()
+            coords[i][:, 0] = coords[i][:, 0] / r.shape[0] * (r.max() - r.min()) + r.min()
 
-    if isinstance(z,np.ndarray) or not z == None:
+    if isinstance(z, np.ndarray) or z is not None:
         for i in range(len(coords)):
-            coords[i][:, 1] = coords[i][:,1]/z.shape[0] * (z.max() - z.min()) + z.min()
+            coords[i][:, 1] = coords[i][:, 1] / z.shape[0] * (z.max() - z.min()) + z.min()
 
     return coords
 
@@ -39,7 +40,8 @@ def point_inside_curve(points, contour):
     """
     return measure.points_in_poly(points, contour)
 
-def get_surface(equilibrium, psi, r=100, z=100, norm =True, closed = True, insidelcfs = True):
+
+def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelcfs=True):
     """
     Finds points of surface with given value of psi.
     :param equilibrium: Equilibrium object
@@ -58,7 +60,7 @@ def get_surface(equilibrium, psi, r=100, z=100, norm =True, closed = True, insid
     if not isinstance(r, np.ndarray):
         r = np.linspace(equilibrium.r_min, equilibrium.r_max, r)
 
-    #if z is integer make z grid
+    # if z is integer make z grid
     if not isinstance(z, np.ndarray):
         z = np.linspace(equilibrium.z_min, equilibrium.z_max, z)
 
@@ -75,17 +77,17 @@ def get_surface(equilibrium, psi, r=100, z=100, norm =True, closed = True, insid
     fluxsurface = []
     magaxis = np.expand_dims(equilibrium._mg_axis, axis=0)
     for i in range(len(contour)):
-            # are we looking for a closed magnetic surface and is it closed?
-            if closed and contour[i][0,0] == contour[i][-1,0] and contour[i][0,1] == contour[i][-1,1]:
-                isinside = measure.points_in_poly(magaxis, contour[i])
-                # surface inside lcfs has to be enclosing magnetic axis
-                if insidelcfs and np.asscalar(isinside):
-                    fluxsurface.append(contour[i])
+        # are we looking for a closed magnetic surface and is it closed?
+        if closed and contour[i][0, 0] == contour[i][-1, 0] and contour[i][0, 1] == contour[i][-1, 1]:
+            isinside = measure.points_in_poly(magaxis, contour[i])
+            # surface inside lcfs has to be enclosing magnetic axis
+            if insidelcfs and np.asscalar(isinside):
+                fluxsurface.append(contour[i])
     return fluxsurface
 
 
 def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
-                             insidelcfs = True):
+                             insidelcfs=True):
     """
     Checks if a point is inside a flux surface with specified value of psi.
     :param equilibrium: Equilibrium object
@@ -101,8 +103,8 @@ def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
     """
     closed = True  # looking for a points inside a not closed surface is ambiguous
 
-    contour = get_surface(equilibrium = equilibrium, psi=psi, r=r, z=z, closed=closed, norm=norm,
-                          insidelcfs = insidelcfs)
+    contour = get_surface(equilibrium=equilibrium, psi=psi, r=r, z=z, closed=closed, norm=norm,
+                          insidelcfs=insidelcfs)
     isinside = []
     for i in range(len(contour)):
         isinside.append(point_inside_curve(points, contour[i]))

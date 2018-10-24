@@ -1,5 +1,7 @@
-from pleque import Equilibrium
 import numpy as np
+
+from pleque import Equilibrium
+
 
 def read_fiesta_equilibrium(filepath, first_wall=None):
     """
@@ -7,28 +9,51 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     `/compass/Shared/Common/COMPASS-UPGRADE/RP1 Design/Equilibria/v3.1`
 
     :param filepath: Path to fiesta g-file equilibria
-    :param limiter: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file). If `None` IBA limiter v 3.1 is taken.
+    :param first_wall: Path to datafile with limiter line. (Fiesta doesn't store limiter contour into g-file).
+        If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
-    from pleque.io.readgeqdsk import readeqdsk_xarray
+    from pleque.io._readgeqdsk import readeqdsk_xarray
+    from scipy.interpolate import UnivariateSpline
+    import pkg_resources
 
-    if first_wall is None:
-        first_wall = '/compass/home/kripner/Projects/equilibrium_module/test/test_files/compu/limiter_v3_1_iba.dat'
+    resource_package = __name__
 
     ds = readeqdsk_xarray(filepath)
-    first_wall = np.loadtxt(first_wall)
+
+    # If there are some limiter data. Use them as and limiter.
+    if 'r_lim' in ds and 'z_lim' in ds and ds.r_lim.size > 3 and first_wall is None:
+        first_wall = np.stack(ds.r_lim.data, ds.z_lim.data)
+
+    if first_wall is None:
+        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        first_wall = '../../test/test_files/compu/limiter_v3_1_iba.dat'
+        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
+
+    if isinstance(first_wall, str):
+        first_wall = np.loadtxt(first_wall)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    eq._q_spl = UnivariateSpline(psi_n, qpsi, s=0, k=3)
+    #todo: now assume cocos = 3 => q < 0
+    if np.sum(ds.qpsi.data) > 0:
+        qpsi = ds.qpsi.data * -1
+    else:
+        qpsi = ds.qpsi.data
+
+
+    #eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
+    eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
+    eq.I_plasma = ds.attrs['cpasma']
 
+    # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-        return self._q_spl(psi_n)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._q_spl(coord.psi_n)
 
+    # noinspection PyPep8Naming
     def diff_q(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
 
@@ -42,15 +67,13 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         :param coords:
         :return: Derivative of q with respect to psi.
         """
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-        return self._dq_dpsin_spl(psi_n) * self._diff_psiN
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
 
+    # noinspection PyPep8Naming
     def tor_flux(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        if R is not None and Z is not None:
-            psi_n = self.psi_n(R=R, Z=Z, grid=grid)
-
-        return eq._q_anideriv_spl(psi_n) * (1 / self._diff_psi_n)
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return eq._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     # eq.q = q
     # eq.diff_q = diff_q

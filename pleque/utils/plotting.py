@@ -15,7 +15,7 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     # separatrix
     ax.plot(eq.lcfs.R, eq.lcfs.Z, color='C1', lw=2, ls='--')
 
-    coords = eq.get_grid_RZ((400, 600), 'size')
+    coords = eq.grid((400, 600), 'size')
     rs, zs = coords.mesh()
 
     psi = eq.psi(coords)
