@@ -4,22 +4,22 @@ from test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 
-surf_inlcfs = [eq.flux_surface(eq.coordinates(psi_n=0.1), inlcfs=True),
-               eq.flux_surface(eq.coordinates(psi_n=0.5), inlcfs=True),
-               eq.flux_surface(eq.coordinates(psi_n=0.9), inlcfs=True)]
+surf_inlcfs = [eq._flux_surface(eq.coordinates(psi_n=0.1), inlcfs=True),
+               eq._flux_surface(eq.coordinates(psi_n=0.5), inlcfs=True),
+               eq._flux_surface(eq.coordinates(psi_n=0.9), inlcfs=True)]
 
-surf_closed = [eq.flux_surface(eq.coordinates(psi_n=0.1), inlcfs=False, closed=True),
-               eq.flux_surface(eq.coordinates(psi_n=0.5), inlcfs=False, closed=True),
-               eq.flux_surface(eq.coordinates(psi_n=0.9), inlcfs=False, closed=True)]
+surf_closed = [eq._flux_surface(eq.coordinates(psi_n=0.1), inlcfs=False, closed=True),
+               eq._flux_surface(eq.coordinates(psi_n=0.5), inlcfs=False, closed=True),
+               eq._flux_surface(eq.coordinates(psi_n=0.9), inlcfs=False, closed=True)]
 
-surf_opened = [eq.flux_surface(eq.coordinates(psi_n=0.1), inlcfs=False, closed=False),
-               eq.flux_surface(eq.coordinates(psi_n=0.5), inlcfs=False, closed=False),
-               eq.flux_surface(eq.coordinates(psi_n=0.9), inlcfs=False, closed=False)]
+surf_opened = [eq._flux_surface(eq.coordinates(psi_n=0.1), inlcfs=False, closed=False),
+               eq._flux_surface(eq.coordinates(psi_n=0.5), inlcfs=False, closed=False),
+               eq._flux_surface(eq.coordinates(psi_n=0.9), inlcfs=False, closed=False)]
 
-surf_lcfs = eq.flux_surface(psi_n=1 - 1e-6)[0]
+surf_lcfs = eq._flux_surface(psi_n=1 - 1e-6)[0]
 
 point = eq.coordinates(R=0.83, Z=-0.3)
-surf_frompoint = eq.flux_surface(point)
+surf_frompoint = eq._flux_surface(point)
 
 grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 # psipol_map = Coordinates(eq, R = r, Z=z, grid=True)

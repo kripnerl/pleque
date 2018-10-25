@@ -82,7 +82,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
         psin_tmp = grid_1d.psi_n[i]
         if not psin_tmp == 1:
             coord_tmp = equilibrium.coordinates(psi_n = psin_tmp)
-            surface = equilibrium.flux_surface(coord_tmp)
+            surface = equilibrium._flux_surface(coord_tmp)
 
         elif psin_tmp == 1:
             from pleque.fluxsurface import FluxSurface

@@ -1,5 +1,6 @@
 from collections import Sequence
 from collections.abc import Sequence
+from pleque.utils.decorators import deprecated
 
 import numpy as np
 import xarray
@@ -254,9 +255,18 @@ class Equilibrium(object):
 
         return B_abs
 
+    @deprecated('The structure and behaviour of this function will change soon!\n'
+                'to keep the same behaviour use `_flux_surface` instead.')
     def flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
-                     closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
-                     coord_type=None, **coords):
+                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      coord_type=None, **coords):
+        return self._flux_surface(*coordinates, resolution=resolution, dim=dim,
+                      closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
+                      coord_type=coord_type, **coords)
+
+    def _flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
+                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
