@@ -529,7 +529,7 @@ class Equilibrium(object):
 
     @property
     def lcfs(self):
-        return self.coordinates(self._lcfs)
+        return self._as_fluxsurface(self._lcfs)
 
     @property
     def first_wall(self):

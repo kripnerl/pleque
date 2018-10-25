@@ -28,20 +28,20 @@ grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 figx, ax = plt.subplots()
 cl = ax.contourf(grid.R, grid.Z, grid.psi_n, 50)
 plt.colorbar(cl)
-ax.plot(surf_lcfs.contour.as_array()[:, 0], surf_lcfs.contour.as_array()[:, 1], "-C3")
+ax.plot(surf_lcfs.as_array()[:, 0], surf_lcfs.as_array()[:, 1], "-C3")
 for i in range(len(surf_inlcfs)):
     for j in range(len(surf_inlcfs[i])):
-        ax.plot(surf_inlcfs[i][j].contour.as_array()[:, 0], surf_inlcfs[i][j].contour.as_array()[:, 1], "-C1")
+        ax.plot(surf_inlcfs[i][j].as_array()[:, 0], surf_inlcfs[i][j].as_array()[:, 1], "-C1")
 
 for i in range(len(surf_closed)):
     for j in range(len(surf_closed[i])):
-        ax.plot(surf_closed[i][j].contour.as_array()[:, 0], surf_closed[i][j].contour.as_array()[:, 1], "--C4")
+        ax.plot(surf_closed[i][j].as_array()[:, 0], surf_closed[i][j].as_array()[:, 1], "--C4")
 
 for i in range(len(surf_opened)):
     for j in range(len(surf_opened[i])):
-        ax.plot(surf_opened[i][j].contour.as_array()[:, 0], surf_opened[i][j].contour.as_array()[:, 1], "--C5")
+        ax.plot(surf_opened[i][j].as_array()[:, 0], surf_opened[i][j].as_array()[:, 1], "--C5")
 
-ax.plot(surf_frompoint[0].contour.as_array()[:, 0], surf_frompoint[0].contour.as_array()[:, 1], "--C6",
+ax.plot(surf_frompoint[0].as_array()[:, 0], surf_frompoint[0].as_array()[:, 1], "--C6",
         label="surface throught point\n"
               "    area={1:1.2f},\n    surface={2:1.2f},\n    volume={3:1.2f}".format(surf_frompoint[0].length,
                                                                                       surf_frompoint[0].area,
