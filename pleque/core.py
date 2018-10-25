@@ -296,7 +296,7 @@ class Equilibrium(object):
         contour = self._get_surface(grid, level=coordinates.psi_n[0], norm=True)
 
         for i in range(len(contour)):
-            contour[i] = FluxSurface(contour[i])
+            contour[i] = self._as_fluxsurface(contour[i])
 
         # get the position of the magnetic axis, which is used to determine whether the found fluxsurfaces are
         # within the lcfs
@@ -347,6 +347,8 @@ class Equilibrium(object):
             contour[i] = Coordinates(self, contour[i])
 
         return contour
+
+
 
     def _plot_overview(self):
         """
@@ -550,6 +552,26 @@ class Equilibrium(object):
             return coordinates[0]
         else:
             return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+
+    def _as_fluxsurface(self, *coordinates, coord_type=None, grid=False, **coords):
+        """
+
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from pleque import FluxSurface
+        if len(coordinates) >= 1 and isinstance(coordinates[0], FluxSurface):
+            return coordinates[0]
+        elif len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
+            coord = coordinates[0]
+            return FluxSurface(self, coord.R, coord.Z)
+        else:
+            return FluxSurface(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+
+
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_inside_curve

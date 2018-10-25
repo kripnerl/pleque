@@ -1,19 +1,20 @@
 import numpy as np
 from shapely import geometry
 
-from pleque.core import Coordinates
+from pleque import Coordinates, Equilibrium
 
 
-class FluxSurface:
-    def __init__(self, coords: Coordinates):
+class FluxSurface(Coordinates):
+    def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
         Calculates geometrical properties of the flux surface. To make the conrour colsed, the first and last points in
         the passed coordinates have to be the same.
         Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
         :param coords: Instance of coordinate class
         """
-        self.coords = coords
-        points_RZ = coords.as_array(('R', 'Z'))
+        
+        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+        points_RZ = self.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
         if points_RZ[0, 0] == points_RZ[-1, 0] and points_RZ[0, 1] == points_RZ[-1, 1]:
@@ -62,8 +63,8 @@ class FluxSurface:
 
     @property
     def centroid(self):
-        return self.coords._eq.coordinates(R=np.array(self.__string.centroid.coords)[0][0],
-                                           Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R", "Z"])
+        return self._eq.coordinates(R=np.array(self.__string.centroid.coords)[0][0],
+                                    Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R", "Z"])
 
     @property
     def volume(self):
@@ -80,10 +81,11 @@ class FluxSurface:
     @property
     def contour(self):
         """
+        deprecated
         Fluxsurface contour points
         :return: numpy ndarray
         """
-        return self.coords
+        return self
 
     def contains(self, coords: Coordinates):
         points_RZ = coords.as_array(('R', 'Z'))[0, :]

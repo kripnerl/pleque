@@ -40,8 +40,13 @@ for i in range(len(surf_closed)):
 for i in range(len(surf_opened)):
     for j in range(len(surf_opened[i])):
         ax.plot(surf_opened[i][j].contour.as_array()[:, 0], surf_opened[i][j].contour.as_array()[:, 1], "--C5")
+
 ax.plot(surf_frompoint[0].contour.as_array()[:, 0], surf_frompoint[0].contour.as_array()[:, 1], "--C6",
-        label="surface throught point")
+        label="surface throught point\n"
+              "    area={1:1.2f},\n    surface={2:1.2f},\n    volume={3:1.2f}".format(surf_frompoint[0].length,
+                                                                                      surf_frompoint[0].area,
+                                                                                      surf_frompoint[0].surface,
+                                                                                      surf_frompoint[0].volume))
 ax.plot(point.R, point.Z, "xC6")
 ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k")
 

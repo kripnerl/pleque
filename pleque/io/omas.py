@@ -86,7 +86,7 @@ def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, od
 
         elif psin_tmp == 1:
             from pleque.fluxsurface import FluxSurface
-            surface = [FluxSurface(equilibrium.lcfs)]
+            surface = [equilibrium._as_fluxsurface(equilibrium.lcfs)]
 
         # todo: really 0 if open?
         # todo: fix this 'surface[0].closed' ... maybe calculate it from boundary
