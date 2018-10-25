@@ -1,4 +1,5 @@
 import numpy as np
+from pleque.utils.decorators import *
 from shapely import geometry
 
 from pleque import Coordinates, Equilibrium
@@ -7,7 +8,7 @@ from pleque import Coordinates, Equilibrium
 class FluxSurface(Coordinates):
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
-        Calculates geometrical properties of the flux surface. To make the conrour colsed, the first and last points in
+        Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
         Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
         :param coords: Instance of coordinate class
@@ -78,11 +79,12 @@ class FluxSurface(Coordinates):
         else:
             raise Exception("Opened Flux Surface does not have area")
 
+
     @property
+    @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
     def contour(self):
         """
-        deprecated
-        Fluxsurface contour points
+        Fluxsurface contour points; in fact return only self, since `Flux_surface` is descendant of `Coordinates`.
         :return: numpy ndarray
         """
         return self
