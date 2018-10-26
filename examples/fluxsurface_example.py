@@ -4,6 +4,8 @@ from test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 
+surf_separatrix = eq._flux_surface(eq.coordinates(psi_n=1), inlcfs=True)[0]
+
 surf_inlcfs = [eq._flux_surface(eq.coordinates(psi_n=0.1), inlcfs=True),
                eq._flux_surface(eq.coordinates(psi_n=0.5), inlcfs=True),
                eq._flux_surface(eq.coordinates(psi_n=0.9), inlcfs=True)]
@@ -28,7 +30,7 @@ grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 figx, ax = plt.subplots()
 cl = ax.contourf(grid.R, grid.Z, grid.psi_n, 50)
 plt.colorbar(cl)
-ax.plot(surf_lcfs.as_array()[:, 0], surf_lcfs.as_array()[:, 1], "-C3")
+#ax.plot(surf_lcfs.as_array()[:, 0], surf_lcfs.as_array()[:, 1], "-C3")
 for i in range(len(surf_inlcfs)):
     for j in range(len(surf_inlcfs[i])):
         ax.plot(surf_inlcfs[i][j].as_array()[:, 0], surf_inlcfs[i][j].as_array()[:, 1], "-C1")
@@ -50,7 +52,7 @@ ax.plot(surf_frompoint[0].as_array()[:, 0], surf_frompoint[0].as_array()[:, 1], 
 ax.plot(point.R, point.Z, "xC6")
 ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k")
 
-ax.plot([], [], "-C3",
+ax.plot(surf_separatrix.R, surf_separatrix.Z, "-C3",
         label="lcfs:\n    length = {0:1.2f},\n"
               "    area={1:1.2f},\n    surface={2:1.2f},\n    volume={3:1.2f}".format(surf_lcfs.length,
                                                                                       surf_lcfs.area,

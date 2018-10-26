@@ -20,8 +20,9 @@ def test_q_profiles():
     NN = eq_dict['nx']*4
     for i in range(1, NN):
         psi_n = i/NN
+        print(psi_n)
         psi_ns.append(psi_n)
-        surf = eq.flux_surface(psi_n=psi_n, resolution=[1e-3, 1e-3])
+        surf = eq._flux_surface(psi_n=psi_n, resolution=[1e-3, 1e-3])
         q_1.append(surf[0].eval_q)
 
     q_1 = np.array(q_1)

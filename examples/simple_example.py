@@ -108,9 +108,6 @@ def main():
     plt.show()
 
 
-
-
-
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
 

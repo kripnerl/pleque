@@ -19,7 +19,7 @@ class FluxSurface(Coordinates):
         points_RZ = self.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
-        if points_RZ[0, 0] == points_RZ[-1, 0] and points_RZ[0, 1] == points_RZ[-1, 1]:
+        if np.isclose(points_RZ[0, 0], points_RZ[-1, 0]) and np.isclose(points_RZ[0, 1], points_RZ[-1, 1]):
             self.__poly = geometry.polygon.Polygon(points_RZ)
             self.__string = geometry.linestring.LineString(points_RZ)
             self.__closed = True
@@ -83,7 +83,7 @@ class FluxSurface(Coordinates):
     @property
     def diff_volume(self):
         """
-        Diferential volume :math: `V' = dV/d\psi`
+        Diferential volume :math:`V' = dV/d\psi`
         Jardin, S.: Computational Methods in Plasma Physics
         :return:
         """
@@ -131,7 +131,7 @@ class FluxSurface(Coordinates):
         """
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
-        ..math::
+        .. math::
             <func>(\psi) = \int_0^{2\pi} \frac{\mathrm{d}l R}{|\grad \psi|}a(R, Z)
         :param func: func(X, Y), Union[ndarray, int, float]
         :return:
@@ -151,9 +151,6 @@ class FluxSurface(Coordinates):
             func_val = (func[1:] + func[:-1])/2
 
         return np.sum(self.dl*Rs/diff_psi*func_val)
-
-
-
 
     def contains(self, coords: Coordinates):
         points_RZ = coords.as_array(('R', 'Z'))[0, :]

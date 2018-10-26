@@ -1,4 +1,3 @@
-from collections import Sequence
 from collections.abc import Sequence
 from pleque.utils.decorators import deprecated
 
@@ -245,18 +244,6 @@ class Equilibrium(object):
         ffprime[mask_out] = 0
         return ffprime
 
-    def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
-    def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
-    def tor_flux(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
@@ -318,14 +305,23 @@ class Equilibrium(object):
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
 
         # get the grid for psi map to find the contour in.
+        # todo: this is, at the moment, slowest part of the code
         grid = self.grid(resolution=resolution, dim=dim)
+
+        # todo: to get lcfs, here is small trick. This should be handled better
+        #       otherwise it may return crossed loop
+        if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
+            psi_n = 1-1e-6
+        else:
+            psi_n = coordinates.psi_n[0]
 
         # create coordinates
         # coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
 
         # get the coordinates of the contours with requested leve and convert them into
         # instances of FluxSurface class
-        contour = self._get_surface(grid, level=coordinates.psi_n[0], norm=True)
+
+        contour = self._get_surface(grid, level=psi_n, norm=True)
 
         for i in range(len(contour)):
             contour[i] = self._as_fluxsurface(contour[i])
@@ -531,13 +527,35 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.fpol(coord) / coord.R
 
-    def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        if not hasattr(self, '_q_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self._q_spl(coord.psi_n)
 
-    def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """
+
+        :param self:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return: Derivative of q with respect to psi.
+        """
+        if not hasattr(self, '_dq_dpsin_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
+
+    def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        if not hasattr(self, '_q_anideriv_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     def diff_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -868,6 +886,21 @@ class Equilibrium(object):
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
         self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+
+    def __init_q__(self):
+        from scipy.interpolate import UnivariateSpline
+        psi_n = np.arange(0.01, 0.99, 99)
+        qs = []
+
+        for pn in psi_n:
+            c = self._flux_surface(psi_n=psi_n)
+            qs.append(c.eval_q)
+        qs = np.array(qs)
+
+        self._q_spl = UnivariateSpline(psi_n.data, qs, s=0, k=3)
+        self._dq_dpsin_spl = self._q_spl.derivative()
+        self._q_anideriv_spl = self._q_spl.antiderivative()
+
 
 
 class Coordinates(object):
