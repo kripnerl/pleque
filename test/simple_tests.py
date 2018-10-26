@@ -119,7 +119,7 @@ def plot_extremes(eq: Equilibrium, ax=None):
         ax = plt.gca()
 
     # opoints:
-    for op in eq._opoints:
+    for op in eq._o_points:
         ax.plot(op[0], op[1], 'o', color='C5')
 
     for xp in eq._x_points:

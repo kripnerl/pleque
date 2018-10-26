@@ -1,6 +1,11 @@
+
+def get_test_cases_number():
+    return 3
+
 def load_testing_equilibrium(case=0):
     """
     Return testing equilibrium file
+    :param case -
     :return:
     """
     from pleque.io.compass import read_fiesta_equilibrium
