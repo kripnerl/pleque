@@ -1,5 +1,5 @@
-from collections import Sequence
 from collections.abc import Sequence
+from pleque.utils.decorators import deprecated
 
 import numpy as np
 import xarray
@@ -180,12 +180,34 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
+
+    def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """
+        Return the value of :math:: `|\grad \psi|`. This is strictly 2+ dimensional value.
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)**2 +
+                       self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1)**2)
+
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
 
     @property
     def _diff_psi_n(self):
+        """
+        psi_2 - psi_1 = (psi_n_2 - psi_n_1)*1/_diff_psi_n
+        :return: Scaling parameter between psi_n and psi
+        """
         return 1 / (self._psi_lcfs - self._psi_axis)
 
     def rho(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
@@ -222,18 +244,6 @@ class Equilibrium(object):
         ffprime[mask_out] = 0
         return ffprime
 
-    def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
-    def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
-    def tor_flux(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
-
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
@@ -254,9 +264,18 @@ class Equilibrium(object):
 
         return B_abs
 
+    @deprecated('The structure and behaviour of this function will change soon!\n'
+                'to keep the same behaviour use `_flux_surface` instead.')
     def flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
-                     closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
-                     coord_type=None, **coords):
+                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      coord_type=None, **coords):
+        return self._flux_surface(*coordinates, resolution=resolution, dim=dim,
+                      closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
+                      coord_type=coord_type, **coords)
+
+    def _flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
+                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
@@ -286,17 +305,26 @@ class Equilibrium(object):
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
 
         # get the grid for psi map to find the contour in.
+        # todo: this is, at the moment, slowest part of the code
         grid = self.grid(resolution=resolution, dim=dim)
+
+        # todo: to get lcfs, here is small trick. This should be handled better
+        #       otherwise it may return crossed loop
+        if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
+            psi_n = 1-1e-6
+        else:
+            psi_n = coordinates.psi_n[0]
 
         # create coordinates
         # coords = self.coordinates(R=R, Z=Z, grid=True, coord_type=["R", "Z"])
 
         # get the coordinates of the contours with requested leve and convert them into
         # instances of FluxSurface class
-        contour = self._get_surface(grid, level=coordinates.psi_n[0], norm=True)
+
+        contour = self._get_surface(grid, level=psi_n, norm=True)
 
         for i in range(len(contour)):
-            contour[i] = FluxSurface(contour[i])
+            contour[i] = self._as_fluxsurface(contour[i])
 
         # get the position of the magnetic axis, which is used to determine whether the found fluxsurfaces are
         # within the lcfs
@@ -348,6 +376,8 @@ class Equilibrium(object):
             contour[i] = Coordinates(self, contour[i])
 
         return contour
+
+
 
     def _plot_overview(self):
         """
@@ -499,13 +529,35 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.fpol(coord) / coord.R
 
-    def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        if not hasattr(self, '_q_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self._q_spl(coord.psi_n)
 
-    def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """
+
+        :param self:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return: Derivative of q with respect to psi.
+        """
+        if not hasattr(self, '_dq_dpsin_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
+
+    def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        if not hasattr(self, '_q_anideriv_spl'):
+            self.__init_q__()
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     def diff_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -519,17 +571,48 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
-    def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Poloidal component of the current density.
+        Calculated as
+        ..math::
+            \frac{f'}{R \mu_0} * |\grad \psi |
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from scipy.constants import mu_0
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self.fprime(coord)/(coord.R*mu_0)*self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+        """
+        Toroidal component of the current denisity.
+        Calculated as
+        .. math::
+            R p' + \frac{1}{\mu_0 R} ff'
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from scipy.constants import mu_0
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return coord.R*self.pressure(coord) + 1/(mu_0*coord.R) *self.ffprime(coord)
+
 
     @property
     def lcfs(self):
-        return self.coordinates(self._lcfs)
+        return self._as_fluxsurface(self._lcfs)
 
     @property
     def first_wall(self):
@@ -552,6 +635,26 @@ class Equilibrium(object):
             return coordinates[0]
         else:
             return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+
+    def _as_fluxsurface(self, *coordinates, coord_type=None, grid=False, **coords):
+        """
+
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from pleque import FluxSurface
+        if len(coordinates) >= 1 and isinstance(coordinates[0], FluxSurface):
+            return coordinates[0]
+        elif len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
+            coord = coordinates[0]
+            return FluxSurface(self, coord.R, coord.Z)
+        else:
+            return FluxSurface(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+
+
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_inside_curve
@@ -785,6 +888,21 @@ class Equilibrium(object):
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
         self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+
+    def __init_q__(self):
+        from scipy.interpolate import UnivariateSpline
+        psi_n = np.arange(0.01, 0.99, 99)
+        qs = []
+
+        for pn in psi_n:
+            c = self._flux_surface(psi_n=psi_n)
+            qs.append(c.eval_q)
+        qs = np.array(qs)
+
+        self._q_spl = UnivariateSpline(psi_n.data, qs, s=0, k=3)
+        self._dq_dpsin_spl = self._q_spl.derivative()
+        self._q_anideriv_spl = self._q_spl.antiderivative()
+
 
 
 class Coordinates(object):
