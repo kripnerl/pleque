@@ -13,8 +13,9 @@ class FluxSurface(Coordinates):
         Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
         :param coords: Instance of coordinate class
         """
-        
+
         super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+
         points_RZ = self.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
@@ -79,6 +80,42 @@ class FluxSurface(Coordinates):
         else:
             raise Exception("Opened Flux Surface does not have area")
 
+    @property
+    def diff_volume(self):
+        """
+        Diferential volume :math: `V' = dV/d\psi`
+        Jardin, S.: Computational Methods in Plasma Physics
+        :return:
+        """
+        if not hasattr(self, '_diff_volume'):
+            self._diff_volume = self._eval_diff_vol()
+
+        return self._diff_volume
+
+
+    def _eval_diff_vol(self):
+        Rs = (self.R[1:] + self.R[:-1]) / 2
+        Zs = (self.Z[1:] + self.Z[:-1]) / 2
+        dpsi = self._eq.diff_psi(Rs, Zs)
+        dl = self.dl
+
+        return 2*np.pi * np.sum(Rs*dl/dpsi)
+
+    @property
+    def dl(self):
+        if not hasattr(self, '_dl'):
+            self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
+        return self._dl
+
+    @property
+    def eval_q(self):
+        if not hasattr(self, '_q'):
+            # todo
+            # self._q = self._eq.fpol(psi_n=np.mean(self.psi_n))*self.diff_volume/\
+            #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
+            self._q = self._eq.BvacR * self.diff_volume/\
+                      (2*np.pi)**2 * self.surface_average(1/self.R**2)
+        return self._q
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
@@ -88,6 +125,32 @@ class FluxSurface(Coordinates):
         :return: numpy ndarray
         """
         return self
+
+
+    def surface_average(self, func):
+        """
+        Return the surface average (over single magnetic surface) value of `func`.
+        Return the value of integration
+        ..math::
+            <func>(\psi) = \frac{2\pi}{V'} \int_0^{2\pi} \frac{\mathrm{d}l R}{|\grad \psi|}a(R, Z)
+        :param func: func(X, Y), Union[ndarray, int, float]
+        :return:
+        """
+        import inspect
+
+        if inspect.isclass(func) or inspect.isfunction(func):
+            func_val = func(self.R, self.Z)
+        else:
+            func_val = func
+
+        Rs = (self.R[1:] + self.R[:-1]) / 2
+        Zs = (self.Z[1:] + self.Z[:-1]) / 2
+        dpsi = self._eq.diff_psi(Rs, Zs)
+
+        return 2*np.pi/self.diff_volume*np.sum(self.dl*Rs/dpsi)
+
+
+
 
     def contains(self, coords: Coordinates):
         points_RZ = coords.as_array(('R', 'Z'))[0, :]

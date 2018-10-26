@@ -181,12 +181,34 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
+
+    def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """
+        Return the value of :math:: `|\grad \psi|`. This is strictly 2+ dimensional value.
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        return np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)**2 +
+                       self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1)**2)
+
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
 
     @property
     def _diff_psi_n(self):
+        """
+        psi_2 - psi_1 = (psi_n_2 - psi_n_1)*1/_diff_psi_n
+        :return: Scaling parameter between psi_n and psi
+        """
         return 1 / (self._psi_lcfs - self._psi_axis)
 
     def rho(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
