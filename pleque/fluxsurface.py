@@ -118,15 +118,6 @@ class FluxSurface(Coordinates):
         return self._q
 
     @property
-    def eval_q_2(self):
-        Rs = (self.R[1:] + self.R[:-1]) / 2
-        Zs = (self.Z[1:] + self.Z[:-1]) / 2
-        dpsi = self._eq.diff_psi(Rs, Zs)
-        dl = self.dl
-
-        return 1/(2*np.pi) * np.sum(1/Rs*self._eq.B_tor(Rs, Zs, grid=False)/self._eq.B_pol(Rs, Zs, grid=False)*dl)
-
-    @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
     def contour(self):
         """
