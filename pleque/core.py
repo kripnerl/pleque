@@ -551,13 +551,44 @@ class Equilibrium(object):
         raise NotImplementedError("This method hasn't been implemented yet. "
                                   "Use monkey patching in the specific cases.")
 
-    def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+    def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Poloidal component of the current density.
+        Calculated as
+        ..math::
+            \frac{f'}{R \mu_0} * |\grad \psi |
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from scipy.constants import mu_0
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return self.fprime(coord)/(coord.R*mu_0)*self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+        """
+        Toroidal component of the current denisity.
+        Calculated as
+        .. math::
+            R p' + \frac{1}{\mu_0 R} ff'
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        from scipy.constants import mu_0
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        return coord.R*self.pressure(coord) + 1/(mu_0*coord.R) *self.ffprime(coord)
+
 
     @property
     def lcfs(self):
