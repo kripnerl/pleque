@@ -3,6 +3,15 @@ import numpy as np
 from pleque import Equilibrium
 
 
+def cdb(shot = None, time = 1000):
+    """
+
+    :param shot: number of shot in cdb
+    :param time:
+    :return:
+    """
+    pass
+
 def read_fiesta_equilibrium(filepath, first_wall=None):
     """
     Current versions of the equilibria are stored in

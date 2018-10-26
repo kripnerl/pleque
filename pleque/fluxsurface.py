@@ -111,11 +111,20 @@ class FluxSurface(Coordinates):
     def eval_q(self):
         if not hasattr(self, '_q'):
             # todo
-            # self._q = self._eq.fpol(psi_n=np.mean(self.psi_n))*self.diff_volume/\
+            self._q = self._eq.fpol(psi_n=np.mean(self.psi_n))/(2*np.pi) \
+                      * self.surface_average(1/self.R**2)
+            # self._q = self._eq.BvacR * self.diff_volume/\
             #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
-            self._q = self._eq.BvacR * self.diff_volume/\
-                      (2*np.pi)**2 * self.surface_average(1/self.R**2)
         return self._q
+
+    @property
+    def eval_q_2(self):
+        Rs = (self.R[1:] + self.R[:-1]) / 2
+        Zs = (self.Z[1:] + self.Z[:-1]) / 2
+        dpsi = self._eq.diff_psi(Rs, Zs)
+        dl = self.dl
+
+        return 1/(2*np.pi) * np.sum(1/Rs*self._eq.B_tor(Rs, Zs, grid=False)/self._eq.B_pol(Rs, Zs, grid=False)*dl)
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
@@ -132,22 +141,25 @@ class FluxSurface(Coordinates):
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
         ..math::
-            <func>(\psi) = \frac{2\pi}{V'} \int_0^{2\pi} \frac{\mathrm{d}l R}{|\grad \psi|}a(R, Z)
+            <func>(\psi) = \int_0^{2\pi} \frac{\mathrm{d}l R}{|\grad \psi|}a(R, Z)
         :param func: func(X, Y), Union[ndarray, int, float]
         :return:
         """
         import inspect
 
-        if inspect.isclass(func) or inspect.isfunction(func):
-            func_val = func(self.R, self.Z)
-        else:
-            func_val = func
-
         Rs = (self.R[1:] + self.R[:-1]) / 2
         Zs = (self.Z[1:] + self.Z[:-1]) / 2
-        dpsi = self._eq.diff_psi(Rs, Zs)
 
-        return 2*np.pi/self.diff_volume*np.sum(self.dl*Rs/dpsi)
+        diff_psi = self._eq.diff_psi(Rs, Zs)
+
+        if inspect.isclass(func) or inspect.isfunction(func):
+            func_val = func(Rs, Zs)
+        elif isinstance(func, float) or isinstance(func, int):
+            func_val = func
+        else:
+            func_val = (func[1:] + func[:-1])/2
+
+        return np.sum(self.dl*Rs/diff_psi*func_val)
 
 
 
