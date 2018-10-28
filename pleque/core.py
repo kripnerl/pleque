@@ -182,8 +182,8 @@ class Equilibrium(object):
 
 
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
-        """
-        Return the value of :math:: `|\grad \psi|`. This is strictly 2+ dimensional value.
+        r"""
+        Return the value of :math:`|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
         :param coordinates:
         :param R:
@@ -572,11 +572,12 @@ class Equilibrium(object):
                                   "Use monkey patching in the specific cases.")
 
     def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
-        """
+        r"""
         Poloidal component of the current density.
         Calculated as
-        ..math::
-            \frac{f'}{R \mu_0} * |\grad \psi |
+
+        .. math::
+          \frac{f'|\nabla \psi |}{R \mu_0}
 
         :param coordinates:
         :param R:
@@ -591,11 +592,12 @@ class Equilibrium(object):
         return self.fprime(coord)/(coord.R*mu_0)*self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        """
+        r"""
         Toroidal component of the current denisity.
         Calculated as
+
         .. math::
-            R p' + \frac{1}{\mu_0 R} ff'
+          R p' + \frac{1}{\mu_0 R} ff'
 
         :param coordinates:
         :param R:
