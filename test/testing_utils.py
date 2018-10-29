@@ -14,7 +14,7 @@ def load_testing_equilibrium(case=0):
     res_gfile = get_test_equilibria_filenames()[case]
     res_limiterfile = get_test_divertor()[0]
 
-    equil = read_fiesta_equilibrium(res_gfile, res_limiterfile)
+    equil = read_fiesta_equilibrium(res_gfile)
 
     # eq_xr = readeqdsk_xarray(res_gfile)
     # limiter = np.loadtxt(res_limiterfile)

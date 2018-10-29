@@ -45,7 +45,7 @@ def load_gfile(g_file):
 
 # todo: add plotting function for various derivatives of psi
 
-def test_qprofiles(g_file: str, eq: Equilibrium):
+def show_qprofiles(g_file: str, eq: Equilibrium):
     # from tokamak.formats import geqdsk
     from pleque.io._geqdsk import read
     import matplotlib.pyplot as plt
@@ -306,7 +306,7 @@ def main():
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
-    test_qprofiles(gfile, eq)
+    show_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
