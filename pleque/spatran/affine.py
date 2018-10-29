@@ -134,7 +134,6 @@ class Affine:
         """
         return self.transformation[:, -1]
 
-
 class Identity(Affine):
 
     def __init__(self, dim: int = 3, name: str = ""):
@@ -160,7 +159,6 @@ class Scale(Affine):
         transformation[diag] = transform
 
         super().__init__(transformation, name)
-
 
 class Rotx(Affine):
 
