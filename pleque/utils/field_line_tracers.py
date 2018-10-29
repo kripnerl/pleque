@@ -1,3 +1,4 @@
+
 from pleque import Equilibrium
 import numpy as np
 
@@ -133,7 +134,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
 
 
 def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi/180):
-    """Factory for function which stops field line tracong close to the original poloidal angle
+    """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
     
     Parameters
@@ -145,8 +146,8 @@ def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi/180):
     direction : float
         sign of dtheta/dphi derivative, depends on plasma current and toroidal mag. field
     stop_res : float
-        stopping offset to stop befroe initial position
-        necessary to prevent stoppign at initial position
+        stopping offset to stop before initial position
+        necessary to prevent stopping at initial position
     """
     y_center = np.asarray(y_center)   # should be [R0, Z0]
     def full_arc(y):
@@ -163,4 +164,25 @@ def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi/180):
         return np.squeeze(dth)
     stopper.terminal = True
     stopper.direction = direction
+    return stopper
+
+def z_coordinate_stopper_factory(z_0):
+    """
+    Factory for function which stops field line tracing close to the defined z planes.
+    Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
+
+    :param z_0: [float, float]
+        [Z_bottom, Z_upper] boundary
+    :param z_end:
+    :return:
+    """
+
+    def stopper(t, y):
+        dist = [y[1] - z_0[0], z_0[1] - y[1]]
+        min = np.min(dist)
+
+        return min
+
+    stopper.terminal = True
+
     return stopper
