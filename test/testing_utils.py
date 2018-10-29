@@ -50,6 +50,6 @@ def get_test_divertor():
     import pkg_resources
     resource_package = __name__
 
-    limiterfile = 'test_files/compu/limiter_v3_1_iba.dat'
+    limiterfile = 'test_files/limiter_v3_1_iba.dat'
     limiter = [pkg_resources.resource_filename(resource_package, limiterfile)]
     return limiter
