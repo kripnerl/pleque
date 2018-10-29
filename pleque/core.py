@@ -1010,6 +1010,23 @@ class Coordinates(object):
     #
     #     return
 
+    def plot(self, ax = None, **kwargs):
+        """
+
+        :param ax: Axis to which will be plotted. Default is plt.gca()
+        :param kwargs: Arguments forwarded to matplotlib plot function.
+        :return:
+        """
+        import matplotlib.pyplot as plt
+
+        if ax is None:
+            ax = plt.gca()
+
+        if self.dim == 1:
+            ax.plot(self.psi_n, **kwargs)
+        else:
+            ax.plot(self.R, self.Z, **kwargs)
+
     def as_array(self, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
