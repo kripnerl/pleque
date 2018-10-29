@@ -791,7 +791,7 @@ class Equilibrium(object):
         # for limiter plasma find the touch point:
         if self._limiter_plasma:
             psi_fw = self._spl_psi(self._first_wall[:, 0], self._first_wall[:, 1], grid=False)
-            idx_min = np.argmin(np.asb(self._psi_axis - psi_fw))
+            idx_min = np.argmin(np.abs(self._psi_axis - psi_fw))
 
             # The choosen x-point is the point, where plasma touch the wall (rename it later?(
             self._x_point = self._first_wall[idx_min]
@@ -889,15 +889,18 @@ class Equilibrium(object):
 
     def __init_q__(self):
         from scipy.interpolate import UnivariateSpline
-        psi_n = np.arange(0.01, 0.99, 99)
+        psi_n = np.arange(0.01, 0.99, 0.01)
         qs = []
 
         for pn in psi_n:
-            c = self._flux_surface(psi_n=psi_n)
+            if self._verbose:
+                print("{}%\r".format(pn/np.max(psi_n)*100))
+            surface = self._flux_surface(psi_n=pn)
+            c = surface[0]
             qs.append(c.eval_q)
         qs = np.array(qs)
 
-        self._q_spl = UnivariateSpline(psi_n.data, qs, s=0, k=3)
+        self._q_spl = UnivariateSpline(psi_n, qs, s=0, k=3)
         self._dq_dpsin_spl = self._q_spl.derivative()
         self._q_anideriv_spl = self._q_spl.antiderivative()
 

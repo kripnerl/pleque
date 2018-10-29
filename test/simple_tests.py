@@ -86,7 +86,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, qpsi * -1, 'x', label='g-file (-1)')
+    ax.plot(psi_n, np.abs(qpsi) , 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
@@ -298,7 +298,7 @@ def plot_overview(eq: Equilibrium):
 def main():
     import matplotlib.pyplot as plt
 
-    test_case = 0
+    test_case = 4
     gfile = get_test_equilibria_filenames()[test_case]
     eq = load_testing_equilibrium(test_case)
 
