@@ -147,16 +147,18 @@ class FluxSurface(Coordinates):
         return self
 
 
-    def surface_average(self, func):
-        r"""
+    def surface_average(self, func, method = 'linear'):
+        self.return_ = r"""
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
         .. math::
           <func>(\psi) = \oint \frac{\mathrm{d}l R}{|\nabla \psi|}a(R, Z)
         :param func: func(X, Y), Union[ndarray, int, float]
-        :return:
+        :param method: str, ['sum', 'trapz', 'simps']
+        :return: 
         """
         import inspect
+        from scipy.integrate import trapz, simps
 
         Rs = (self.R[1:] + self.R[:-1]) / 2
         Zs = (self.Z[1:] + self.Z[:-1]) / 2
@@ -170,7 +172,16 @@ class FluxSurface(Coordinates):
         else:
             func_val = (func[1:] + func[:-1])/2
 
-        return np.sum(self.dl*Rs/diff_psi*func_val)
+        if method == 'sum':
+            ret = np.sum(self.dl*Rs/diff_psi*func_val)
+        elif method == 'trapz':
+            ret = trapz(Rs/diff_psi*func_val, dx=self.dl)
+        elif method == 'simps':
+            ret = simps(Rs / diff_psi * func_val, dx=self.dl)
+        else:
+            ret = None
+
+        return ret
 
     def contains(self, coords: Coordinates):
         points_RZ = coords.as_array(('R', 'Z'))[0, :]
