@@ -1,4 +1,4 @@
-from .testing_utils import get_test_equilibria
+from .testing_utils import get_test_equilibria_filenames
 
 def test_q_profiles():
     from pleque.io.compass import read_fiesta_equilibrium
@@ -7,7 +7,7 @@ def test_q_profiles():
     import matplotlib.pyplot as plt
     import numpy as np
 
-    g_file = get_test_equilibria()[0]
+    g_file = get_test_equilibria_filenames()[0]
 
     eq = read_fiesta_equilibrium(g_file)
     with open(g_file, 'r') as f:

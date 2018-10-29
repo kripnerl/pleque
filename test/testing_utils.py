@@ -1,6 +1,6 @@
 
 def get_test_cases_number():
-    return 3
+    return 6
 
 def load_testing_equilibrium(case=0):
     """
@@ -11,7 +11,7 @@ def load_testing_equilibrium(case=0):
     from pleque.io.compass import read_fiesta_equilibrium
 
     # cases are numbered from one... for now :-)
-    res_gfile = get_test_equilibria()[case]
+    res_gfile = get_test_equilibria_filenames()[case]
     res_limiterfile = get_test_divertor()[0]
 
     equil = read_fiesta_equilibrium(res_gfile, res_limiterfile)
@@ -23,7 +23,7 @@ def load_testing_equilibrium(case=0):
     return equil
 
 
-def get_test_equilibria():
+def get_test_equilibria_filenames():
     """
     Return the list with absolute path (on given instance) to gfiles dedicated for testing.
     :return:
@@ -31,9 +31,12 @@ def get_test_equilibria():
     import pkg_resources
     resource_package = __name__
 
-    files = ['test_files/compu/baseline_eqdsk',
-             'test_files/compu/scenario_1_baseline_upward_eqdsk',
-             'test_files/compu/DoubleNull_eqdsk']
+    files = ['test_files/baseline_eqdsk',
+             'test_files/scenario_1_baseline_upward_eqdsk',
+             'test_files/DoubleNull_eqdsk',
+             'test_files/g13127.1050',
+             'test_files/_Equidisk_File__15MA_T_ped_4.5keV_513x51_44WYKU_v1_0.txt',
+             'test_files/14068@1130_2kA_modified_triang.gfile']
 
     equils = []
 

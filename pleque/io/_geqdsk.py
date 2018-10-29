@@ -282,7 +282,7 @@ def data_as_ds(data):
                             "r_bound": data["rbdry"], "z_bound": data["zbdry"],  # plasma boundary
                             "r_lim": data["rlim"], "z_lim": data["zlim"],
                             "fpol": ("psi_n", data["fpol"]),
-                            "pressure": ("psi_n", data["press"]),
+                            "pressure": ("psi_n", data["pres"]),
                             "ffprime": ("psi_n", data["ffprime"]),
                             "qpsi": ("psi_n", data["qpsi"]),
                             "pprime": ("psi_n", data["pprime"])},  # limiter contour
@@ -295,3 +295,14 @@ def data_as_ds(data):
 
     for i in attrs:
         eq_xarray.attrs[i] = data[i]
+    return  eq_xarray
+
+def read_as_equilibrium(fh, cocos=1):
+    from pleque import Equilibrium
+    import numpy as np
+
+    data = read(fh, cocos)
+    ds = data_as_ds(data) # as dataset
+    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T # first wall
+    eq = Equilibrium(ds, fw)
+    return eq
