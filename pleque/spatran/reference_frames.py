@@ -10,7 +10,7 @@ class ReferenceFrame():
 
         # todo:remove child
         # todo:specifying of the transformation to the parent frame by more ways (IMAS style, some engineering styles etc.)
-
+        # todo:introduce checks to prevent creation of closed loops in the tree
     def _init_tranforms(self, transform, parent, toparent):
 
         if transform is None or parent is None:
@@ -20,9 +20,10 @@ class ReferenceFrame():
             if not toparent:
                 transform = ~transform
 
+            parent._child_add(self)
+            self._check_frameloops(parent)#check if there are some frame loops
             self._parent = parent
             self._transform_toparent = transform
-            parent._child_add(self)
 
             if not parent._transform_toorigin is None:
                 self._transform_toorigin = (parent._transform_toorigin * transform)
@@ -33,6 +34,9 @@ class ReferenceFrame():
         if child in self._child.values():
             raise Exception("Child already exists")
         else:
+            for i in list(self._child.values()):
+                if i is self:
+                    raise Exception("Possible creation of a closed loop of reference frames. Child not added")
             self._child[child._name] = child
 
     def _child_remove(self, child):
@@ -42,7 +46,14 @@ class ReferenceFrame():
         elif child._name in self._child.keys():
             del self._child[child]
 
+    def _check_frameloops(self, frame):
+        for i in list(self._child.values()):
+            if i is frame:
+                raise Exception("Possible loop in frame tree")
+            i._check_frameloops(frame)
+
     def _transform_toorigin_changed(self):
+
         if self._parent._transform_toorigin is not None:
             self._transform_toorigin = self._parent._transform_toorigin * self._transform_toparent
         else:
@@ -56,6 +67,7 @@ class ReferenceFrame():
         pass
 
     def parent_add(self, parent, transform, toparent=True):
+        self._check_frameloops(parent)
         self._init_tranforms(transform, parent, toparent)
         self._transform_toorigin_changed()
 
