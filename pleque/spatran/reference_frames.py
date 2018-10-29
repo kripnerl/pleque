@@ -1,39 +1,26 @@
-from pleque.spatran import affine
-
-
 class ReferenceFrame():
 
-    def __init__(self, name, transform=None, parent=None, toparent = True):
+    def __init__(self, name, transform=None, parent=None, toparent=True):
         self._name = name
         self._child = {}
-        self._transform_toparent = None #from self to parent
-        self._transform_toorigin = None #from self to origin
+        self._transform_toparent = None  # from self to parent
+        self._transform_toorigin = None  # from self to origin
 
         self._init_tranforms(transform, parent, toparent)
 
-        # todo:initiate transformations
-        # todo:add child
         # todo:remove child
-        # todo:add parent
-        # todo:changed parent or anything in the chain above
-        # todo:initiate with parent
-        # todo:initiate without parent
-        # todo:changed child
-        # todo:Adding a child has to be initiated by the child
-        # todo: handle vector transformation to parents, origins, children
+        # todo:specifying of the transformation to the parent frame by more ways (IMAS style, some engineering styles etc.)
 
     def _init_tranforms(self, transform, parent, toparent):
-        # todo: add self as child of parent, if parent is passed
-        # todo: add transformation to parent, if parent is passed
-        # todo: child
 
-        if transform is None or isinstance(transform, affine.Identity) or parent is None:
+        if transform is None or parent is None:
             self._transform_toparent = None
             self._parent = None
         else:
             if not toparent:
                 transform = ~transform
 
+            self._parent = parent
             self._transform_toparent = transform
             parent._child_add(self)
 
@@ -56,16 +43,48 @@ class ReferenceFrame():
             del self._child[child]
 
     def _transform_toorigin_changed(self):
-        self._transform_toorigin = self._parent._transform_toorigin * self._transform_toparent
-        for i in self._child.values():
-            i._tranform_toorigin_changed()
+        if self._parent._transform_toorigin is not None:
+            self._transform_toorigin = self._parent._transform_toorigin * self._transform_toparent
+        else:
+            self._transform_toorigin = self._transform_toparent
+
+        for i in list(self._child.values()):
+            i._transform_toorigin_changed()
 
     def _parent_change(self, transform):
         self._transform_toparent = transform
         pass
 
-    def add_parent(self, parent):
-        self
+    def parent_add(self, parent, transform, toparent=True):
+        self._init_tranforms(transform, parent, toparent)
+        self._transform_toorigin_changed()
+
+    def parent_change(self, parent=None, transform=None, toparent=True):
+
+        if parent is None:
+            if self._parent is not None:
+                parent = self._parent
+            else:
+                raise Exception("Parent of the frame has to be specified")
+        else:#remove self from child list of obsolete parent
+            self._parent._child_remove(self)
+
+        if transform is None:
+            if self._transform_toparent is not None:
+                transform = self._transform_toparent
+            else:
+                raise Exception("Transformation to parent has to be specified")
+
+        self._init_tranforms(transform, parent, toparent)
+        self._transform_toorigin_changed()
+
+    def parent_remove(self):
+        if self._parent is not None:
+            self._parent._child_remove(self)
+
+        self._transform_toparent = None
+        self._parent = None
+        self._transform_toorigin = None
 
     def toparent(self, vector):
         if self._transform_toparent is not None:
