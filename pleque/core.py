@@ -684,6 +684,7 @@ class Equilibrium(object):
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
+
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
@@ -925,6 +926,17 @@ class Coordinates(object):
     # def __iter__(self):
     #     pass
 
+    def __iter__(self):
+        if self.grid:
+            raise TypeError('Grid is not iterable at the moment.')
+        if self.dim == 1:
+            for psi in self.psi:
+                yield psi
+        elif self.dim == 2:
+            for i in np.arange(len(self.x1)):
+                r = self.x1[i]
+                z = self.x2[i]
+                yield r, z
     def __len__(self):
         if self.grid:
             return len(self.x1) * len(self.x2)
