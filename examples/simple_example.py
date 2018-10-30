@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from test.testing_utils import load_testing_equilibrium, get_test_equilibria
+from test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
 
 def plot_extremes(eq: Equilibrium, ax=None):
     import matplotlib.pyplot as plt
@@ -83,7 +83,7 @@ def main():
     import matplotlib.pyplot as plt
 
     test_case = 0
-    gfile = get_test_equilibria()[test_case]
+    gfile = get_test_equilibria_filenames()[test_case]
     eq = load_testing_equilibrium(test_case)
 
     ax = plot_overview(eq)
