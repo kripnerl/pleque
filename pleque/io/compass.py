@@ -23,12 +23,16 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     :return: Equilibrium: Instance of `Equilibrium`
     """
     from pleque.io._readgeqdsk import readeqdsk_xarray
+    from pleque.io._geqdsk import read, data_as_ds
     from scipy.interpolate import UnivariateSpline
     import pkg_resources
 
     resource_package = __name__
 
-    ds = readeqdsk_xarray(filepath)
+    # ds = readeqdsk_xarray(filepath)
+    with open(filepath, 'r') as f:
+        data = read(f)
+        ds = data_as_ds(data)
 
     # If there are some limiter data. Use them as and limiter.
     if 'r_lim' in ds and 'z_lim' in ds and ds.r_lim.size > 3 and first_wall is None:
@@ -52,9 +56,9 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
 
     #eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
-    eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
-    eq._dq_dpsin_spl = eq._q_spl.derivative()
-    eq._q_anideriv_spl = eq._q_spl.antiderivative()
+    # eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
+    # eq._dq_dpsin_spl = eq._q_spl.derivative()
+    # eq._q_anideriv_spl = eq._q_spl.antiderivative()
     eq.I_plasma = ds.attrs['cpasma']
 
 
@@ -89,8 +93,8 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     # eq.diff_q = diff_q
     # eq.tor_flux = tor_flux
 
-    Equilibrium.q = q
-    Equilibrium.diff_q = diff_q
-    Equilibrium.tor_flux = tor_flux
+    # Equilibrium.q = q
+    # Equilibrium.diff_q = diff_q
+    # Equilibrium.tor_flux = tor_flux
 
     return eq
