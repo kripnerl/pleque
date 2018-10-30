@@ -71,7 +71,7 @@ def first_attempt():
 def default_treacer():
     eq = load_testing_equilibrium()
 
-    N = 30
+    N = 1
     rs = np.linspace(1.16, 1.17, N, endpoint=False)
     zs = np.zeros_like(rs)
 

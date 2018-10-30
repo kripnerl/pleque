@@ -1,6 +1,6 @@
 
 def get_test_cases_number():
-    return 6
+    return 7
 
 def load_testing_equilibrium(case=0):
     """
@@ -36,7 +36,8 @@ def get_test_equilibria_filenames():
              'test_files/DoubleNull_eqdsk',
              'test_files/g13127.1050',
              'test_files/_Equidisk_File__15MA_T_ped_4.5keV_513x51_44WYKU_v1_0.txt',
-             'test_files/14068@1130_2kA_modified_triang.gfile']
+             'test_files/14068@1130_2kA_modified_triang.gfile',
+             'test_files/g15349.1120']
 
     equils = []
 

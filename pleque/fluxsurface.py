@@ -147,7 +147,7 @@ class FluxSurface(Coordinates):
         return self
 
 
-    def surface_average(self, func, method = 'linear'):
+    def surface_average(self, func, method = 'sum'):
         self.return_ = r"""
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
