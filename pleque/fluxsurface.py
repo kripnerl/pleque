@@ -135,7 +135,7 @@ class FluxSurface(Coordinates):
 
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        return 1/mu_0 * self.surface_average(diff_psi**2, self.R**2)
+        return 1/mu_0 * self.surface_average(diff_psi**2/self.R**2)
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
