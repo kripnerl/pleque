@@ -61,6 +61,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     # eq._q_anideriv_spl = eq._q_spl.antiderivative()
     eq.I_plasma = ds.attrs['cpasma']
 
+
     # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
