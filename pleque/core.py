@@ -183,8 +183,8 @@ class Equilibrium(object):
 
 
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
-        """
-        Return the value of :math:: `|\grad \psi|`. This is strictly 2+ dimensional value.
+        r"""
+        Return the value of :math:`|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
         :param coordinates:
         :param R:
@@ -290,24 +290,20 @@ class Equilibrium(object):
         :param psi_n:
         :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
-        If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
-        Coordinates.grid must be False.
-        :param resolution: default None
-            Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-            resolutions or dimension sizes can be required by passing an iterable of size 2
-            If `None` default equilibrium grid is used - this approach is much faster since some quiantities are
-            evaluated only ones.
+                            If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
+                            Coordinates.grid must be False.
+        :param resolution:  Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
+                            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+                            resolutions or dimension sizes can be required by passing an iterable of size 2
         :param dim: iterable of size 2 or string. Default is "step", determines the meaning of the resolution.
-         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
-        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-         achieved by passing an iterable of shape 2.
+                    If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+                    values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+                    same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+                    achieved by passing an iterable of shape 2.
         :param closed: Are we looking for a closed surface. This parameter is ignored of inlcfs is True.
         :param inlcfs: If True only the surface inside the last closed flux surface is returned.
         :return: list of FluxSurface objects
         """
-
         from pleque.fluxsurface import FluxSurface
 
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
@@ -368,6 +364,7 @@ class Equilibrium(object):
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
+
         :return: list of coordinates of contours on a requested level
         """
         from pleque.utils.surfaces import find_contour
@@ -400,16 +397,17 @@ class Equilibrium(object):
     def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
-        :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
-         R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
-          resolutions or dimension sizes can be required by passing an iterable of size 2.
-          If None, default grid is returned (1000, 2000) points.
+
+        :param resolution: Iterable of size 2 or a number. If a number is passed,
+                           R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
+                           resolutions or dimension sizes can be required by passing an iterable of size 2.
+                           If None, default grid of size (1000, 2000) is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
-            of the resolution.
-         If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
-        values in resolution are interpreted as requested number of points in a dimension. If string is passed,
-         same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
-         achieved by passing an iterable of shape 2.
+                    of the resolution.
+                    If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
+                    values in resolution are interpreted as requested number of points in a dimension. If string is passed,
+                    same value is used for R and Z dimension. Different interpretation of resolution for R, Z dimensions can be
+                    achieved by passing an iterable of shape 2.
         :return: Instance of `Coordinates` class with grid data
         """
         if resolution is None:
@@ -581,11 +579,12 @@ class Equilibrium(object):
                                   "Use monkey patching in the specific cases.")
 
     def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
-        """
+        r"""
         Poloidal component of the current density.
         Calculated as
-        ..math::
-            \frac{f'}{R \mu_0} * |\grad \psi |
+
+        .. math::
+          \frac{f'|\nabla \psi |}{R \mu_0}
 
         :param coordinates:
         :param R:
@@ -600,13 +599,14 @@ class Equilibrium(object):
         return self.fprime(coord)/(coord.R*mu_0)*self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        """
+        r"""
         todo: to be tested
 
         Toroidal component of the current denisity.
         Calculated as
+
         .. math::
-            R p' + \frac{1}{\mu_0 R} ff'
+          R p' + \frac{1}{\mu_0 R} ff'
 
         :param coordinates:
         :param R:
