@@ -19,7 +19,8 @@ def read(equilibrium,file, time):
     #TODO: Shall whe save 0D values from metis into the FluxFunc object?
 
     post = pydons.loadmat(file)["post"]
-    fluxfun = FluxFuncs(equi=equilibrium)
+    #fluxfun = FluxFuncs(equi=equilibrium)
+    fluxfun = equilibrium.fluxfuncs
 
     zerod = post.zerod
     times = zerod.temps.squeeze()
