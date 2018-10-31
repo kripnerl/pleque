@@ -944,7 +944,9 @@ class Equilibrium(object):
 
     @property
     def fluxfuncs(self):
-        return FluxFuncs(self)  # filters out methods from self
+        if not hasattr(self, '_fluxfunc'):
+            self._fluxfunc = FluxFuncs(self)  # filters out methods from self
+        return self._fluxfunc
 
     def __map_midplane2psi__(self):
         from scipy.interpolate import UnivariateSpline
