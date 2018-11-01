@@ -970,7 +970,7 @@ class Equilibrium(object):
 
     def __init_q__(self):
         from scipy.interpolate import UnivariateSpline
-        psi_n = np.arange(0.01, 0.99, 0.01)
+        psi_n = np.arange(0.01, 1, 0.005)
         qs = []
 
         for pn in psi_n:

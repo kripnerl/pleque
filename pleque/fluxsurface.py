@@ -110,11 +110,19 @@ class FluxSurface(Coordinates):
     @property
     def eval_q(self):
         if not hasattr(self, '_q'):
-            self._q = self._eq.fpol(psi_n=np.mean(self.psi_n))/(2*np.pi) \
+            self._q = self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False)/(2*np.pi) \
                       * self.surface_average(1/self.R**2)
             # self._q = self._eq.BvacR * self.diff_volume/\
             #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
         return self._q
+
+    def get_eval_q(self, method):
+        """
+        :param method: str, ['sum', 'trapz', 'simps']
+        :return:
+        """
+        return self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
+        * self.surface_average(1 / self.R ** 2, method=method)
 
     @property
     def tor_current(self):
@@ -148,7 +156,7 @@ class FluxSurface(Coordinates):
 
 
     def surface_average(self, func, method = 'sum'):
-        self.return_ = r"""
+        r"""
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
         .. math::
@@ -160,8 +168,13 @@ class FluxSurface(Coordinates):
         import inspect
         from scipy.integrate import trapz, simps
 
-        Rs = (self.R[1:] + self.R[:-1]) / 2
-        Zs = (self.Z[1:] + self.Z[:-1]) / 2
+        if method == 'sum':
+            Rs = (self.R[1:] + self.R[:-1]) / 2
+            Zs = (self.Z[1:] + self.Z[:-1]) / 2
+
+        else:
+            Rs = self.R
+            Zs = self.Z
 
         diff_psi = self._eq.diff_psi(Rs, Zs)
 
@@ -170,14 +183,19 @@ class FluxSurface(Coordinates):
         elif isinstance(func, float) or isinstance(func, int):
             func_val = func
         else:
-            func_val = (func[1:] + func[:-1])/2
+            if method == 'sum':
+                func_val = (func[1:] + func[:-1])/2
+            else:
+                func_val = func
+
+        l =  np.hstack((0, np.cumsum(self.dl)))
 
         if method == 'sum':
             ret = np.sum(self.dl*Rs/diff_psi*func_val)
         elif method == 'trapz':
-            ret = trapz(Rs/diff_psi*func_val, dx=self.dl)
+            ret = trapz(Rs/diff_psi*func_val, l)
         elif method == 'simps':
-            ret = simps(Rs / diff_psi * func_val, dx=self.dl)
+            ret = simps(Rs / diff_psi * func_val, l)
         else:
             ret = None
 
