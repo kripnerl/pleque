@@ -122,7 +122,19 @@ class FluxSurface(Coordinates):
         :return:
         """
         return self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
-        * self.surface_average(1 / self.R ** 2, method=method)
+                * self.surface_average(1 / self.R ** 2, method=method)
+
+    @property
+    def straight_fieldline_theta(self):
+        h = 1/self.R**2
+
+        izero = np.argmin(np.abs(self.theta))
+
+        avg = self.surface_average(h)
+        cum_avg = self.cumsum_surface_average(h, roll=izero)
+        #ret = np.roll(ret, amin)
+        ret = 2 * np.pi * cum_avg / avg
+        return ret
 
     @property
     def tor_current(self):
@@ -153,6 +165,41 @@ class FluxSurface(Coordinates):
         :return: numpy ndarray
         """
         return self
+
+    def cumsum_surface_average(self, func, roll=0):
+        r"""
+        Return the surface average (over single magnetic surface) value of `func`.
+        Return the value of integration
+
+        .. math::
+          <func>(\psi)_i = \oint_0^{\theta_i} \frac{\mathrm{d}l R}{|\nabla \psi|}a(R, Z)
+
+        :param func: func(X, Y), Union[ndarray, int, float]
+        :param method: str, ['sum', 'trapz', 'simps']
+        :return: ndarray
+        """
+        import inspect
+
+        Rs = (self.R[1:] + self.R[:-1]) / 2
+        Zs = (self.Z[1:] + self.Z[:-1]) / 2
+
+        diff_psi = self._eq.diff_psi(Rs, Zs)
+
+        if inspect.isclass(func) or inspect.isfunction(func):
+            func_val = func(Rs, Zs)
+        elif isinstance(func, float) or isinstance(func, int):
+            func_val = func
+        else:
+            func_val = (func[1:] + func[:-1])/2
+
+        val = self.dl*Rs/diff_psi*func_val
+
+        val = np.roll(val, -roll)
+        ret = np.cumsum(val)
+        ret = np.hstack((0, ret))
+        ret = np.roll(ret, +roll)
+
+        return ret
 
 
     def surface_average(self, func, method = 'sum'):
