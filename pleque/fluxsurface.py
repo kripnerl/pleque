@@ -159,8 +159,10 @@ class FluxSurface(Coordinates):
         r"""
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
+
         .. math::
           <func>(\psi) = \oint \frac{\mathrm{d}l R}{|\nabla \psi|}a(R, Z)
+
         :param func: func(X, Y), Union[ndarray, int, float]
         :param method: str, ['sum', 'trapz', 'simps']
         :return: 

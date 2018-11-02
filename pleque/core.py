@@ -725,7 +725,7 @@ class Equilibrium(object):
 
         res = []
 
-        coords_rz = coords.as_array()
+        coords_rz = coords.as_array(dim=2)
 
         dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
@@ -733,12 +733,20 @@ class Equilibrium(object):
         for i in np.arange(len(coords)):
 
             y0 = coords_rz[i]
+            if coords.dim == 2:
+                phi0 = 0
+            else:
+                phi0 = coords.phi[i]
+
+            if self._verbose:
+                print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
+
             if coords.psi_n[i] < 1:
                 # todo: determine the direction (now -1) !!
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
             else:
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
-            sol = solve_ivp(dphifunc, (0, 2 * np.pi * 8), y0,
+            sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
                             events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             )
@@ -990,6 +998,19 @@ class Equilibrium(object):
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Default coordinate systems are
+
+        - **1D**: :math:`\psi_\mathrm{N}`,
+        - **2D**: :math:`(R, Z)`,
+        - **3D**: :math:`(R, Z, \phi)`.
+
+        :param equilibrium:
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        """
         self._eq = equilibrium
         self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
@@ -1017,6 +1038,7 @@ class Coordinates(object):
                 r = self.x1[i]
                 z = self.x2[i]
                 yield r, z
+
     def __len__(self):
         if self.grid:
             return len(self.x1) * len(self.x2)
@@ -1122,18 +1144,20 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def as_array(self, coord_type=None):
+    def as_array(self, dim = None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+
+        :param dim: reduce the number of dimensions to dim (todo)
         :param coord_type: not effected at the moment (TODO)
         :return:
         """
         if self.dim == 0:
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
-        elif self.dim == 1:
+        elif dim == 1 or self.dim == 1:
             return self.x1 
-        elif self.dim == 2:
+        elif dim == 2 or self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
                 return np.vstack((x1.ravel(), x2.ravel())).T
@@ -1142,7 +1166,7 @@ class Coordinates(object):
                 # return np.array([x1, x2]).T
             else:
                 return np.array([self.x1, self.x2]).T
-        elif self.dim == 3:
+        elif dim == 3 or self.dim == 3:
             # todo: replace this by split method
             return np.array([self.x1, self.x2, self.x3]).T
 
