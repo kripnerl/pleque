@@ -3,14 +3,52 @@ import numpy as np
 from pleque import Equilibrium
 
 
-def cdb(shot = None, time = 1000):
+def cdb(shot = None, time = 1060, revision=1):
     """
 
-    :param shot: number of shot in cdb
-    :param time:
+    :param shot: number of shot in cdb, defaults to last
+    :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
+    :param revision: EFIT revision, defaults to first (post-shot standard)
     :return:
     """
-    pass
+    import pyCDB.client
+    import h5py
+    import xarray as xr
+    cdb = pyCDB.client.CDBClient()
+    if shot is None:
+        shot = cdb.last_shot_number()
+    # psi_RZ generic ID
+    sig_ref = cdb.get_signal_references(record_number=shot,
+                                        generic_signal_id=2860,
+                                        revision=revision)[0]
+    data_ref = cdb.get_data_file_reference(**sig_ref)
+    f5efit = h5py.File(data_ref.full_path, 'r')  # open EFITXX.rev.h5
+    t = f5efit['time'].value
+    if t[0] < 100:       # heuristic, first time should be above 100 if in ms
+        t *= 1e3         # put into ms
+    dst = xr.Dataset({
+        'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
+        'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
+        'pprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPPrime']),
+        'fpol': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
+        'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
+        'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
+        'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
+        'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
+
+    }, coords={
+        'time': t,
+        'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
+    }
+    )
+    ds = dst.sel(time=time, method='nearest').rename(Rt='R', Zt='Z')
+    # limiter is not expected to change in tome, so take 0th time index
+    limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0,:]
+                               for x in 'rz'])
+    eq = Equilibrium(ds, limiter)
+    return eq
+
+
 
 def read_fiesta_equilibrium(filepath, first_wall=None):
     """
