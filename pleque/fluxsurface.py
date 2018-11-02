@@ -126,15 +126,56 @@ class FluxSurface(Coordinates):
 
     @property
     def straight_fieldline_theta(self):
-        h = 1/self.R**2
+        """
+        Calculate straight field line :math:`\theta^*` coordinate.
+        :return:
+        """
+        from scipy.interpolate import CubicSpline
+        from pleque.utils.tools import arglis
 
-        izero = np.argmin(np.abs(self.theta))
+        if not hasattr(self, '_straight_fieldline_theta'):
 
-        avg = self.surface_average(h)
-        cum_avg = self.cumsum_surface_average(h, roll=izero)
-        #ret = np.roll(ret, amin)
-        ret = 2 * np.pi * cum_avg / avg
-        return ret
+            h = 1/self.R**2
+
+            izero = np.asscalar(np.argmin(np.mod(self.theta, 2*np.pi)))
+
+            avg = self.surface_average(h)
+            cum_avg = self.cumsum_surface_average(h, roll=izero)
+            #ret = np.roll(ret, amin)
+            theta_star = 2 * np.pi * cum_avg / avg
+
+            # generate splines:
+            theta4spl = np.mod(self.theta, 2*np.pi)
+            th_st4spl = theta_star
+            amin = np.asscalar(np.argmin(theta4spl))
+
+            theta4spl = np.roll(theta4spl, -amin)
+            th_st4spl = np.roll(th_st4spl, -amin)
+
+            # todo: this part is for testing
+            try:
+                self._theta2thetastar_spl = CubicSpline(theta4spl, th_st4spl, extrapolate='periodic')
+            except Exception:
+                # the sequence is not always strictly increasing.
+                # so get the increasing subsequence
+                alis = arglis(theta4spl)
+
+                theta4spl = theta4spl[alis]
+                th_st4spl = th_st4spl[alis]
+                self._theta2thetastar_spl = CubicSpline(theta4spl, th_st4spl, extrapolate='periodic')
+
+            try:
+                self._thetastar2theta_spl = CubicSpline(th_st4spl, theta4spl ,extrapolate='periodic')
+            except Exception:
+                alis = arglis(th_st4spl)
+
+                theta4spl = theta4spl[alis]
+                th_st4spl = th_st4spl[alis]
+                self._thetastar2theta_spl = CubicSpline(th_st4spl, theta4spl, extrapolate='periodic')
+
+            self._straight_fieldline_theta = theta_star
+
+        return self._straight_fieldline_theta
 
     @property
     def tor_current(self):
