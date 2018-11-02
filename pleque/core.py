@@ -24,6 +24,7 @@ class FluxFuncs:
 
     def add_flux_func(self, name, data, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, spline_smooth=0,
                       spline_order=3, **coords):
+
         from scipy.interpolate import UnivariateSpline
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
@@ -195,8 +196,11 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)**2 +
+        ret = np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)**2 +
                        self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1)**2)
+        if coord.grid:
+            ret = ret.T
+        return ret
 
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
@@ -273,7 +277,7 @@ class Equilibrium(object):
                       closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
                       coord_type=coord_type, **coords)
 
-    def _flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
+    def _flux_surface(self, *coordinates, resolution=None, dim="step",
                       closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
                       coord_type=None, **coords):
         """
@@ -311,7 +315,7 @@ class Equilibrium(object):
         # todo: to get lcfs, here is small trick. This should be handled better
         #       otherwise it may return crossed loop
         if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
-            psi_n = 1-1e-6
+            psi_n = 1-1e-5
         else:
             psi_n = coordinates.psi_n[0]
 
@@ -379,25 +383,25 @@ class Equilibrium(object):
 
 
 
-    def _plot_overview(self):
+    def _plot_overview(self, ax = None):
         """
         Simple routine for plot of plasma overview
         :return:
         """
         from pleque.utils.plotting import  plot_equilibrium
         import  matplotlib.pyplot as plt
-        plt.figure()
-        plot_equilibrium(self)
+        #plt.figure()
+        return plot_equilibrium(self, ax=ax)
 
 
     def grid(self, resolution=None, dim="step"):
         """
         Function which returns 2d grid with requested step/dimensions generated over the reconstruction space.
 
-        :param resolution: Iterable of size 2 or a number, default is [1e-3, 1e-3]. If a number is passed,
+        :param resolution: Iterable of size 2 or a number. If a number is passed,
                            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
                            resolutions or dimension sizes can be required by passing an iterable of size 2.
-                           If None, default grid is returned.
+                           If None, default grid of size (1000, 2000) is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
                     of the resolution.
                     If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
@@ -407,8 +411,11 @@ class Equilibrium(object):
         :return: Instance of `Coordinates` class with grid data
         """
         if resolution is None:
-            R = self._basedata.R.data
-            Z = self._basedata.Z.data
+            if not hasattr(self, '_default_grid'):
+                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), 1000)
+                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), 2000)
+                self._default_grid = self.coordinates(R=R, Z=Z, grid=True)
+            return self._default_grid
         else:
             if isinstance(resolution, Sequence):
                 if not len(resolution) == 2:
@@ -593,6 +600,8 @@ class Equilibrium(object):
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
+        todo: to be tested
+
         Toroidal component of the current denisity.
         Calculated as
 
@@ -614,7 +623,11 @@ class Equilibrium(object):
 
     @property
     def lcfs(self):
-        return self._as_fluxsurface(self._lcfs)
+        if not hasattr(self, '_lcfs_fl'):
+            if not (np.isclose(self._lcfs[0, 0], self._lcfs[-1, 0]) and np.isclose(self._lcfs[0, 1], self._lcfs[-1, 1])):
+                self._lcfs = np.vstack((self._lcfs, self._lcfs[-1]))
+            self._lcfs_fl = self._as_fluxsurface(self._lcfs)
+        return self._lcfs_fl
 
     @property
     def first_wall(self):
@@ -712,7 +725,7 @@ class Equilibrium(object):
 
         res = []
 
-        coords_rz = coords.as_array()
+        coords_rz = coords.as_array(dim=2)
 
         dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
@@ -720,12 +733,20 @@ class Equilibrium(object):
         for i in np.arange(len(coords)):
 
             y0 = coords_rz[i]
+            if coords.dim == 2:
+                phi0 = 0
+            else:
+                phi0 = coords.phi[i]
+
+            if self._verbose:
+                print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
+
             if coords.psi_n[i] < 1:
                 # todo: determine the direction (now -1) !!
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
             else:
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
-            sol = solve_ivp(dphifunc, (0, 2 * np.pi * 8), y0,
+            sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
                             events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             )
@@ -839,7 +860,8 @@ class Equilibrium(object):
         # Limiter vs. x-point plasma:
         self._limiter_plasma = False
         in_fwmask = np.ones_like(x_points)
-        if self._first_wall is not None:
+        # todo: evaluate psi along the wall.... this will work even with one limitter point!
+        if self._first_wall is not None and len(self._first_wall) > 2:
             from pleque.utils.surfaces import point_inside_curve
             in_fwmask = point_inside_curve(x_points, self._first_wall)
             if not np.any(in_fwmask):
@@ -893,13 +915,18 @@ class Equilibrium(object):
         # get lcfs, for now using matplotlib contour line
 
         # todo: replace this by Matisek's function (!!!)
+        rs = np.linspace(self.R_min, self.R_max, 1000)
+        zs = np.linspace(self.Z_min, self.Z_max, 2000)
+        psi = self._spl_psi(rs, zs)
+
         plt.figure(1111)
         cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
         paths = cl.collections[0].get_paths()
         v = np.concatenate([p.vertices for p in paths], axis=0)
         plt.close(1111)
 
-        if self._limiter_plasma:
+        # todo: first wall
+        if self._limiter_plasma and len(self._first_wall) > 3:
             mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
             v = v[mask_in, :]
         else:
@@ -918,11 +945,16 @@ class Equilibrium(object):
             mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
             v = v[mask_in, :]
 
+#        lcfs = self._flux_surface(psi_n=1)[0]
         self._lcfs = v
+        #self._lcfs = lcfs.as_array()
+
 
     @property
     def fluxfuncs(self):
-        return FluxFuncs(self)  # filters out methods from self
+        if not hasattr(self, '_fluxfunc'):
+            self._fluxfunc = FluxFuncs(self)  # filters out methods from self
+        return self._fluxfunc
 
     def __map_midplane2psi__(self):
         from scipy.interpolate import UnivariateSpline
@@ -946,7 +978,7 @@ class Equilibrium(object):
 
     def __init_q__(self):
         from scipy.interpolate import UnivariateSpline
-        psi_n = np.arange(0.01, 0.99, 0.01)
+        psi_n = np.arange(0.01, 1, 0.005)
         qs = []
 
         for pn in psi_n:
@@ -966,6 +998,19 @@ class Equilibrium(object):
 class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Default coordinate systems are
+
+        - **1D**: :math:`\psi_\mathrm{N}`,
+        - **2D**: :math:`(R, Z)`,
+        - **3D**: :math:`(R, Z, \phi)`.
+
+        :param equilibrium:
+        :param coordinates:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        """
         self._eq = equilibrium
         self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
@@ -993,6 +1038,7 @@ class Coordinates(object):
                 r = self.x1[i]
                 z = self.x2[i]
                 yield r, z
+
     def __len__(self):
         if self.grid:
             return len(self.x1) * len(self.x2)
@@ -1014,21 +1060,24 @@ class Coordinates(object):
 
     @property
     def psi(self):
-        if self.dim == 1:
-            return self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
-        elif self.dim >= 2:
-            psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
-            if self.grid:
-                return psi.T
-            else:
-                return psi
-
+        if not hasattr(self, '_psi'):
+            if self.dim == 1:
+                self._psi = self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
+            elif self.dim >= 2:
+                psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
+                if self.grid:
+                    self._psi = psi.T
+                else:
+                    self._psi =  psi
+        return self._psi
     @property
     def psi_n(self):
-        if self.dim == 1:
-            return self.x1
-        elif self.dim >= 2:
-            return (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
+        if not hasattr(self, '_psi_n'):
+            if self.dim == 1:
+                self._psi_n = self.x1
+            elif self.dim >= 2:
+                self._psi_n =(self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
+        return self._psi_n
 
     @property
     def rho(self):
@@ -1095,18 +1144,20 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def as_array(self, coord_type=None):
+    def as_array(self, dim = None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+
+        :param dim: reduce the number of dimensions to dim (todo)
         :param coord_type: not effected at the moment (TODO)
         :return:
         """
         if self.dim == 0:
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
-        elif self.dim == 1:
+        elif dim == 1 or self.dim == 1:
             return self.x1 
-        elif self.dim == 2:
+        elif dim == 2 or self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
                 return np.vstack((x1.ravel(), x2.ravel())).T
@@ -1115,7 +1166,7 @@ class Coordinates(object):
                 # return np.array([x1, x2]).T
             else:
                 return np.array([self.x1, self.x2]).T
-        elif self.dim == 3:
+        elif dim == 3 or self.dim == 3:
             # todo: replace this by split method
             return np.array([self.x1, self.x2, self.x3]).T
 
