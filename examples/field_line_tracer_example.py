@@ -68,10 +68,10 @@ def first_attempt():
 
     print('End of tracing')
 
-def default_treacer():
+def default_tracer():
     eq = load_testing_equilibrium()
 
-    N = 30
+    N = 1
     rs = np.linspace(1.16, 1.17, N, endpoint=False)
     zs = np.zeros_like(rs)
 
@@ -112,6 +112,6 @@ def default_treacer():
 
 if __name__ == '__main__':
     #first_attempt()
-    default_treacer()
+    default_tracer()
 
     plt.show()

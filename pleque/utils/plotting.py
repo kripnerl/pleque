@@ -3,25 +3,36 @@ import numpy as np
 
 from pleque import Equilibrium
 
-def _plot_extremes(o_points, x_points, ax: plt.Axes = None):
+def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
 
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue')
-    ax.plot(x_points[:, 0], x_points[:, 1], 'x', color='coral')
+    ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue', **kwargs)
+    ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
 
-def plot_extremes(eq: Equilibrium, ax: plt.Axes = None):
+def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
 
     if ax is None:
         ax = plt.gca()
 
-    _plot_extremes(eq._o_points, eq._x_points, ax=ax)
+    _plot_extremes(eq._o_points, eq._x_points, ax=ax, **kwargs)
 
 
 def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     if ax is None:
         ax = plt.gca()
+
+    rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
+    zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
+
+    size = rlim[1] - rlim[0]
+    rlim[0] -= size / 12
+    rlim[1] += size / 12
+
+    size = zlim[1] - zlim[0]
+    zlim[0] -= size / 12
+    zlim[1] += size / 12
 
     if eq._first_wall is not None:
         ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
@@ -43,8 +54,12 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     psi_out = np.ma.masked_array(psi, mask_inlcfs)
     # ax.pcolormesh(coords.R, coords.Z, psi_in, shading='gouraud')
 
-    ax.contourf(coords.R, coords.Z, psi_in, 100)
-    ax.contour(coords.R, coords.Z, psi_out, 20)
+    contour_out = eq.coordinates(r = eq.lcfs.r_mid[0]+2e-3*np.arange(1,11), theta = np.zeros(10), grid=False)
+
+    ax.contour(coords.R, coords.Z, psi_in, 20)
+
+    # todo: psi should be 1-d (!) resolve this
+    ax.contour(coords.R, coords.Z, psi, np.squeeze(contour_out.psi).sort(), colors='C0')
 
     psi_lcfs = eq._psi_lcfs
     z0 = eq._mg_axis[1]
@@ -56,4 +71,8 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
 
+    ax.set_xlim(rlim)
+    ax.set_ylim(zlim)
     ax.set_aspect('equal')
+
+    return ax
