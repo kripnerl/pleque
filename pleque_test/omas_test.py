@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from pleque.io import omas as plomas
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 import omas
 import numpy as np
 ods = omas.ODS()

@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from test.testing_utils import load_testing_equilibrium, get_test_equilibria
+from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
@@ -45,7 +45,7 @@ def load_gfile(g_file):
 
 # todo: add plotting function for various derivatives of psi
 
-def test_qprofiles(g_file: str, eq: Equilibrium):
+def show_qprofiles(g_file: str, eq: Equilibrium):
     # from tokamak.formats import geqdsk
     from pleque.io._geqdsk import read
     import matplotlib.pyplot as plt
@@ -86,7 +86,7 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, qpsi * -1, 'x', label='g-file (-1)')
+    ax.plot(psi_n, np.abs(qpsi) , 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
@@ -298,15 +298,15 @@ def plot_overview(eq: Equilibrium):
 def main():
     import matplotlib.pyplot as plt
 
-    test_case = 0
-    gfile = get_test_equilibria()[test_case]
+    test_case = 4
+    gfile = get_test_equilibria_filenames()[test_case]
     eq = load_testing_equilibrium(test_case)
 
     ax = plot_overview(eq)
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
-    test_qprofiles(gfile, eq)
+    show_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
