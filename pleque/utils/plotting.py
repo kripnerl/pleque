@@ -23,18 +23,9 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     if ax is None:
         ax = plt.gca()
 
-    rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
-    zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
 
-    size = rlim[1] - rlim[0]
-    rlim[0] -= size / 12
-    rlim[1] += size / 12
 
-    size = zlim[1] - zlim[0]
-    zlim[0] -= size / 12
-    zlim[1] += size / 12
-
-    if eq._first_wall is not None:
+    if eq._first_wall is not None and len(eq._first_wall) > 2:
         ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
         ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], color='k', lw=2,
                 label='First wall')
@@ -71,8 +62,19 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
 
-    ax.set_xlim(rlim)
-    ax.set_ylim(zlim)
+    if len(eq._first_wall) > 2:
+        rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
+        zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
+
+        size = rlim[1] - rlim[0]
+        rlim[0] -= size / 12
+        rlim[1] += size / 12
+
+        size = zlim[1] - zlim[0]
+        zlim[0] -= size / 12
+        zlim[1] += size / 12
+        ax.set_xlim(rlim)
+        ax.set_ylim(zlim)
     ax.set_aspect('equal')
 
     return ax

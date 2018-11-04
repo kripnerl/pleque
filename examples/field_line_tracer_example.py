@@ -1,7 +1,7 @@
 
 from pleque.core import Equilibrium
 from pleque.utils.plotting import plot_equilibrium
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np

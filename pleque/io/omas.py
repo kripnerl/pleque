@@ -1,6 +1,6 @@
 from pleque.core import Coordinates, Equilibrium
 
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 import omas
 import numpy as np
 def write(equilibrium: Equilibrium, grid_1d = None, grid_2d=None, gridtype=1, ods = None, time = np.array(0,ndmin=1), cocosio=3):

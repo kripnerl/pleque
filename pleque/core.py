@@ -89,7 +89,9 @@ class Equilibrium(object):
 
         Arguments
         ---------
+
         basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
+                  f = B_tor * R
         first_wall: required for initialization in case of limiter configuration
         cocos: At the moment module assume cocos to be 3 (no other option).
         """
@@ -100,6 +102,8 @@ class Equilibrium(object):
             print('Equilibrium module initialization')
             print('---------------------------------')
 
+
+        # todo what is actually used...
         self._basedata = basedata
         self._verbose = verbose
         self._first_wall = first_wall
@@ -382,6 +386,12 @@ class Equilibrium(object):
         return contour
 
 
+    def plot_overview(self, ax = None):
+        """
+        Simple routine for plot of plasma overview
+        :return:
+        """
+        self._plot_overview(ax)
 
     def _plot_overview(self, ax = None):
         """
@@ -827,7 +837,12 @@ class Equilibrium(object):
                         # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
                         x_points.append((r_ex2, z_ex2))
 
-        # todo: After beeing function written, check whether are points inside limiter
+        def is_monotonic(f, x0, x1, n_test=10):
+            rpts = np.linspace(x0[0], x1[0], n_test)
+            zpts = np.linspace(x0[1], x1[1], n_test)
+            psi_test = f(rpts, zpts, grid=False)
+            return np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test - 1
+
 
         # First identify the o-point nearest the operation range as center of plasma
         r_centr = (self.R_min + self.R_max) / 2
@@ -841,12 +856,14 @@ class Equilibrium(object):
         op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
         op_in_first_wall = np.ones_like(op_dist)
-        if self._first_wall is not None:
-            op_in_first_wall = self.in_first_wall(R=o_points[:, 0],
-                                                  Z=o_points[:, 1],
-                                                  grid=False) * 1
-            # weight
-            op_in_first_wall = np.abs(op_in_first_wall - 1 + 1e-3)
+        if self._first_wall is not None and len(self._first_wall) > 2:
+            in_fw = self.in_first_wall(R=o_points[:, 0],
+                                       Z=o_points[:, 1],
+                                       grid=False)
+            # If there is any o-point inside first wall, this is not used in weighting
+            if np.any(in_fw):
+                # weight
+                op_in_first_wall = np.abs(op_in_first_wall * 1 - 1 + 1e-3)
 
         sortidx = np.argsort(op_dist * op_psiscale * op_in_first_wall)
         # idx = np.argmin(op_dist)
@@ -855,62 +872,86 @@ class Equilibrium(object):
         self._o_points = o_points[sortidx]
 
         # identify THE x-point as the x-point nearest in psi value to mg_axis
-        # todo: Ensure that the psi function between x-point and o-point is monotonic (!)
+
+        psi_diff = np.zeros(x_points.shape[0])
+        monotonic = np.zeros(x_points.shape[0])
+        for i in np.arange(x_points.shape[0]):
+            rxp = x_points[i, 0]
+            zxp = x_points[i, 1]
+            psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
+            if self._psi_lcfs is None:
+                psi_diff[i] = np.abs(psi_xp - self._psi_axis)
+            else:
+                psi_diff[i] = np.abs(psi_xp - self._psi_lcfs)
+
+            # pleque_test whether the path from the o-point is monotionic
+            # n_test = 10
+            # rpts = np.linspace(rxp, self._mg_axis[0], n_test)
+            # zpts = np.linspace(zxp, self._mg_axis[1], n_test)
+            # psi_test = self._spl_psi(rpts, zpts, grid=False)
+            # monotonic[i] = (np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test-1)*1
+            monotonic[i] = is_monotonic(self._spl_psi, self._mg_axis, x_points[i])
+            monotonic[i] = (1 - monotonic[i]*1)+1e-3
+
+        # xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
+        # xp_dist = xp_dist / (np.max(xp_dist) - np.min(xp_dist))
+
+        # idx = np.argmin(psi_diff)
+        # sortidx = np.argsort(psi_diff * xp_dist * monotonic)
+        sortidx = np.argsort(psi_diff * monotonic)
+
+        if len(x_points) >= 1:
+            self._x_point = x_points[sortidx[0]]
+            self._psi_xp = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
+        else:
+            self._x_point = None
+            self._psi_xp = None
+
+        #todo: only for limiter plasma...
+        self._psi_lcfs = self._psi_xp
+
+        if len(x_points) >= 2:
+            self._x_point2 = x_points[sortidx[1]]
+            self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1]))
+        else:
+            self._x_point2 = None
+            self._psi_xp2 = None
+
+        self._x_points = x_points[sortidx]
 
         # Limiter vs. x-point plasma:
         self._limiter_plasma = False
-        in_fwmask = np.ones_like(x_points)
-        # todo: evaluate psi along the wall.... this will work even with one limitter point!
-        if self._first_wall is not None and len(self._first_wall) > 2:
-            from pleque.utils.surfaces import point_inside_curve
-            in_fwmask = point_inside_curve(x_points, self._first_wall)
-            if not np.any(in_fwmask):
-                self._limiter_plasma = True
+        # Evaluate psi along the limiter and find whether it limits the plasma
+        psi_first_wall = self._spl_psi(self._first_wall[:,0], self._first_wall[:,1], grid=False)
 
-        # for limiter plasma find the touch point:
+        if self._first_wall is not None and self._psi_xp is not None:
+            wall_zdist = np.abs(self._first_wall[:,1] - self._mg_axis[1])
+            xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
+
+            limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) < np.abs(self._psi_xp - self._psi_axis),
+                                                wall_zdist < xp_zdist)
+
+            if np.any(limiter_candidates):
+                for wpoint in self.first_wall[limiter_candidates]:
+                    if is_monotonic(self._spl_psi, wpoint, self.magnetic_axis):
+                        self._limiter_plasma = True
+
+        elif self._psi_xp is None:
+            self._limiter_plasma = True
+
         if self._limiter_plasma:
-            psi_fw = self._spl_psi(self._first_wall[:, 0], self._first_wall[:, 1], grid=False)
-            idx_min = np.argmin(np.abs(self._psi_axis - psi_fw))
-
-            # The choosen x-point is the point, where plasma touch the wall (rename it later?(
-            self._x_point = self._first_wall[idx_min]
-            self._psi_lcfs = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
-
-            self._x_point2 = None
-            self._psi_xp2 = None
+            # Find the plasma limitation
+            if self._first_wall is not None:
+                # find the touch point (strike point)
+                i_sp = np.argmin(np.abs(psi_first_wall - self._psi_axis))
+                self._strike_point = self._first_wall[i_sp]
+                self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1])
+                self._psi_lcfs = self._psi_strike_point
         else:
-            psi_diff = np.zeros(x_points.shape[0])
-            monotonic = np.zeros(x_points.shape[0])
-            for i in np.arange(x_points.shape[0]):
-                rxp = x_points[i, 0]
-                zxp = x_points[i, 1]
-                psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
-                if self._psi_lcfs is None:
-                    psi_diff[i] = np.abs(psi_xp - self._psi_axis)
-                else:
-                    psi_diff[i] = np.abs(psi_xp - self._psi_lcfs)
-
-                # test whether the path from the o-point is monotionic
-                n_test = 10
-                rpts = np.linspace(rxp, self._mg_axis[0], n_test)
-                zpts = np.linspace(zxp, self._mg_axis[1], n_test)
-                psi_test = self._spl_psi(rpts, zpts, grid=False)
-                monotonic[i] = (np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test-1)*1
-                monotonic[i] = (1 - monotonic[i])+1e-3
-
-                # todo: handle self.x_points (probably 1st/2nd separetly), use np.atleast2d()
-            xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
-            xp_dist = xp_dist / (np.max(xp_dist) - np.min(xp_dist))
-
-            # idx = np.argmin(psi_diff)
-            sortidx = np.argsort(psi_diff * xp_dist * monotonic)
-
-            self._x_point = x_points[sortidx[0]]
-            self._psi_lcfs = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
-            self._x_points = x_points[sortidx]
-
-            self._x_point2 = x_points[sortidx[1]]
-            self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1]))
+            # x-point plasma:
+            self._psi_lcfs = self._psi_xp
+            # todo: Strike point is None, it will be found later
+            self._strike_point = None
 
         # get lcfs, for now using matplotlib contour line
 
@@ -922,14 +963,21 @@ class Equilibrium(object):
         plt.figure(1111)
         cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
         paths = cl.collections[0].get_paths()
-        v = np.concatenate([p.vertices for p in paths], axis=0)
         plt.close(1111)
 
         # todo: first wall
-        if self._limiter_plasma and len(self._first_wall) > 3:
-            mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
-            v = v[mask_in, :]
+        if self._limiter_plasma:
+            print('>>> looking for flux surface limited by limiter')
+            distance = np.zeros(len(paths))
+            import shapely.geometry as geo
+            for i in range(len(paths)):
+                v = paths[i].vertices
+                distance[i] = geo.Point(self._strike_point).distance(geo.LineString(v))
+            v = paths[np.argmin(distance)].vertices
+
         else:
+            v = np.concatenate([p.vertices for p in paths], axis=0)
+
             if self._x_point[1] < self._x_point2[1]:
                 if self._verbose:
                     print('>>> lower x-point configuration found')
@@ -942,8 +990,9 @@ class Equilibrium(object):
                 v = v[v[:, 1] < self._x_point[1], :]
                 v = v[v[:, 1] > self._x_point2[1], :]
 
-            mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
-            v = v[mask_in, :]
+            if len(self._first_wall) > 2:
+                mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+                v = v[mask_in, :]
 
 #        lcfs = self._flux_surface(psi_n=1)[0]
         self._lcfs = v
