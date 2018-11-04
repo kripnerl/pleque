@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from pleque.core import FluxFuncs, Coordinates
 
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 import pydons
 import os
 import xarray as xr

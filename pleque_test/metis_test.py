@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from pleque.core import FluxFuncs, Coordinates
 from pleque.io import metis
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 import pydons
 import os
 import xarray as xr
@@ -29,9 +29,6 @@ ax[0].set_ylabel(r"$Te [eV]$")
 ax[1].set_ylabel(r"$Te [eV]$")
 
 print(eq.fluxfuncs.keys())
-
-
-
 
 keys = ['pressure', 'jboot', 'n0', 'tip', 'vrot', 'zeff']
 

@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 
