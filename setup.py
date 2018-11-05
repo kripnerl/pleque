@@ -1,4 +1,8 @@
 from setuptools import setup
+import os
+
+def readme():
+    return open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 
 setup(
     name='pleque',
@@ -8,7 +12,8 @@ setup(
     license='MIT',
     author='Lukas Kripner',
     author_email='kripner@ipp.cas.cz',
-    description='Python module for easy work with a tokamak plasma equilibrium.',
+    description='Python module for an easy work with a tokamak plasma equilibrium.',
+    long_description=readme(),
     install_requires=[
         'numpy',
         'scipy',
