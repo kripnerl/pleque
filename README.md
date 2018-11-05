@@ -6,7 +6,8 @@ Python module for the simple manipulation with the tokamak plasma equilibrium.
 For more information see the documentation at https://pleque.readthedocs.io.
 
 **Note:** The work is still in the early development stage and `pleque` probably contains bugs. You are very welcome to
-put a your wishes, found bugs or any other comment as an issue.
+put a your wishes, found bugs or any other comment as an issue. There also may occur minor changes in code structure 
+before `0.1.0` release. 
 
 ## Getting Started
 
