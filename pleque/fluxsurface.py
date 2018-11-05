@@ -212,8 +212,7 @@ class FluxSurface(Coordinates):
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
     def contour(self):
         """
-        Fluxsurface contour points; in fact return only self, since `Flux_surface` is descendant of `Coordinates`.
-
+        Depracated. Fluxsurface contour points.
         :return: numpy ndarray
         """
         return self
