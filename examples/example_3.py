@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
@@ -14,8 +14,8 @@ if not modpath in sys.path:  # not to stack same paths continuously if it is alr
 
 # noinspection PyUnreachableCode
 def load_gfile(g_file):
-    from tokamak.formats import geqdsk
-    eq_gfile = geqdsk.read(g_file)
+    from pleque.io._geqdsk import read
+    eq_gfile = read(g_file)
 
     psi = eq_gfile['psi']
     r = eq_gfile['r'][:, 0]
@@ -45,11 +45,13 @@ def load_gfile(g_file):
 
 # todo: add plotting function for various derivatives of psi
 
-def test_qprofiles(g_file: str, eq: Equilibrium):
-    from tokamak.formats import geqdsk
+def show_qprofiles(g_file: str, eq: Equilibrium):
+    # from tokamak.formats import geqdsk
+    from pleque.io._geqdsk import read
     import matplotlib.pyplot as plt
 
-    eq_gfile = geqdsk.read(g_file)
+    with open(g_file, 'r') as f:
+        eq_gfile = read(f)
 
     qpsi = eq_gfile['qpsi']
     psi_n = np.linspace(0, 1, len(qpsi))
@@ -57,15 +59,15 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     print(eq_gfile.keys())
 
     psin_axis = np.linspace(0, 1, 100)
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
     psi = eq.psi(R=r, Z=z)
 
     plt.figure()
     plt.subplot(121)
     ax = plt.gca()
 
-    ax.contour(r, z, psi.T, 30)
+    cs = ax.contour(r, z, psi, 30)
     ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
@@ -76,27 +78,39 @@ def test_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_ylabel('Z [m]')
     ax.set_aspect('equal')
     ax.set_title(r'$\psi$')
+    plt.colorbar(cs, ax=ax)
 
     psi_mod = eq.psi(psi_n=psin_axis)
     tor_flux = eq.tor_flux(psi_n=psin_axis)
     q_as_grad = np.gradient(tor_flux, psi_mod)
 
-    plt.subplot(222)
+    plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, qpsi, 'x', label='g-file data')
+    ax.plot(psi_n, np.abs(qpsi) , 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
-    ax.plot(psin_axis, q_as_grad, '--', label='Equilibrium data')
+    ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
 
     ax.legend()
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r'$q$')
 
-    plt.subplot(224)
+    plt.subplot(324)
     ax = plt.gca()
-    ax.plot(psi_mod, tor_flux, label='Toroidal flux')
-    ax.set_xlabel(r'$\psi$')
-    ax.set_ylabel(r'$\Phi$')
+    ax.plot(tor_flux, psi_mod, label='Toroidal flux')
+    ax.set_ylabel(r'$\psi$')
+    ax.set_xlabel(r'$\Phi$')
+
+    plt.subplot(326)
+    ax = plt.gca()
+    ax.plot(psi_n, eq.pprime(psi_n=psi_n)/1e3)
+    ax.set_xlabel(r'$\psi_\mathrm{N}$')
+    ax.set_ylabel(r"$p' (\times 10^3)$")
+    ax2 = ax.twinx()
+    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C1')
+    ax2.set_ylabel(r"$ff'$")
+
+
 
 
 def plot_extremes(eq: Equilibrium, ax=None):
@@ -105,7 +119,7 @@ def plot_extremes(eq: Equilibrium, ax=None):
         ax = plt.gca()
 
     # opoints:
-    for op in eq._opoints:
+    for op in eq._o_points:
         ax.plot(op[0], op[1], 'o', color='C5')
 
     for xp in eq._x_points:
@@ -116,8 +130,8 @@ def plot_extremes(eq: Equilibrium, ax=None):
 def plot_psi_derivatives(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
 
     psi = eq.psi(R=r, Z=z)
 
@@ -176,18 +190,20 @@ def plot_psi_derivatives(eq: Equilibrium):
     ax.set_aspect('equal')
 
 
+# noinspection PyTypeChecker
 def plot_overview(eq: Equilibrium):
     import matplotlib.pyplot as plt
 
-    r = np.linspace(eq.r_min, eq.r_max, 100)
-    z = np.linspace(eq.z_min, eq.z_max, 120)
+    r = np.linspace(eq.R_min, eq.R_max, 100)
+    z = np.linspace(eq.Z_min, eq.Z_max, 120)
 
     psi = eq.psi(R=r, Z=z)
 
     plt.figure(figsize=(8, 4))
     plt.subplot(131)
-    plt.contour(r, z, psi.T, 20)
-    plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.contour(r, z, psi, 20)
+    # plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
+    plt.plot(eq.lcfs.R, eq.lcfs.Z, label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.plot(eq._mg_axis[0], eq._mg_axis[1], 'o', color='b', markersize=10)
@@ -195,25 +211,40 @@ def plot_overview(eq: Equilibrium):
     plt.plot(eq._x_point2[0], eq._x_point2[1], 'x', color='r', markersize=10)
     return_axis = plt.gca()
 
-
     plt.title(r'$\psi$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(132)
-    plt.contour(r, z, eq.B_pol(R=r, Z=z).T, 20)
+    cs = plt.contour(r, z, eq.B_pol(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
+
     plt.title(r'$B_\mathrm{pol}$')
     plt.gca().set_aspect('equal')
 
     plt.subplot(133)
-    plt.contour(r, z, eq.B_tor(R=r, Z=z).T, 20)
+    cs = plt.contour(r, z, eq.B_tor(R=r, Z=z), 20)
+    plt.clabel(cs, inline=1)
     plt.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], label='lcfs')
     if eq._first_wall is not None:
         plt.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], 'k')
     plt.title(r'$B_\mathrm{tor}$')
     plt.gca().set_aspect('equal')
+
+    # number of points
+    n = 100
+    # module automaticaly identify the type of the input:
+    midplane = eq.coordinates(r=np.linspace(-0.3, 0.3, n), theta=np.zeros(n))
+
+    fig, axs = plt.subplots(3, 1, sharex=True)
+
+    ax = axs[0]
+    # Profile of toroidal field:
+    ax.plot(midplane.r, eq.B_tor(midplane))
+    # Profile of poloidal field:
+    ax.plot(midplane.r, eq.B_pol(midplane))
 
     # # ----
     # plt.figure(figsize=(8, 4))
@@ -263,58 +294,26 @@ def plot_overview(eq: Equilibrium):
 
     return return_axis
 
+
 def main():
-    ## Here is only some testing equilibirum prepared:
+    import matplotlib.pyplot as plt
 
-    # r = np.linspace(0.5, 2.5, 100)
-    # z = np.linspace(-1.5, 1.5, 200)
-    #
-    # r_grid, z_grid = np.meshgrid(r, z)
-    # el_r = 1 / 2
-    # el_z = 1 / 1
-    #
-    # def foofunc(r, z, par_r, par_z): return np.exp(-(r / par_r) ** 2 - (z / par_z) ** 2)
-    #
-    # # simple circle equilibrium
-    # psi_circle = foofunc(r_grid - 1.5, z_grid, el_r, el_z)
-    # # test x-point equilibrium done from 'three hills':
-    # psi_xpoint = 0.5 * foofunc(r_grid - 1.5, z_grid - 1.5, el_r, el_z * .5) + \
-    #              foofunc(r_grid - 1.5, z_grid + 1.5, el_r, el_z * .5) + \
-    #              psi_circle
-    #
-    # # psi = psi_circle.copy()
-    # psi = psi_xpoint.copy()
-    #
-    # # eq_ds = Dataset({'psi': (['Z', 'R'], psi)},
-    # #                 coords={'R': r,
-    # #                         'Z': z})
+    test_case = 4
+    gfile = get_test_equilibria_filenames()[test_case]
+    eq = load_testing_equilibrium(test_case)
 
-
-    ## Load the equilibrium directly from gfile
-
-    # # eq_ds = load_gfile('/compass/home/kripner/COMPU/fiesta/natural_divertor_v666.gfile')
-    # gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    # eq_ds = load_gfile(gfile)
-    #
-    # print(eq_ds)
-    # # eq = Equilibrium(eq_ds)
-
-    ## Load the equilibrium from fiesta generated g-filem using module routine
-
-    gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
-    eq = load_testing_equilibrium(1)
-
-    # ax = plot_overview(eq)
+    ax = plot_overview(eq)
     # plot_extremes(eq, ax)
     # plot_psi_derivatives(eq)
 
-    # test_qprofiles(gfile, eq)
+    show_qprofiles(gfile, eq)
 
     print(eq.fluxfuncs.fpol)
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
-    #plt.show()
+    plt.show()
+
 
 if __name__ == '__main__':
     main()
