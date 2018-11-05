@@ -596,6 +596,8 @@ class Equilibrium(object):
         .. math::
           \frac{f'|\nabla \psi |}{R \mu_0}
 
+        [Wesson: Tokamaks, p. 105]
+
         :param coordinates:
         :param R:
         :param Z:
