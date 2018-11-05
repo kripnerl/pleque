@@ -15,5 +15,3 @@ dependencies:
   - pytest
   - pylint
   - flake8
-  - pip:
-    - git+https://github.com/coobas/pyTokamak
