@@ -649,7 +649,8 @@ class Equilibrium(object):
 
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
-        Return instance of Coordinates. If instances of coordinates is already on the input, just pass it throught.
+        Return instance of Coordinates. If instances of coordinates is already on the input, just pass it through.
+
         :param coordinates:
         :param coord_type:
         :param grid:
@@ -717,16 +718,18 @@ class Equilibrium(object):
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
         are limited by z planes given be outermost z coordinates of the first wall.
 
-        Note:
-        -----
-        - (TODO) Even for the 3d coordinates toroidal angle is assumed to be zero.
-
         :param coordinates:
         :param R:
         :param Z:
         :param coord_type:
         :param coords:
         :return:
+
+        **Note:**
+
+
+        - (TODO) Even for the 3d coordinates toroidal angle is assumed to be zero.
+
         """
         import pleque.utils.field_line_tracers as flt
         from scipy.integrate import solve_ivp

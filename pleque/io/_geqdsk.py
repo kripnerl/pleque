@@ -268,6 +268,7 @@ def read(fh, cocos=1):
 def data_as_ds(data):
     """
     Convert data mappable to Pandas
+
     :param data:
     :return:
     """
@@ -298,6 +299,13 @@ def data_as_ds(data):
     return  eq_xarray
 
 def read_as_equilibrium(fh, cocos=1):
+    """
+    Read the eqdsk file and open it as `Equilibrium`.
+
+    :param fh: file handler
+    :param cocos:
+    :return: instance of `Equilibrium`
+    """
     from pleque import Equilibrium
     import numpy as np
 

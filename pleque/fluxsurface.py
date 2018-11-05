@@ -11,6 +11,7 @@ class FluxSurface(Coordinates):
         Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
         Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
+
         :param coords: Instance of coordinate class
         """
 
@@ -31,6 +32,7 @@ class FluxSurface(Coordinates):
     def closed(self):
         """
         True if the fluxsurface is closed.
+
         :return:
         """
         return self.__closed
@@ -39,6 +41,7 @@ class FluxSurface(Coordinates):
     def area(self):
         """
         Area of the closed fluxsurface.
+
         :return:
         """
         if self.__closed:
@@ -50,6 +53,7 @@ class FluxSurface(Coordinates):
     def length(self):
         """
         Length of the fluxsurface contour
+
         :return:
         """
         return self.__string.length
@@ -58,7 +62,8 @@ class FluxSurface(Coordinates):
     def surface(self):
         """
         Surface of fluxsurface calculated from the contour length
-         using Pappus centroid theorem : https://en.wikipedia.org/wiki/Pappus%27s_centroid_theorem
+        using Pappus centroid theorem : https://en.wikipedia.org/wiki/Pappus%27s_centroid_theorem
+
         :return: float
         """
         return self.__string.length * 2 * np.pi * self.centroid.R[0]
@@ -72,7 +77,8 @@ class FluxSurface(Coordinates):
     def volume(self):
         """
         Volume of the closed fluxsurface calculated from the area
-         using Pappus centroid theorem : https://en.wikipedia.org/wiki/Pappus%27s_centroid_theorem
+        using Pappus centroid theorem : https://en.wikipedia.org/wiki/Pappus%27s_centroid_theorem
+
         :return: float
         """
         if self.__closed:
@@ -85,6 +91,7 @@ class FluxSurface(Coordinates):
         """
         Diferential volume :math:`V' = dV/d\psi`
         Jardin, S.: Computational Methods in Plasma Physics
+
         :return:
         """
         if not hasattr(self, '_diff_volume'):
@@ -126,8 +133,9 @@ class FluxSurface(Coordinates):
 
     @property
     def straight_fieldline_theta(self):
-        """
+        r"""
         Calculate straight field line :math:`\theta^*` coordinate.
+
         :return:
         """
         from scipy.interpolate import CubicSpline
@@ -181,6 +189,7 @@ class FluxSurface(Coordinates):
     def tor_current(self):
         """
         Return toroidal current through the closed flux surface
+
         :return:
         """
         if not hasattr(self, '_tor_current'):
@@ -190,6 +199,7 @@ class FluxSurface(Coordinates):
     def _eval_tor_current(self):
         """
         to be tested (!)
+
         :return:
         """
         from scipy.constants import mu_0
@@ -203,6 +213,7 @@ class FluxSurface(Coordinates):
     def contour(self):
         """
         Fluxsurface contour points; in fact return only self, since `Flux_surface` is descendant of `Coordinates`.
+
         :return: numpy ndarray
         """
         return self
