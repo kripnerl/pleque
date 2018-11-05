@@ -4,7 +4,7 @@
 1. Set release number in `README.md`.
 1. Set release number in `setup.py`
 1. Set release number in `docs/source/conf.py`
-1. Create push request to master on GitHub (GitLab (?)). 
+1. Create push request to master on GitLab.
 1. Wait for the approval.
 1. Tag the commit as `release-[release_number]`
 1. Upload the release to pip: 
