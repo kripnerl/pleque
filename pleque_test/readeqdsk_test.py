@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pleque.core import Equilibrium
-from pleque.io.readgeqdsk import _readeqdsk, readeqdsk_xarray
+from pleque.io._readgeqdsk import _readeqdsk, readeqdsk_xarray
 
 limiter = np.loadtxt("test_files/compu/limiter_v3_1_iba.dat")
 gfile = '/compass/Shared/Exchange/imrisek/MATLAB/COMPASS_U/Scenarios/scenario_1_baseline_eqdsk'
