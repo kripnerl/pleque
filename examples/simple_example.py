@@ -6,6 +6,7 @@ import xarray as xa
 
 from pleque.core import Equilibrium
 from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
+from pleque.io import readers
 
 def plot_extremes(eq: Equilibrium, ax=None):
     import matplotlib.pyplot as plt
@@ -86,7 +87,7 @@ def main():
     gfile = get_test_equilibria_filenames()[test_case]
     eq = load_testing_equilibrium(test_case)
 
-    ax = plot_overview(eq)
+    eq.plot_overview()
     plot_extremes(eq)
 
     surfaces = []
