@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='pleque',
-    version='0.0.1',
+    version='0.0.2',
     packages=['pleque_test', 'pleque', 'pleque.io', 'pleque.utils'],
     url='https://pleque.readthedocs.io',
     license='MIT',
