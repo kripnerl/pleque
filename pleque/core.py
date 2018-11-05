@@ -1048,17 +1048,56 @@ class Coordinates(object):
 
     def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
-        Default coordinate systems are
-
-        - **1D**: :math:`\psi_\mathrm{N}`,
-        - **2D**: :math:`(R, Z)`,
-        - **3D**: :math:`(R, Z, \phi)`.
 
         :param equilibrium:
         :param coordinates:
         :param coord_type:
         :param grid:
         :param coords:
+
+        Default coordinate systems
+        --------------------------
+
+        - **1D**: :math:`\psi_\mathrm{N}`,
+        - **2D**: :math:`(R, Z)`,
+        - **3D**: :math:`(R, Z, \phi)`.
+
+        Accepted coordinates types
+        --------------------------
+
+        **1D - coordinates**
+
+        +------------------------+-----------+------------------------------+
+        | Coordinate             | Code      | Note                         |
+        +========================+===========+==============================+
+        |:math:`\psi_\mathrm{N}` | ``psi_n`` | Default 1D coordinate        |
+        +------------------------+-----------+------------------------------+
+        |:math:`\psi`            | ``psi``   |                              |
+        +------------------------+-----------+------------------------------+
+        |:math:`\rho`            | ``rho``   | :math:`\rho = \sqrt{\psi_n}` |
+        +------------------------+-----------+------------------------------+
+
+        **2D - coordintares**
+
+        +------------------------+--------------+-------------------------------------------------+
+        | Coordinate             | Code         | Note                                            |
+        +========================+==============+=================================================+
+        |:math:`(R, Z)`          | ``R, Z``     | Default 2D coordinate                           |
+        +------------------------+--------------+-------------------------------------------------+
+        |:math:`(r, \theta)`     | ``r, theta`` | Polar coordinates with respect to magnetic axis |
+        +------------------------+--------------+-------------------------------------------------+
+
+        **3D - coordinates**
+
+        +------------------------+---------------+-------------------------------------------------+
+        | Coordinate             | Code          | Note                                            |
+        +========================+===============+=================================================+
+        |:math:`(R, Z, \phi)`    | ``R, Z, phi`` | Default 3D coordinate                           |
+        +------------------------+---------------+-------------------------------------------------+
+        |:math:`(X, Y, Z)`       | ``(X, Y, Z)`` | Polar coordinates with respect to magnetic axis |
+        +------------------------+---------------+-------------------------------------------------+
+
+
         """
         self._eq = equilibrium
         self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
@@ -1069,12 +1108,6 @@ class Coordinates(object):
         self.grid = grid
 
         self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
-
-    # def __call__(self, *args, **kwargs):
-    #     pass
-    #
-    # def __iter__(self):
-    #     pass
 
     def __iter__(self):
         if self.grid:
