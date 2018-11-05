@@ -65,7 +65,7 @@ also some examples in `examples` directory.
 
 * **Lukas Kripner** - [kripnerl](https://github.com/kripnerl)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
 
 ## License
 
