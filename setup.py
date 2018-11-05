@@ -14,6 +14,7 @@ setup(
     author_email='kripner@ipp.cas.cz',
     description='Python module for an easy work with a tokamak plasma equilibrium.',
     long_description=readme(),
+    long_description_content_type="text/markdown",
     install_requires=[
         'numpy',
         'scipy',
