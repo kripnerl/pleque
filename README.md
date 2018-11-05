@@ -1,89 +1,82 @@
-# Pleque - PLasma EQUilibrium module
+# PLEQUE - **PL**asma **EQU**ilibrium **E**njoyment module \[pleɪɡ\]
+[![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://img.shields.io/github/license/mashape/apistatus.svg)
+[![py3comp](https://img.shields.io/badge/py3-compatible-brightgreen.svg)](https://img.shields.io/badge/py3-compatible-brightgreen.svg)
 
-Template of the future README file. 
+Python module for the simple manipulation with the tokamak plasma equilibrium.
+For more information see the documentation at https://pleque.readthedocs.io.
 
-One Paragraph of project description goes here
+**Note:** The work is still in the early development stage and `pleque` probably contains bugs. You are very welcome to
+put a your wishes, found bugs or any other comment as an issue. There also may occur minor changes in code structure 
+before `0.1.0` release. 
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
-
 ### Prerequisites
 
-What things you need to install the software and how to install them
+The prerequisites should be maintained by `pip`.  
 
 ```
-Give examples
+python>=3.5
+numpy
+scipy
+shapely
+scikit-image
+xarray
+pandas
 ```
 
 ### Installing
 
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
-
-```
-Give the example
+From PyPI (https://pypi.org/project/pleque/):
+```bash
+pip install --user pleque
 ```
 
-And repeat
+or clone/copy the github repository and run
 
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo
-
-## Running the tests
-
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
+```bash
+git clone https://github.com/kripnerl/pleque.git
+cd pleque
+pip install --user .
 ```
 
-### And coding style tests
+## Examples
 
-Explain what these tests test and why
+```python
+from pleque.io import readers
+import matplotlib as plt
 
+eqdsk_filename = "path_to_my_gfile.gfile"
+# Create instance of `Equilibrium` class
+eq = readers.read_geqdsk(eqdsk_filename)
+
+# plot simple overview of the equilibrium:
+eq.plot_overview()
 ```
-Give an example
-```
 
-## Deployment
+Some other examples can be found as a notebook in the `notebooks` folder. There are 
+also some examples in `examples` directory. 
 
-Add additional notes about how to deploy this on a live system
+## Version
 
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
+0.0.1
 
 ## Authors
 
-* **Lukas Kripner** - *Initial work* - [kripnerl](https://github.com/kripnerl)
+* **Lukas Kripner** - [kripnerl](https://github.com/kripnerl)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
-## Acknowledgments
+## Related projects
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* [FreeGS](https://github.com/bendudson/freegs) - Free boundary Grad-Shafranov solver in Python
+* [OMFIT](https://gafusion.github.io/OMFIT-source/) is an integrated modeling and experimental data analysis software for magnetically confined thermonuclear fusion experiments. The goal of OMFIT is to enhance existing scientific workflows and enable new integrated modeling capabilities. To achieve these goals OMFIT adopts a bottom-up collaborative development approach.
+* [OMAS](https://gafusion.github.io/omas/) (Ordered Multidimensional Array Structure) is a Python library designed to simplify the interface of third-party codes with the ITER Integrated Modeling and Analysis Suite (IMAS) . ITER IMAS defines a data model, a data get/put API, and a data storage infrastructure used for manipulating ITER data.
+
+## References
+* [Sauter, O. & Medvedev, S. Y. "Tokamak coordinate conventions: COCOS." Comput. Phys. Commun. **184**, 293–302 (2013).](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
+* S. Jardin "Computational Methods in Plasma Physics" CRC Press.
