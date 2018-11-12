@@ -41,7 +41,7 @@ def cdb(shot = None, time = 1060, revision=1):
         'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
     }
     )
-    ds = dst.sel(time=time, method='nearest').rename(Rt='R', Zt='Z')
+    ds = dst.sel(time=time, method='nearest').rename({'Rt':'R', 'Zt':'Z'})
     # limiter is not expected to change in tome, so take 0th time index
     limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0,:]
                                for x in 'rz'])
