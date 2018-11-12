@@ -8,6 +8,8 @@ setup(
     name='pleque',
     version='0.0.2',
     packages=['pleque_test', 'pleque', 'pleque.io', 'pleque.utils'],
+    package_dir={'pleque_test': 'pleque_test'},
+    package_data={'pleque_test': ['test_files/*']},
     url='https://pleque.readthedocs.io',
     license='MIT',
     author='Lukas Kripner',
