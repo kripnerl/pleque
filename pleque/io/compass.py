@@ -3,7 +3,7 @@ import numpy as np
 from pleque import Equilibrium
 
 
-def cdb(shot = None, time = 1060, revision=1):
+def cdb(shot=None, time=1060, revision=1):
     """
 
     :param shot: number of shot in cdb, defaults to last
@@ -14,6 +14,7 @@ def cdb(shot = None, time = 1060, revision=1):
     import pyCDB.client
     import h5py
     import xarray as xr
+
     cdb = pyCDB.client.CDBClient()
     if shot is None:
         shot = cdb.last_shot_number()
@@ -22,32 +23,47 @@ def cdb(shot = None, time = 1060, revision=1):
                                         generic_signal_id=2860,
                                         revision=revision)[0]
     data_ref = cdb.get_data_file_reference(**sig_ref)
-    f5efit = h5py.File(data_ref.full_path, 'r')  # open EFITXX.rev.h5
-    t = f5efit['time'].value
-    if t[0] < 100:       # heuristic, first time should be above 100 if in ms
-        t *= 1e3         # put into ms
-    dst = xr.Dataset({
-        'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
-        'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
-        'pprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPPrime']),
-        'fpol': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
-        'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
-        'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-        'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
-        'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
+    eq = read_efithdf5(data_ref.full_path, time=time)
 
-    }, coords={
-        'time': t,
-        'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
-    }
-    )
-    ds = dst.sel(time=time, method='nearest').rename({'Rt':'R', 'Zt':'Z'})
-    # limiter is not expected to change in tome, so take 0th time index
-    limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0,:]
-                               for x in 'rz'])
-    eq = Equilibrium(ds, limiter)
     return eq
 
+
+def read_efithdf5(file_path, time):
+    """
+    Loads Equilibrium information from an efit file
+    :param file_path: path to the efit file
+    :param time: Time to return
+    :return: equilibrium
+    """
+    import h5py
+    import xarray as xr
+
+    with h5py.File(file_path, 'r') as f5efit: # open EFITXX.rev.h5
+
+        t = f5efit['time'].value
+        if t[0] < 100:       # heuristic, first time should be above 100 if in ms
+            t *= 1e3         # put into ms
+        dst = xr.Dataset({
+            'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
+            'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
+            'pprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPPrime']),
+            'fpol': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
+            'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
+            'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
+            'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
+            'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
+
+        }, coords={
+            'time': t,
+            'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
+        }
+        )
+        ds = dst.sel(time=time, method='nearest').rename({'Rt':'R', 'Zt':'Z'})
+        # limiter is not expected to change in tome, so take 0th time index
+        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0,:]
+                                   for x in 'rz'])
+        eq = Equilibrium(ds, limiter)
+    return eq
 
 
 def read_fiesta_equilibrium(filepath, first_wall=None):
@@ -84,19 +100,17 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    #todo: now assume cocos = 3 => q < 0
+    # todo: now assume cocos = 3 => q < 0
     if np.sum(ds.qpsi.data) > 0:
         qpsi = ds.qpsi.data * -1
     else:
         qpsi = ds.qpsi.data
 
-
-    #eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
+    # eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
     # eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
     # eq._dq_dpsin_spl = eq._q_spl.derivative()
     # eq._q_anideriv_spl = eq._q_spl.antiderivative()
     eq.I_plasma = ds.attrs['cpasma']
-
 
     # noinspection PyPep8Naming
     def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
