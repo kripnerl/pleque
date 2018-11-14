@@ -6,10 +6,11 @@ from pleque import Equilibrium
 def cdb(shot=None, time=1060, revision=1):
     """
 
+
     :param shot: number of shot in cdb, defaults to last
     :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
     :param revision: EFIT revision, defaults to first (post-shot standard)
-    :return:
+    :return: Equilibrium
     """
     import pyCDB.client
     import h5py
@@ -30,10 +31,11 @@ def cdb(shot=None, time=1060, revision=1):
 
 def read_efithdf5(file_path, time):
     """
-    Loads Equilibrium information from an efit file
-    :param file_path: path to the efit file
-    :param time: Time to return
-    :return: equilibrium
+    Loads Equilibrium information from an efit file.
+
+    :param file_path: path to the hdf5 compass efit file
+    :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
+    :return: Equilibrium
     """
     import h5py
     import xarray as xr
@@ -92,7 +94,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
-        first_wall = '../../pleque_test/test_files/limiter_v3_1_iba.dat'
+        first_wall = '../../pleque_test/test_files/limiter_v3_1_iba_v2.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
 
     if isinstance(first_wall, str):
