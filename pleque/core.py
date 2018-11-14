@@ -928,18 +928,30 @@ class Equilibrium(object):
         self._limiter_plasma = False
         # Evaluate psi along the limiter and find whether it limits the plasma
         psi_first_wall = self._spl_psi(self._first_wall[:,0], self._first_wall[:,1], grid=False)
+        limiter_candidates = np.full_like(psi_first_wall, True, dtype=bool)
 
         if self._first_wall is not None and self._psi_xp is not None:
-            wall_zdist = np.abs(self._first_wall[:,1] - self._mg_axis[1])
-            xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
 
-            limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) < np.abs(self._psi_xp - self._psi_axis),
-                                                wall_zdist < xp_zdist)
-
-            if np.any(limiter_candidates):
-                for wpoint in self._first_wall[limiter_candidates]:
-                    if is_monotonic(self._spl_psi, wpoint, self._mg_axis):
+            # some circular plasmas can have xpoint on hfs so some advance testing for low number walls
+            if len(self._first_wall) < 3:
+                for wpoint, psi_wall in zip(self.first_wall, psi_first_wall):
+                    if np.linalg.norm(wpoint-self._mg_axis) < np.linalg.norm(self._x_point - self._mg_axis) and np.abs(psi_wall - self._psi_axis) < np.abs(self._psi_xp - self._psi_axis):
                         self._limiter_plasma = True
+            elif not self.in_first_wall(self._x_point[0], self._x_point[1]):
+                self._limiter_plasma = True
+            else:
+
+                wall_zdist = np.abs(self._first_wall[:,1] - self._mg_axis[1])
+                xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
+
+                limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) <
+                                                    np.abs(self._psi_xp - self._psi_axis),
+                                                    wall_zdist < xp_zdist)
+
+                if np.any(limiter_candidates):
+                    for wpoint in self._first_wall[limiter_candidates]:
+                        if is_monotonic(self._spl_psi, wpoint, self._mg_axis):
+                            self._limiter_plasma = True
 
         elif self._psi_xp is None:
             self._limiter_plasma = True
@@ -948,8 +960,9 @@ class Equilibrium(object):
             # Find the plasma limitation
             if self._first_wall is not None:
                 # find the touch point (strike point)
-                i_sp = np.argmin(np.abs(psi_first_wall - self._psi_axis))
-                self._strike_point = self._first_wall[i_sp]
+                psi_fw_candidates = psi_first_wall[limiter_candidates]
+                i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
+                self._strike_point = self._first_wall[limiter_candidates][i_sp]
                 self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1])
                 self._psi_lcfs = self._psi_strike_point
         else:
