@@ -3,16 +3,16 @@ import numpy as np
 
 from pleque import Equilibrium
 
-def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
 
+def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
     ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue', **kwargs)
     ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
 
-def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
 
+def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -22,8 +22,6 @@ def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
 def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     if ax is None:
         ax = plt.gca()
-
-
 
     if eq._first_wall is not None and len(eq._first_wall) > 2:
         ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
@@ -45,7 +43,7 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     psi_out = np.ma.masked_array(psi, mask_inlcfs)
     # ax.pcolormesh(coords.R, coords.Z, psi_in, shading='gouraud')
 
-    contour_out = eq.coordinates(r = eq.lcfs.r_mid[0]+2e-3*np.arange(1,11), theta = np.zeros(10), grid=False)
+    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 11), theta=np.zeros(10), grid=False)
 
     ax.contour(coords.R, coords.Z, psi_in, 20)
 

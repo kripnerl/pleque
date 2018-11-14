@@ -79,7 +79,7 @@ def write(data, fh, label=None, shot=None, time=None):
 
     # I have no idea what idum is, here it is set to 3
     idum = 3
-    header = "{0:11s}{1:10s}   {2:>8s}{3:16s}{4:4d}{5:4d}{6:4d}\n"\
+    header = "{0:11s}{1:10s}   {2:>8s}{3:16s}{4:4d}{5:4d}{6:4d}\n" \
         .format(label, creation_date, shot, time, idum, nx, ny)
 
     # First line: Identification string, followed by resolution
@@ -296,7 +296,8 @@ def data_as_ds(data):
 
     for i in attrs:
         eq_xarray.attrs[i] = data[i]
-    return  eq_xarray
+    return eq_xarray
+
 
 def read_as_equilibrium(fh, cocos=1):
     """
@@ -310,7 +311,7 @@ def read_as_equilibrium(fh, cocos=1):
     import numpy as np
 
     data = read(fh, cocos)
-    ds = data_as_ds(data) # as dataset
-    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T # first wall
+    ds = data_as_ds(data)  # as dataset
+    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T  # first wall
     eq = Equilibrium(ds, fw)
     return eq

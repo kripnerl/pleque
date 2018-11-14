@@ -13,8 +13,6 @@ def cdb(shot=None, time=1060, revision=1):
     :return: Equilibrium
     """
     import pyCDB.client
-    import h5py
-    import xarray as xr
 
     cdb = pyCDB.client.CDBClient()
     if shot is None:
@@ -40,11 +38,11 @@ def read_efithdf5(file_path, time):
     import h5py
     import xarray as xr
 
-    with h5py.File(file_path, 'r') as f5efit: # open EFITXX.rev.h5
+    with h5py.File(file_path, 'r') as f5efit:  # open EFITXX.rev.h5
 
         t = f5efit['time'].value
-        if t[0] < 100:       # heuristic, first time should be above 100 if in ms
-            t *= 1e3         # put into ms
+        if t[0] < 100:  # heuristic, first time should be above 100 if in ms
+            t *= 1e3  # put into ms
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
@@ -60,9 +58,9 @@ def read_efithdf5(file_path, time):
             'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
         }
         )
-        ds = dst.sel(time=time, method='nearest').rename({'Rt':'R', 'Zt':'Z'})
+        ds = dst.sel(time=time, method='nearest').rename({'Rt': 'R', 'Zt': 'Z'})
         # limiter is not expected to change in tome, so take 0th time index
-        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0,:]
+        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
                                    for x in 'rz'])
         eq = Equilibrium(ds, limiter)
     return eq

@@ -10,6 +10,6 @@ test:pylint:
 
 test:flake8:
   script:
-    - flake8 pleque
+  - flake8 -max-line-length 121 pleque
 
 # TODO add pytest

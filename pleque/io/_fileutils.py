@@ -61,6 +61,7 @@ def write_1d(val, out):
         out.write(val[i])
     out.newline()
 
+
 def write_2d(val, out):
     """
     Writes a 2D array. Note that this transposes
@@ -71,6 +72,7 @@ def write_2d(val, out):
         for x in range(nx):
             out.write(val[x, y])
     out.newline()
+
 
 def next_value(fh):
     """

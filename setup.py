@@ -6,6 +6,7 @@ from setuptools import setup
 def readme():
     return open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 
+
 setup(
     name='pleque',
     version='0.0.3.beta2',
@@ -29,5 +30,3 @@ setup(
     ],
     zip_safe=False
 )
-
-

@@ -30,7 +30,7 @@ grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 figx, ax = plt.subplots()
 cl = ax.contourf(grid.R, grid.Z, grid.psi_n, 50)
 plt.colorbar(cl)
-#ax.plot(surf_lcfs.as_array()[:, 0], surf_lcfs.as_array()[:, 1], "-C3")
+# ax.plot(surf_lcfs.as_array()[:, 0], surf_lcfs.as_array()[:, 1], "-C3")
 for i in range(len(surf_inlcfs)):
     for j in range(len(surf_inlcfs[i])):
         ax.plot(surf_inlcfs[i][j].as_array()[:, 0], surf_inlcfs[i][j].as_array()[:, 1], "-C1")

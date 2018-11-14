@@ -86,7 +86,7 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, np.abs(qpsi) , 'x', label='g-file (abs)')
+    ax.plot(psi_n, np.abs(qpsi), 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
@@ -103,14 +103,12 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(326)
     ax = plt.gca()
-    ax.plot(psi_n, eq.pprime(psi_n=psi_n)/1e3)
+    ax.plot(psi_n, eq.pprime(psi_n=psi_n) / 1e3)
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r"$p' (\times 10^3)$")
     ax2 = ax.twinx()
     ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C1')
     ax2.set_ylabel(r"$ff'$")
-
-
 
 
 def plot_extremes(eq: Equilibrium, ax=None):
