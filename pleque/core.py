@@ -937,8 +937,8 @@ class Equilibrium(object):
                                                 wall_zdist < xp_zdist)
 
             if np.any(limiter_candidates):
-                for wpoint in self.first_wall[limiter_candidates]:
-                    if is_monotonic(self._spl_psi, wpoint, self.magnetic_axis):
+                for wpoint in self._first_wall[limiter_candidates]:
+                    if is_monotonic(self._spl_psi, wpoint, self._mg_axis):
                         self._limiter_plasma = True
 
         elif self._psi_xp is None:
