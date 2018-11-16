@@ -1,11 +1,7 @@
-import numpy as np
-
 def test_equilibria():
-    from pleque_test.testing_utils import load_testing_equilibrium, get_test_cases_number, get_test_equilibria_filenames
+    from pleque_test.testing_utils import get_test_cases_number, get_test_equilibria_filenames
     from pleque.io.readers import read_geqdsk
     from numpy import array
-    from pleque.utils.plotting import plot_extremes
-    import matplotlib.pyplot as plt
     import numpy as np
 
     N_cases = get_test_cases_number()
@@ -42,6 +38,5 @@ def test_equilibria():
         print('mg axis = {}'.format(eq._mg_axis))
         print('x point = {}'.format(eq._x_point))
         print('strike point = {}'.format(eq._strike_point))
-
 
     #plt.show()

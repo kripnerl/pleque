@@ -114,7 +114,7 @@ def _readeqdsk(filepath, order="F"):
     equi["r_bound"] = boundage[0:equi["nbound"], 0]
     equi["z_bound"] = boundage[0:equi["nbound"], 1]
 
-    equi["r_lim"] = boundage[equi["nbound"]:equi["nbound"]+equi["nlim"], 0]
-    equi["z_lim"] = boundage[equi["nbound"]:equi["nbound"]+equi["nlim"], 1]
+    equi["r_lim"] = boundage[equi["nbound"]:equi["nbound"] + equi["nlim"], 0]
+    equi["z_lim"] = boundage[equi["nbound"]:equi["nbound"] + equi["nlim"], 1]
 
     return equi

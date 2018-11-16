@@ -22,3 +22,5 @@ build/
 dist/
 
 pleque\.egg-info/
+
+\.cache/v/cache/

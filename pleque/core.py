@@ -1,8 +1,9 @@
 from collections.abc import Sequence
-from pleque.utils.decorators import deprecated
 
 import numpy as np
 import xarray
+
+from pleque.utils.decorators import deprecated
 
 
 class FluxFuncs:
@@ -37,7 +38,7 @@ class FluxFuncs:
         psi_n, idxs = np.unique(coord.psi_n, return_index=True)
         data = data[idxs]
 
-        #add flux function name to the list
+        # add flux function name to the list
         self._func_names.append(name)
 
         interp = UnivariateSpline(psi_n, data, s=spline_smooth, k=spline_order)
@@ -50,10 +51,11 @@ class FluxFuncs:
         setattr(type(self), name, new_func)
 
     def __getitem__(self, item):
-        return getattr(self,item)
+        return getattr(self, item)
 
     def keys(self):
         return self._func_names
+
 
 class Equilibrium(object):
     """
@@ -101,7 +103,6 @@ class Equilibrium(object):
             print('---------------------------------')
             print('Equilibrium module initialization')
             print('---------------------------------')
-
 
         # todo what is actually used...
         self._basedata = basedata
@@ -185,7 +186,6 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
-
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""
         Return the value of :math:`|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
@@ -200,8 +200,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        ret = np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)**2 +
-                       self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1)**2)
+        ret = np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1) ** 2 +
+                      self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1) ** 2)
         if coord.grid:
             ret = ret.T
         return ret
@@ -274,12 +274,12 @@ class Equilibrium(object):
 
     @deprecated('The structure and behaviour of this function will change soon!\n'
                 'to keep the same behaviour use `_flux_surface` instead.')
-    def flux_surface(self, *coordinates, resolution=[1e-3, 1e-3], dim="step",
-                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
-                      coord_type=None, **coords):
+    def flux_surface(self, *coordinates, resolution=(1e-3, 1e-3), dim="step",
+                     closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                     coord_type=None, **coords):
         return self._flux_surface(*coordinates, resolution=resolution, dim=dim,
-                      closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
-                      coord_type=coord_type, **coords)
+                                  closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
+                                  coord_type=coord_type, **coords)
 
     def _flux_surface(self, *coordinates, resolution=None, dim="step",
                       closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
@@ -308,7 +308,6 @@ class Equilibrium(object):
         :param inlcfs: If True only the surface inside the last closed flux surface is returned.
         :return: list of FluxSurface objects
         """
-        from pleque.fluxsurface import FluxSurface
 
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
 
@@ -319,7 +318,7 @@ class Equilibrium(object):
         # todo: to get lcfs, here is small trick. This should be handled better
         #       otherwise it may return crossed loop
         if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
-            psi_n = 1-1e-5
+            psi_n = 1 - 1e-5
         else:
             psi_n = coordinates.psi_n[0]
 
@@ -354,7 +353,7 @@ class Equilibrium(object):
             # Sadly contour des not go through the point due to mesh resolution :-(
             dist = np.inf
             tmp2 = None
-            
+
             for i in range(len(contour)):
                 tmp = contour[i].distance(coordinates)
                 if tmp < dist:
@@ -385,24 +384,21 @@ class Equilibrium(object):
 
         return contour
 
-
-    def plot_overview(self, ax = None):
+    def plot_overview(self, ax=None):
         """
         Simple routine for plot of plasma overview
         :return:
         """
         self._plot_overview(ax)
 
-    def _plot_overview(self, ax = None):
+    def _plot_overview(self, ax=None):
         """
         Simple routine for plot of plasma overview
         :return:
         """
-        from pleque.utils.plotting import  plot_equilibrium
-        import  matplotlib.pyplot as plt
-        #plt.figure()
+        from pleque.utils.plotting import plot_equilibrium
+        # plt.figure()
         return plot_equilibrium(self, ax=ax)
-
 
     def grid(self, resolution=None, dim="step"):
         """
@@ -568,17 +564,13 @@ class Equilibrium(object):
         if not hasattr(self, '_dq_dpsin_spl'):
             self.__init_q__()
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
+        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_anideriv_spl'):
             self.__init_q__()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
-
-    def diff_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -608,7 +600,7 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self.fprime(coord)/(coord.R*mu_0)*self.diff_psi(coord)
+        return self.fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
@@ -630,13 +622,13 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return coord.R*self.pressure(coord) + 1/(mu_0*coord.R) *self.ffprime(coord)
-
+        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.ffprime(coord)
 
     @property
     def lcfs(self):
         if not hasattr(self, '_lcfs_fl'):
-            if not (np.isclose(self._lcfs[0, 0], self._lcfs[-1, 0]) and np.isclose(self._lcfs[0, 1], self._lcfs[-1, 1])):
+            if not (np.isclose(self._lcfs[0, 0], self._lcfs[-1, 0]) and np.isclose(self._lcfs[0, 1],
+                                                                                   self._lcfs[-1, 1])):
                 self._lcfs = np.vstack((self._lcfs, self._lcfs[-1]))
             self._lcfs_fl = self._as_fluxsurface(self._lcfs)
         return self._lcfs_fl
@@ -681,8 +673,6 @@ class Equilibrium(object):
             return FluxSurface(self, coord.R, coord.Z)
         else:
             return FluxSurface(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
-
-
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from pleque.utils.surfaces import point_inside_curve
@@ -776,7 +766,6 @@ class Equilibrium(object):
 
         return res
 
-
     def __find_extremes__(self):
         from scipy.signal import argrelmin
         from scipy.optimize import minimize
@@ -848,7 +837,6 @@ class Equilibrium(object):
             psi_test = f(rpts, zpts, grid=False)
             return np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test - 1
 
-
         # First identify the o-point nearest the operation range as center of plasma
         r_centr = (self.R_min + self.R_max) / 2
         z_centr = (self.Z_min + self.Z_max) / 2
@@ -896,7 +884,7 @@ class Equilibrium(object):
             # psi_test = self._spl_psi(rpts, zpts, grid=False)
             # monotonic[i] = (np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test-1)*1
             monotonic[i] = is_monotonic(self._spl_psi, self._mg_axis, x_points[i])
-            monotonic[i] = (1 - monotonic[i]*1)+1e-3
+            monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
 
         # xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
         # xp_dist = xp_dist / (np.max(xp_dist) - np.min(xp_dist))
@@ -912,7 +900,7 @@ class Equilibrium(object):
             self._x_point = None
             self._psi_xp = None
 
-        #todo: only for limiter plasma...
+        # todo: only for limiter plasma...
         self._psi_lcfs = self._psi_xp
 
         if len(x_points) >= 2:
@@ -927,19 +915,33 @@ class Equilibrium(object):
         # Limiter vs. x-point plasma:
         self._limiter_plasma = False
         # Evaluate psi along the limiter and find whether it limits the plasma
-        psi_first_wall = self._spl_psi(self._first_wall[:,0], self._first_wall[:,1], grid=False)
+        psi_first_wall = self._spl_psi(self._first_wall[:, 0], self._first_wall[:, 1], grid=False)
+        limiter_candidates = np.full_like(psi_first_wall, True, dtype=bool)
 
         if self._first_wall is not None and self._psi_xp is not None:
-            wall_zdist = np.abs(self._first_wall[:,1] - self._mg_axis[1])
-            xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
 
-            limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) < np.abs(self._psi_xp - self._psi_axis),
-                                                wall_zdist < xp_zdist)
-
-            if np.any(limiter_candidates):
-                for wpoint in self.first_wall[limiter_candidates]:
-                    if is_monotonic(self._spl_psi, wpoint, self.magnetic_axis):
+            # some circular plasmas can have xpoint on hfs so some advance testing for low number walls
+            if len(self._first_wall) < 3:
+                for wpoint, psi_wall in zip(self.first_wall, psi_first_wall):
+                    if np.linalg.norm(wpoint - self._mg_axis) < np.linalg.norm(
+                            self._x_point - self._mg_axis) and np.abs(psi_wall - self._psi_axis) < np.abs(
+                        self._psi_xp - self._psi_axis):
                         self._limiter_plasma = True
+            elif not self.in_first_wall(self._x_point[0], self._x_point[1]):
+                self._limiter_plasma = True
+            else:
+
+                wall_zdist = np.abs(self._first_wall[:, 1] - self._mg_axis[1])
+                xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
+
+                limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) <
+                                                    np.abs(self._psi_xp - self._psi_axis),
+                                                    wall_zdist < xp_zdist)
+
+                if np.any(limiter_candidates):
+                    for wpoint in self._first_wall[limiter_candidates]:
+                        if is_monotonic(self._spl_psi, wpoint, self._mg_axis):
+                            self._limiter_plasma = True
 
         elif self._psi_xp is None:
             self._limiter_plasma = True
@@ -948,8 +950,9 @@ class Equilibrium(object):
             # Find the plasma limitation
             if self._first_wall is not None:
                 # find the touch point (strike point)
-                i_sp = np.argmin(np.abs(psi_first_wall - self._psi_axis))
-                self._strike_point = self._first_wall[i_sp]
+                psi_fw_candidates = psi_first_wall[limiter_candidates]
+                i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
+                self._strike_point = self._first_wall[limiter_candidates][i_sp]
                 self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1])
                 self._psi_lcfs = self._psi_strike_point
         else:
@@ -999,10 +1002,9 @@ class Equilibrium(object):
                 mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
                 v = v[mask_in, :]
 
-#        lcfs = self._flux_surface(psi_n=1)[0]
+        #        lcfs = self._flux_surface(psi_n=1)[0]
         self._lcfs = v
-        #self._lcfs = lcfs.as_array()
-
+        # self._lcfs = lcfs.as_array()
 
     @property
     def fluxfuncs(self):
@@ -1037,7 +1039,7 @@ class Equilibrium(object):
 
         for pn in psi_n:
             if self._verbose:
-                print("{}%\r".format(pn/np.max(psi_n)*100))
+                print("{}%\r".format(pn / np.max(psi_n) * 100))
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)
@@ -1046,7 +1048,6 @@ class Equilibrium(object):
         self._q_spl = UnivariateSpline(psi_n, qs, s=0, k=3)
         self._dq_dpsin_spl = self._q_spl.derivative()
         self._q_anideriv_spl = self._q_spl.antiderivative()
-
 
 
 class Coordinates(object):
@@ -1155,15 +1156,16 @@ class Coordinates(object):
                 if self.grid:
                     self._psi = psi.T
                 else:
-                    self._psi =  psi
+                    self._psi = psi
         return self._psi
+
     @property
     def psi_n(self):
         if not hasattr(self, '_psi_n'):
             if self.dim == 1:
                 self._psi_n = self.x1
             elif self.dim >= 2:
-                self._psi_n =(self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
+                self._psi_n = (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
         return self._psi_n
 
     @property
@@ -1187,7 +1189,7 @@ class Coordinates(object):
     @property
     def phi(self):
         return self.x3
-    
+
     @property
     def X(self):
         if self.dim >= 2:
@@ -1214,7 +1216,7 @@ class Coordinates(object):
     #
     #     return
 
-    def plot(self, ax = None, **kwargs):
+    def plot(self, ax=None, **kwargs):
         """
 
         :param ax: Axis to which will be plotted. Default is plt.gca()
@@ -1231,7 +1233,7 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def as_array(self, dim = None, coord_type=None):
+    def as_array(self, dim=None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
 
@@ -1243,7 +1245,7 @@ class Coordinates(object):
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
         elif dim == 1 or self.dim == 1:
-            return self.x1 
+            return self.x1
         elif dim == 2 or self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
@@ -1278,6 +1280,7 @@ class Coordinates(object):
                     xy_name.append(key)
                     self.dim += 1
 
+            coord_type = ()
             if self.dim == 0:
                 coord_type_ = ()
             elif self.dim == 1:
@@ -1473,6 +1476,6 @@ class Coordinates(object):
                 # R(1)**2 = X(1)**2 + Y(2)**2
                 # Z(2) = Z(3)
                 # phi(3) = atan2(Y(2), X(1)]
-                self.x1 = np.sqrt(self._x1_input**2 + self._x2_input**2)
+                self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(self._x2_input, self._x1_input)

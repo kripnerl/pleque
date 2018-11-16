@@ -11,6 +11,7 @@ class ReferenceFrame():
         # todo:remove child
         # todo:specifying of the transformation to the parent frame by more ways (IMAS style, some engineering styles etc.)
         # todo:introduce checks to prevent creation of closed loops in the tree
+
     def _init_tranforms(self, transform, parent, toparent):
 
         if transform is None or parent is None:
@@ -21,7 +22,7 @@ class ReferenceFrame():
                 transform = ~transform
 
             parent._child_add(self)
-            self._check_frameloops(parent)#check if there are some frame loops
+            self._check_frameloops(parent)  # check if there are some frame loops
             self._parent = parent
             self._transform_toparent = transform
 
@@ -78,7 +79,7 @@ class ReferenceFrame():
                 parent = self._parent
             else:
                 raise Exception("Parent of the frame has to be specified")
-        else:#remove self from child list of obsolete parent
+        else:  # remove self from child list of obsolete parent
             self._parent._child_remove(self)
 
         if transform is None:

@@ -1,8 +1,8 @@
 import numpy as np
-from pleque.utils.decorators import *
 from shapely import geometry
 
 from pleque import Coordinates, Equilibrium
+from pleque.utils.decorators import *
 
 
 class FluxSurface(Coordinates):
@@ -99,14 +99,13 @@ class FluxSurface(Coordinates):
 
         return self._diff_volume
 
-
     def _eval_diff_vol(self):
         Rs = (self.R[1:] + self.R[:-1]) / 2
         Zs = (self.Z[1:] + self.Z[:-1]) / 2
         dpsi = self._eq.diff_psi(Rs, Zs)
         dl = self.dl
 
-        return 2*np.pi * np.sum(Rs*dl/dpsi)
+        return 2 * np.pi * np.sum(Rs * dl / dpsi)
 
     @property
     def dl(self):
@@ -117,8 +116,8 @@ class FluxSurface(Coordinates):
     @property
     def eval_q(self):
         if not hasattr(self, '_q'):
-            self._q = self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False)/(2*np.pi) \
-                      * self.surface_average(1/self.R**2)
+            self._q = self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
+                      * self.surface_average(1 / self.R ** 2)
             # self._q = self._eq.BvacR * self.diff_volume/\
             #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
         return self._q
@@ -129,7 +128,7 @@ class FluxSurface(Coordinates):
         :return:
         """
         return self._eq.fpol(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
-                * self.surface_average(1 / self.R ** 2, method=method)
+               * self.surface_average(1 / self.R ** 2, method=method)
 
     @property
     def straight_fieldline_theta(self):
@@ -143,17 +142,17 @@ class FluxSurface(Coordinates):
 
         if not hasattr(self, '_straight_fieldline_theta'):
 
-            h = 1/self.R**2
+            h = 1 / self.R ** 2
 
-            izero = np.asscalar(np.argmin(np.mod(self.theta, 2*np.pi)))
+            izero = np.asscalar(np.argmin(np.mod(self.theta, 2 * np.pi)))
 
             avg = self.surface_average(h)
             cum_avg = self.cumsum_surface_average(h, roll=izero)
-            #ret = np.roll(ret, amin)
+            # ret = np.roll(ret, amin)
             theta_star = 2 * np.pi * cum_avg / avg
 
             # generate splines:
-            theta4spl = np.mod(self.theta, 2*np.pi)
+            theta4spl = np.mod(self.theta, 2 * np.pi)
             th_st4spl = theta_star
             amin = np.asscalar(np.argmin(theta4spl))
 
@@ -173,7 +172,7 @@ class FluxSurface(Coordinates):
                 self._theta2thetastar_spl = CubicSpline(theta4spl, th_st4spl, extrapolate='periodic')
 
             try:
-                self._thetastar2theta_spl = CubicSpline(th_st4spl, theta4spl ,extrapolate='periodic')
+                self._thetastar2theta_spl = CubicSpline(th_st4spl, theta4spl, extrapolate='periodic')
             except Exception:
                 alis = arglis(th_st4spl)
 
@@ -206,7 +205,7 @@ class FluxSurface(Coordinates):
 
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        return 1/mu_0 * self.surface_average(diff_psi**2/self.R**2)
+        return 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
@@ -226,7 +225,6 @@ class FluxSurface(Coordinates):
           <func>(\psi)_i = \oint_0^{\theta_i} \frac{\mathrm{d}l R}{|\nabla \psi|}a(R, Z)
 
         :param func: func(X, Y), Union[ndarray, int, float]
-        :param method: str, ['sum', 'trapz', 'simps']
         :return: ndarray
         """
         import inspect
@@ -241,9 +239,9 @@ class FluxSurface(Coordinates):
         elif isinstance(func, float) or isinstance(func, int):
             func_val = func
         else:
-            func_val = (func[1:] + func[:-1])/2
+            func_val = (func[1:] + func[:-1]) / 2
 
-        val = self.dl*Rs/diff_psi*func_val
+        val = self.dl * Rs / diff_psi * func_val
 
         val = np.roll(val, -roll)
         ret = np.cumsum(val)
@@ -252,8 +250,7 @@ class FluxSurface(Coordinates):
 
         return ret
 
-
-    def surface_average(self, func, method = 'sum'):
+    def surface_average(self, func, method='sum'):
         r"""
         Return the surface average (over single magnetic surface) value of `func`.
         Return the value of integration
@@ -284,16 +281,16 @@ class FluxSurface(Coordinates):
             func_val = func
         else:
             if method == 'sum':
-                func_val = (func[1:] + func[:-1])/2
+                func_val = (func[1:] + func[:-1]) / 2
             else:
                 func_val = func
 
-        l =  np.hstack((0, np.cumsum(self.dl)))
+        l = np.hstack((0, np.cumsum(self.dl)))
 
         if method == 'sum':
-            ret = np.sum(self.dl*Rs/diff_psi*func_val)
+            ret = np.sum(self.dl * Rs / diff_psi * func_val)
         elif method == 'trapz':
-            ret = trapz(Rs/diff_psi*func_val, l)
+            ret = trapz(Rs / diff_psi * func_val, l)
         elif method == 'simps':
             ret = simps(Rs / diff_psi * func_val, l)
         else:
