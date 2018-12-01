@@ -737,6 +737,8 @@ class Equilibrium(object):
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
 
+        # We need to pass all necessary information in one argument
+        # to the pool workers.
         process_args = [(
             coords_rz[i],
             0 if coords.dim == 2 else coords.phi[i],
@@ -752,6 +754,8 @@ class Equilibrium(object):
         from multiprocessing import Pool
         pool = Pool(4)
         process_results = pool.map(_process, process_args)
+
+        # Translate the result
         return [self.coordinates(*result) for result in process_results]
         
         # for i in np.arange(len(coords)):
@@ -1501,6 +1505,7 @@ class Coordinates(object):
 
 
 def _process(args):
+    """Function called in the tracing worker."""
     import pleque.utils.field_line_tracers as flt
     from scipy.integrate import solve_ivp
     
