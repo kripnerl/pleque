@@ -733,7 +733,21 @@ class Equilibrium(object):
         coords_rz = coords.as_array(dim=2)
         magnetic_axis = self.magnetic_axis.as_array()[0]
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+        def B_R(R, Z):
+            return -self._spl_psi(R, Z, dy=1, grid=False) / R * self._Bpol_sign
+
+        def B_Z(R, Z):
+            return self._spl_psi(R, Z, dx=1, grid=False) / R * self._Bpol_sign
+
+        def B_tor(R, Z):
+            psi = self._spl_psi(R, Z, grid=False)
+            psi_n = (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
+            mask_out = psi_n > 1
+            fpol = self._fpol_spl(psi_n)
+            fpol[mask_out] = self.BvacR
+            return fpol / R
+
+        dphifunc = flt.dhpi_tracer_factory(B_R, B_Z, B_tor)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
 
