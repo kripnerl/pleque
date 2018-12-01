@@ -728,27 +728,27 @@ class Equilibrium(object):
 
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        res = []
+        # res = []
 
         coords_rz = coords.as_array(dim=2)
+        coords_phi0 = [coords.phi[i] for i in len(coords)] if coords.dim == 2 else np.zeros(len(coords))
+        coords_psi_n = [coords.psi_n[i] for i in len(coords)]
+        magnetic_axis = self.magnetic_axis.as_array()[0]
+        verbose = self._verbose
 
         dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
-        for i in np.arange(len(coords)):
 
-            y0 = coords_rz[i]
-            if coords.dim == 2:
-                phi0 = 0
-            else:
-                phi0 = coords.phi[i]
+        def _process(args):
+            y0, phi0, psi_n = *args
 
-            if self._verbose:
+            if verbose:
                 print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
 
-            if coords.psi_n[i] < 1:
+            if psi_n < 1:
                 # todo: determine the direction (now -1) !!
-                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
+                stopper = flt.poloidal_angle_stopper_factory(y0, magnetic_axis, -1)
             else:
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
             sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
@@ -762,9 +762,45 @@ class Equilibrium(object):
             phi = sol.t
             R, Z = sol.y
 
-            res.append(self.coordinates(R, Z, phi))
+            return R, Z, phi
 
-        return res
+        process_args = zip(coords_rz, coords_phi0, coords_psi_n)
+
+        from multiprocessing import Pool
+        pool = Pool(4)
+        process_results = pool.map(_process, process_args)
+        return [self.coordinates(*result) for result in process_results]
+        
+        # for i in np.arange(len(coords)):
+
+        #     y0 = coords_rz[i]
+        #     if coords.dim == 2:
+        #         phi0 = 0
+        #     else:
+        #         phi0 = coords.phi[i]
+
+        #     if self._verbose:
+        #         print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
+
+        #     if coords.psi_n[i] < 1:
+        #         # todo: determine the direction (now -1) !!
+        #         stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
+        #     else:
+        #         stopper = flt.z_coordinate_stopper_factory(z_lims)
+        #     sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
+        #                     events=stopper,
+        #                     max_step=1e-2,  # we want high phi resolution
+        #                     )
+
+        #     if self._verbose:
+        #         print("{}, {}".format(sol.message, sol.nfev))
+
+        #     phi = sol.t
+        #     R, Z = sol.y
+
+        #     res.append(self.coordinates(R, Z, phi))
+
+        # return res
 
     def __find_extremes__(self):
         from scipy.signal import argrelmin
