@@ -731,40 +731,23 @@ class Equilibrium(object):
         # res = []
 
         coords_rz = coords.as_array(dim=2)
-        coords_phi0 = np.zeros(len(coords)) if coords.dim == 2 else [coords.phi[i] for i in range(len(coords))]
-        coords_psi_n = [coords.psi_n[i] for i in range(len(coords))]
         magnetic_axis = self.magnetic_axis.as_array()[0]
-        verbose = self._verbose
 
         dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
 
-        def _process(args):
-            y0, phi0, psi_n = args
+        process_args = [(
+            coords_rz[i],
+            0 if coords.dim == 2 else coords.phi[i],
+            coords.psi_n[i],
 
-            if verbose:
-                print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
+            magnetic_axis,
+            dphifunc,
+            z_lims,
 
-            if psi_n < 1:
-                # todo: determine the direction (now -1) !!
-                stopper = flt.poloidal_angle_stopper_factory(y0, magnetic_axis, -1)
-            else:
-                stopper = flt.z_coordinate_stopper_factory(z_lims)
-            sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
-                            events=stopper,
-                            max_step=1e-2,  # we want high phi resolution
-                            )
-
-            if self._verbose:
-                print("{}, {}".format(sol.message, sol.nfev))
-
-            phi = sol.t
-            R, Z = sol.y
-
-            return R, Z, phi
-
-        process_args = zip(coords_rz, coords_phi0, coords_psi_n)
+            self._verbose
+        ) for i in range(len(coords))]
 
         from multiprocessing import Pool
         pool = Pool(4)
@@ -1515,3 +1498,31 @@ class Coordinates(object):
                 self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(self._x2_input, self._x1_input)
+
+
+def _process(args):
+    import pleque.utils.field_line_tracers as flt
+    from scipy.integrate import solve_ivp
+    
+    y0, phi0, psi_n, magnetic_axis, dphifunc, z_lims, verbose = args
+
+    if verbose:
+        print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
+
+    if psi_n < 1:
+        # todo: determine the direction (now -1) !!
+        stopper = flt.poloidal_angle_stopper_factory(y0, magnetic_axis, -1)
+    else:
+        stopper = flt.z_coordinate_stopper_factory(z_lims)
+    sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
+                    events=stopper,
+                    max_step=1e-2,  # we want high phi resolution
+                    )
+
+    if verbose:
+        print("{}, {}".format(sol.message, sol.nfev))
+
+    phi = sol.t
+    R, Z = sol.y
+
+    return R, Z, phi
