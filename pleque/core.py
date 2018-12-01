@@ -738,6 +738,7 @@ class Equilibrium(object):
         for i in np.arange(len(coords)):
 
             y0 = coords_rz[i]
+            #todo: handle dims in the future
             if coords.dim == 2:
                 phi0 = 0
             else:
