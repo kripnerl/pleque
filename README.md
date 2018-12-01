@@ -64,6 +64,7 @@ also some examples in `examples` directory.
 ## Authors
 
 * **Lukas Kripner** - [kripnerl](https://github.com/kripnerl)
+* **Matěj Tomeš** - [Mateesek](https://github.com/MatejTomes)
 
 See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
 
