@@ -731,8 +731,8 @@ class Equilibrium(object):
         # res = []
 
         coords_rz = coords.as_array(dim=2)
-        coords_phi0 = [coords.phi[i] for i in len(coords)] if coords.dim == 2 else np.zeros(len(coords))
-        coords_psi_n = [coords.psi_n[i] for i in len(coords)]
+        coords_phi0 = np.zeros(len(coords)) if coords.dim == 2 else [coords.phi[i] for i in range(len(coords))]
+        coords_psi_n = [coords.psi_n[i] for i in range(len(coords))]
         magnetic_axis = self.magnetic_axis.as_array()[0]
         verbose = self._verbose
 
@@ -741,7 +741,7 @@ class Equilibrium(object):
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
 
         def _process(args):
-            y0, phi0, psi_n = *args
+            y0, phi0, psi_n = args
 
             if verbose:
                 print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
