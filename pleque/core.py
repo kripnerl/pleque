@@ -746,7 +746,7 @@ class Equilibrium(object):
             if self._verbose:
                 print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
 
-            if coords.psi_n[i] < 1:
+            if coords.psi_n[i] <= 1:
                 # todo: determine the direction (now -1) !!
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
             else:
