@@ -1,3 +1,6 @@
+from scipy.interpolate import BivariateSpline
+import numpy as np
+
 def arglis(seq):
     """Returns arguments of the Longest Increasing Subsequence in the Given List/Array"""
     n = len(seq)
@@ -33,18 +36,15 @@ def lis(seq):
     """Returns the Longest Increasing Subsequence in the Given List/Array"""
     return [seq[i] for i in arglis(seq)]
 
-from scipy.interpolate import BivariateSpline
-
 def hessian(spln : BivariateSpline, R, Z, grid=False):
     """
 
     :param spln: BivariateSpline in R and Z coordinates
+    :type spln: scipy.optimi
     :param R:
     :param Z:
     :return: (2, 2, n) matrix of psi hessian od n points
     """
-    import numpy as np
-
     spl_rz = (spln(R, Z, dx=1, dy=1, grid=grid)).T
     spl_rr = (spln(R, Z, dx=2, dy=0, grid=grid)).T
     spl_zz = (spln(R, Z, dx=0, dy=2, grid=grid)).T
@@ -64,8 +64,6 @@ def xp_vecs(spln : BivariateSpline, R, Z):
     :param Z:
     :return:
     """
-
-    import numpy as np
 
     spl_rz = (spln(R, Z, dx=1, dy=1, grid=False))
     spl_rr = (spln(R, Z, dx=2, dy=0, grid=False))
