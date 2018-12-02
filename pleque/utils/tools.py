@@ -65,9 +65,9 @@ def xp_vecs(spln : BivariateSpline, R, Z):
     :return:
     """
 
-    spl_rz = (spln(R, Z, dx=1, dy=1, grid=False))
-    spl_rr = (spln(R, Z, dx=2, dy=0, grid=False))
-    spl_zz = (spln(R, Z, dx=0, dy=2, grid=False))
+    spl_rz = spln(R, Z, dx=1, dy=1, grid=False)
+    spl_rr = spln(R, Z, dx=2, dy=0, grid=False)
+    spl_zz = spln(R, Z, dx=0, dy=2, grid=False)
 
     mat = np.array([[-spl_rz, -spl_zz],
                     [ spl_rr,  spl_rz]])
