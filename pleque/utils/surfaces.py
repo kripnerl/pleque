@@ -123,3 +123,54 @@ def point_in_first_wall(equilibrium, points):
     isinside = point_inside_curve(points, equilibrium._first_wall)
 
     return isinside
+
+def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6):
+    """
+
+    :param equilibrium:
+    :type equilibrium: pleque.Equilibrium
+    :param xp:
+    :return:
+    """
+    from pleque.utils.tools import xp_vecs
+    import numpy.linalg as la
+
+    evecs, _ = xp_vecs(equilibrium._spl_psi, *xp)
+    mg_axis = equilibrium._mg_axis
+
+    evec = evecs[0]
+
+    # if there is obtuse angle between line connecting x-point and mg axis and
+    # the separatrix branch multiply t
+    print(evec.dot(mg_axis - xp))
+    if evec.dot(mg_axis - xp) < 0:
+        evec *= -1
+
+    evec /= la.norm(evec)
+    evec *= xp_shift
+
+    print(xp)
+    print(evec)
+    print(xp + evec)
+
+    br = equilibrium.B_R(*(xp + evec))[0]
+    bz = equilibrium.B_Z(*(xp + evec))[0]
+
+    bpol = np.square(np.array([br, bz]))
+    print(evec.shape)
+    print(bpol.shape)
+
+    direction = evec.dot(bpol)
+    print(direction)
+    trace = equilibrium.trace_field_line(*(xp + evec), direction=direction)
+    t = trace[0]
+    rs = t.R
+    zs = t.Z
+    rs = np.hstack((rs[-1], rs))
+    zs = np.hstack((zs[-1], zs))
+    t = equilibrium._as_fluxsurface(rs, zs)
+    return t
+
+
+
+
