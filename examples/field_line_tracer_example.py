@@ -70,9 +70,11 @@ def first_attempt():
 
 
 def default_tracer():
+    import mpl_toolkits.mplot3d
+
     eq = load_testing_equilibrium()
 
-    N = 1
+    N = 20
     rs = np.linspace(1.16, 1.17, N, endpoint=False)
     zs = np.zeros_like(rs)
 
