@@ -1521,10 +1521,8 @@ class Coordinates(object):
 
         if self.grid:
             raise ValueError("grid ")
-        points_RZ1 = self.as_array(('R', 'Z'))
-        points_RZ2 = coords2.as_array(('R', 'Z'))
-        coor1 = geometry.linestring.LineString(points_RZ1)
-        coor2 = geometry.linestring.LineString(points_RZ2)
+        coor1 = geometry.linestring.LineString(self.as_array())
+        coor2 = geometry.linestring.LineString(coords2.as_array())
         intersec = coor1.intersection(coor2)
         if isinstance(intersec, geometry.MultiLineString):
             return None
