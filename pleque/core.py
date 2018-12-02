@@ -1201,10 +1201,40 @@ class Coordinates(object):
         if self.dim >= 2:
             return self.R * np.sin(self.phi)
 
+
     def mesh(self):
         if self.dim != 2 or not self.grid:
             raise TypeError('mesh can be returned only for 2d grid coordinates.')
         return np.meshgrid(self.x1, self.x2)
+
+    @property
+    def dists(self):
+        """
+        distances between spatial steps along the tracked field line
+        :return:
+        self._dists
+        """
+        if self.grid:
+            raise TypeError('The grid is used - no distances between spatial steps will be calculated')
+        else:
+            if self.dim == 1:
+                self._dists = (self.x1[1:] - self.x1[:-1])
+            elif self.dim == 2:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+            elif self.dim == 3:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
+                              (self.x3[1:] - self.x3[:-1]) ** 2)
+            return self._dists
+
+
+    @property
+    def length(self):
+        """
+        the total length along the field line
+        :return:
+        self.length
+        """
+        return np.concatenate([[0.0], np.cumsum(self._dists)])
 
     # todo
     # @property
