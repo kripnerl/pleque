@@ -1216,15 +1216,15 @@ class Coordinates(object):
         """
         if self.grid:
             raise TypeError('The grid is used - no distances between spatial steps will be calculated')
-        else:
-            if self.dim == 1:
-                self._dists = (self.x1[1:] - self.x1[:-1])
-            elif self.dim == 2:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
-            elif self.dim == 3:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
-                              (self.x3[1:] - self.x3[:-1]) ** 2)
-            return self._dists
+        
+        if self.dim == 1:
+            self._dists = (self.x1[1:] - self.x1[:-1])
+        elif self.dim == 2:
+            self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+        elif self.dim == 3:
+            self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
+                          (self.x3[1:] - self.x3[:-1]) ** 2)
+        return self._dists
 
 
     @property
