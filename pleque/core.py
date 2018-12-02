@@ -1510,3 +1510,26 @@ class Coordinates(object):
                 self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(self._x2_input, self._x1_input)
+
+    def intersect(self, coords2):
+        """
+        input: 2 sets of coordinates
+        crossection of two lines (2 sets of coordinates)
+        :return:
+        """
+        from shapely import geometry
+
+        if self.grid:
+            raise ValueError("grid ")
+        points_RZ1 = self.as_array(('R', 'Z'))
+        points_RZ2 = coords2.as_array(('R', 'Z'))
+        coor1 = geometry.linestring.LineString(points_RZ1)
+        coor2 = geometry.linestring.LineString(points_RZ2)
+        intersec = coor1.intersection(coor2)
+        if isinstance(intersec, geometry.MultiLineString):
+            return None
+        elif intersec is not None:
+            intersec = np.array(intersec).T
+            return self._eq.coordinates(R = intersec[0], Z = intersec[1], coord_type=["R", "Z"])
+        else:
+            return None
