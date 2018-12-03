@@ -13,8 +13,8 @@ def default_tracer():
     zs = np.zeros_like(rs)
 
     traces = eq.trace_field_line(R=rs, Z=zs)
-
-    dists, lines = eq.connection_length(R=1.18, Z=0)
+    
+    dists, lines = eq.connection_length(R=(0.62, 1.165, 1.18), Z=(0, 0, 0))
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
@@ -22,7 +22,7 @@ def default_tracer():
     for fl in traces:
         ax.scatter(fl.X, fl.Y, fl.Z, s=0.3, marker='.')
     for fl in lines:
-        ax.scatter(fl.X, fl.Y, fl.Z, s=0.3, marker='.')
+        ax.scatter(fl.X, fl.Y, fl.Z, s=0.6, marker='.')
 
     ax.set_aspect('equal')
     ax.set_xlabel('x [m]')
@@ -35,9 +35,13 @@ def default_tracer():
     for fl in traces:
         ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
     for fl in lines:
-        ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+        #ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+        ax.plot(fl.R, fl.Z)
 
     print(dists)
+
+    eq.first_wall.plot(color='k')
+    eq.lcfs.plot(color='y', lw=0.5)
 
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
@@ -47,6 +51,8 @@ def default_tracer():
     ax = fig.gca()
 
     for fl in traces:
+        ax.plot(fl.X, fl.Y)
+    for fl in lines:
         ax.plot(fl.X, fl.Y)
 
     ax.set_xlabel('X [m]')

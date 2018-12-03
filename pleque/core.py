@@ -729,7 +729,8 @@ class Equilibrium(object):
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
-    def connection_length(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+    def connection_length(self, *coordinates, R: np.array = None, Z: np.array = None,
+                          coord_type=None, direction = 1, **coords):
         """
         Calculate connection length from given coordinates to first wall
 
@@ -743,21 +744,31 @@ class Equilibrium(object):
         :return:
         """
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
-        traces = self.trace_field_line(coords)
+        traces = self.trace_field_line(coords, direction = direction)
+        dists = []
+        lines = []
 
         for t in traces:
             if t.psi_n[0] > 1:
-                mask_in = self.in_lcfs(t)
+                # todo: find first False!
+                mask_in = self.in_first_wall(t)
                 rzp = t.as_array()[mask_in, :]
+
+                #todo: add intersection point!
 
                 line_in = self.coordinates(rzp)
                 dist = line_in.length[-1]
-                return dist, line_in
-            else:
-                return np.inf, None
 
-    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
-    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, direction=1,**coords):
+                dists.append(dist)
+                lines.append(line_in)
+            else:
+                dists.append(np.infty)
+                lines.append(None)
+
+        return dists, lines
+
+    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None,
+                         coord_type=None, direction=1,**coords):
         """
         Return traced field lines starting from the given set of at least 2d coordinates.
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
