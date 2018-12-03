@@ -1,75 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pleque.utils.field_line_tracers import _trace_field_line_first_attempt
-from pleque.utils.plotting import plot_equilibrium
 from pleque_test.testing_utils import load_testing_equilibrium
 
-
-def first_attempt():
-    eq = load_testing_equilibrium()
-
-    plot_equilibrium(eq)
-    # plt.show()
-
-    # N = 20
-    N = 5
-
-    rs = np.linspace(1.16, 1.17, N)
-    zs = np.zeros_like(rs)
-    traces = _trace_field_line_first_attempt(eq, R=rs, Z=zs, step=1e-2)
-
-    # traces = eq._trace_field_line(R=1.17, Z=0)
-
-    def convert_to_cart(r, z, phi):
-        x = r * np.sin(phi)
-        y = r * np.cos(phi)
-        z = z
-        return x, y, z
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    for trace in traces:
-        p = trace[0]
-        trace_array = np.array(trace[1]).squeeze()
-        r = trace_array[:, 0]
-        z = trace_array[:, 1]
-        phi = trace_array[:, 2]
-        x, y, z = convert_to_cart(r, z, phi)
-        # ax.plot(x, y, z)
-        ax.scatter(x, y, z, c=p, s=0.3, marker='.')
-
-    ax.set_aspect('equal')
-    ax.set_xlabel('x [m]')
-    ax.set_ylabel('y [m]')
-    ax.set_zlabel('z [m]')
-    # plt.savefig('/compass/home/kripner/Desktop/tracinkg/trace_1.png')
-
-    fig = plt.figure()
-    ax = fig.gca()
-
-    sc = None
-    for trace in traces:
-        p = trace[0]
-        trace_array = np.array(trace[1]).squeeze()
-        r = trace_array[:, 0]
-        z = trace_array[:, 1]
-        phi = trace_array[:, 2]
-        x, y, z = convert_to_cart(r, z, phi)
-        # ax.plot(x, y, z)
-        sc = ax.scatter(r, z, c=p, s=0.3, marker='.')
-
-    if sc is not None:
-        plt.colorbar(sc)
-    ax.set_aspect('equal')
-    ax.set_xlabel('R [m]')
-    ax.set_ylabel('Z [m]')
-
-    print('End of tracing')
-
-
 def default_tracer():
+    from mpl_toolkits.mplot3d import axes3d, Axes3D
+
     eq = load_testing_equilibrium()
 
     N = 1
@@ -78,10 +14,14 @@ def default_tracer():
 
     traces = eq.trace_field_line(R=rs, Z=zs)
 
+    dists, lines = eq.connection_length(R=1.18, Z=0)
+
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
     for fl in traces:
+        ax.scatter(fl.X, fl.Y, fl.Z, s=0.3, marker='.')
+    for fl in lines:
         ax.scatter(fl.X, fl.Y, fl.Z, s=0.3, marker='.')
 
     ax.set_aspect('equal')
@@ -94,6 +34,10 @@ def default_tracer():
 
     for fl in traces:
         ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+    for fl in lines:
+        ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+
+    print(dists)
 
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')

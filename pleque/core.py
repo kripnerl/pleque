@@ -691,6 +691,17 @@ class Equilibrium(object):
         return mask_in
 
     def in_lcfs(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
+        """
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return: mask of points which are inside lcfs
+        """
+
         from pleque.utils.surfaces import point_inside_curve
         # if grid:
         #     r_mesh, z_mesh = np.meshgrid(R, Z)
@@ -699,10 +710,37 @@ class Equilibrium(object):
         #     points = np.vstack((R, Z)).T
         points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        mask_in = point_inside_curve(points.as_array(), self._lcfs)
+        mask_in = point_inside_curve(points.as_array(dim = 2), self._lcfs)
         if points.grid:
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
+
+    def connection_length(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+        """
+        Calculate connection length from given coordinates to first wall
+
+        Todo: The field line is traced to min/max value of z of first wall, distance is calculated to the last
+            point before first wall.
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return:
+        """
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        traces = self.trace_field_line(coords)
+
+        for t in traces:
+            if t.psi_n[0] > 1:
+                mask_in = self.in_lcfs(t)
+                rzp = t.as_array()[mask_in, :]
+
+                line_in = self.coordinates(rzp)
+                dist = line_in.length[-1]
+                return dist, line_in
+            else:
+                return np.inf, None
 
     def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
         """
@@ -1234,7 +1272,7 @@ class Coordinates(object):
         :return:
         self.length
         """
-        return np.concatenate([[0.0], np.cumsum(self._dists)])
+        return np.concatenate([[0.0], np.cumsum(self.dists)])
 
     # todo
     # @property
@@ -1511,18 +1549,22 @@ class Coordinates(object):
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(self._x2_input, self._x1_input)
 
-    def intersect(self, coords2):
+    def intersect(self, coords2, dim = None):
         """
         input: 2 sets of coordinates
         crossection of two lines (2 sets of coordinates)
+
+        :param dim: reduce number of dimension in which is the intersection searched
         :return:
         """
         from shapely import geometry
 
+        dim_ = np.max((dim, self.dim, coords2.dim))
+
         if self.grid:
             raise ValueError("grid ")
-        coor1 = geometry.linestring.LineString(self.as_array())
-        coor2 = geometry.linestring.LineString(coords2.as_array())
+        coor1 = geometry.linestring.LineString(self.as_array(dim = dim_))
+        coor2 = geometry.linestring.LineString(coords2.as_array(dim = dim_))
         intersec = coor1.intersection(coor2)
         if isinstance(intersec, geometry.MultiLineString):
             return None
