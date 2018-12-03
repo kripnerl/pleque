@@ -312,7 +312,6 @@ class Equilibrium(object):
         coordinates = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
 
         # get the grid for psi map to find the contour in.
-        # todo: this is, at the moment, slowest part of the code
         grid = self.grid(resolution=resolution, dim=dim)
 
         # todo: to get lcfs, here is small trick. This should be handled better
@@ -478,7 +477,7 @@ class Equilibrium(object):
 
         return coords
 
-    # todo: resolve the grids
+    # todo: resolve the grid
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
@@ -624,6 +623,21 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.ffprime(coord)
 
+    def get_precise_lcfs(self):
+        """
+        Calculate plasma LCFS by field line tracing technique and save LCFS as
+        instance property.
+
+        :return:
+        """
+        from pleque.utils.surfaces import track_plasma_boundary
+
+        lcfs = track_plasma_boundary(self, self._x_point)
+
+        # todo debug this :) after this doesn't work eq.plot_overview()
+        # self._lcfs = lcfs
+        return lcfs
+
     @property
     def lcfs(self):
         if not hasattr(self, '_lcfs_fl'):
@@ -743,6 +757,7 @@ class Equilibrium(object):
                 return np.inf, None
 
     def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, direction=1,**coords):
         """
         Return traced field lines starting from the given set of at least 2d coordinates.
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
@@ -752,6 +767,7 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param coords:
         :return:
 
@@ -770,7 +786,7 @@ class Equilibrium(object):
 
         coords_rz = coords.as_array(dim=2)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, direction)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
         for i in np.arange(len(coords)):
@@ -792,7 +808,9 @@ class Equilibrium(object):
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
             sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
                             events=stopper,
-                            max_step=1e-2,  # we want high phi resolution
+                            max_step=5e-2,  # we want high phi resolution
+                            atol=1e-7,
+                            rtol=1e-4,
                             )
 
             if self._verbose:
@@ -848,7 +866,7 @@ class Equilibrium(object):
                               (np.max((self.Z_min, z_ex - 0.1)),
                                np.min((self.Z_max, z_ex + 0.1))))
 
-                    res = minimize(psi_xysq_func, x0, bounds=bounds)
+                    res = minimize(psi_xysq_func, x0, bounds=bounds, tol=1e-8)
                     # Remove bad candidates for extreme
                     if res['fun'] > 1e-3:
                         continue
