@@ -4,10 +4,10 @@ import numpy as np
 from pleque.utils.field_line_tracers import _trace_field_line_first_attempt
 from pleque.utils.plotting import plot_equilibrium
 from pleque_test.testing_utils import load_testing_equilibrium
-from pleque.io import jet
+from pleque.io.jet import reader_jet
 
 def first_attempt():
-    eq = jet.sal_jet(92400)
+    eq = reader_jet.sal_jet(92400)
 
     plot_equilibrium(eq)
     # plt.show()
@@ -70,10 +70,10 @@ def first_attempt():
 
 
 def default_tracer():
-    eq = load_testing_equilibrium()
+    eq = reader_jet.sal_jet(92400)
 
     N = 1
-    rs = np.linspace(1.16, 1.17, N, endpoint=False)
+    rs = np.linspace(3.76, 3.77, N, endpoint=False)
     zs = np.zeros_like(rs)
 
     traces = eq.trace_field_line(R=rs, Z=zs)

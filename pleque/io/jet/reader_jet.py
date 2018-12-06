@@ -8,70 +8,86 @@ from sal.core.exception import NodeNotFound
 from pleque import Equilibrium
 
 
-def psin2psi(pulse, psi_n):
+def deltapsi_calc(pulse):
+    """
+    Calculates difference between value of psi at magnetic axis and at sepraratrix, function of time
+
+    :param pulse: JET pulse number
+    :return : difference, function of time
+    """
     DATA_PATH = '/pulse/{}/ppf/signal/jetppf/efit/{}:{}'
     psi_lcfs = sal.get(DATA_PATH.format(pulse, 'fbnd', 0))
     psi_axis = sal.get(DATA_PATH.format(pulse, 'faxs', 0))
-    scaling = (psi_lcfs.data - psi_axis.data)
-    psi_1D = np.outer(psi_n, np.ones(len(psi_axis.dimensions[0].data))).T * scaling[:, np.newaxis] + psi_axis.data[:,
-                                                                                                     np.newaxis]
-
-    # print(np.shape(np.outer(psi_n,np.ones(len(psi_axis.dimensions[0].data))).T))
-    print(np.shape(psi_1D))
-    return psi_1D
+    deltapsi = (psi_lcfs.data - psi_axis.data)
+    return deltapsi
 
 
-def pprime_ugly(pressure, psi1D):
-    print(np.shape(pressure), psi1D[10, :])
-    pprime = [np.gradient(pressure.data[i, :], psi1D[i, :]) for i in range(0, np.shape(pressure.data)[0])]
-    return np.vstack(pprime)
+def pprime_calc(pressure, deltapsi, lenpsin):
+    """
+    Calculates derivative of pressure along psi coordinate
+    :param pressure: pressure signal from database
+    :param deltapsi: result of deltapsi_calc
+    :param lenpsin: 1/number of points in psi_n axis
+    :return: the dp/dpsi on axis time and psi_n
+    """
+    pprime = deltapsi[:, np.newaxis]*np.gradient(pressure.data, 1/lenpsin, axis=1)
+    return pprime
 
 
-def ffprime_ugly(f, psi1D):
-    print(np.shape(f), psi1D[10, :])
-    ffprime = [f.data[i, :] * np.gradient(f.data[i, :], psi1D[i, :]) for i in range(0, np.shape(f.data)[0])]
-    return np.vstack(ffprime)
-
+def ffprime_calc(f, deltapsi, lenpsin):
+    """
+    Calculates ffprime
+    :param f: f function
+    :param deltapsi: result of deltapsi_calc
+    :param lenpsin: 1/number of points in psi_n axis
+    :return: the f*df/fpsi on axis time and psi_n
+    """
+    ffprime = deltapsi[:,np.newaxis]*f.data*np.gradient(f.data, 1/lenpsin,axis=1)
+    return ffprime
 
 def sal_jet(pulse, timex=47.0):
-    DDA_PATH = '/pulse/{}/ppf/signal/jetppf/efit:{}'
-    DATA_PATH = '/pulse/{}/ppf/signal/jetppf/efit/{}:{}'
+    """
+    Main loading routine, based on simple access layer, loads ppf data, calculates derivatives
+    :param pulse: JET pulse number
+    :param timex: time of slice
+    :return: equilibrium
+    """
 
-    # defaults
+    data_path = '/pulse/{}/ppf/signal/jetppf/efit/{}:{}'
+
+    # default sequence
     sequence = 0
 
-    # obtain psi data and timebase
-    packed_psi = sal.get(DATA_PATH.format(pulse, 'psi', sequence))
+    # obtain psi data (reshape, transpose) and time axis
+    packed_psi = sal.get(data_path.format(pulse, 'psi', sequence))
     psi = packed_psi
     psi.data = packed_psi.data[:, :].reshape(len(packed_psi.dimensions[0]), 33, 33)
     psi.data = np.swapaxes(psi.data, 1, 2)
 
     time = packed_psi.dimensions[0].data
-    # get time index of selected time
-    time_ind = np.argmin(psi.dimensions[0].data - timex)
 
     # psi grid axis
-    r = sal.get(DATA_PATH.format(pulse, 'psir', sequence)).data
-    z = sal.get(DATA_PATH.format(pulse, 'psiz', sequence)).data
+    r = sal.get(data_path.format(pulse, 'psir', sequence)).data
+    z = sal.get(data_path.format(pulse, 'psiz', sequence)).data
 
     # pressure profile
-    pressure = sal.get(DATA_PATH.format(pulse, 'p', sequence))
+    pressure = sal.get(data_path.format(pulse, 'p', sequence))
     psi_n = pressure.dimensions[1].data
 
     # f-profile
-    f = sal.get(DATA_PATH.format(pulse, 'f', sequence))
+    f = sal.get(data_path.format(pulse, 'f', sequence))
 
-    # qprofile
-    qpsi = sal.get(DATA_PATH.format(pulse, 'q', sequence))
+    # q-profile
+    qpsi = sal.get(data_path.format(pulse, 'q', sequence))
 
+    # calculate pprime and ffprime
+    deltapsi = deltapsi_calc(pulse)
 
-    psi1D = psin2psi(pulse, psi_n)
+    pprime = pprime_calc(pressure, deltapsi, len(psi_n))
 
-    pprime = pprime_ugly(pressure, psi1D)
+    ffprime = ffprime_calc(f, deltapsi, len(psi_n))
 
-
-    ffprime = ffprime_ugly(f, psi1D)
-
+    #create dataset
 
     dst = xr.Dataset({
         'psi': (['time', 'R', 'Z'], psi.data),
@@ -88,17 +104,22 @@ def sal_jet(pulse, timex=47.0):
         'psi_n': psi_n,
     }
     )
+
+    # select desired time
     ds = dst.sel(time=timex, method='nearest')
-    # limiter is not expected to change in tome, so take 0th time index
+
+    # try to load limiter from ppfs
 
     try:
-        limiter_r = sal.get(DATA_PATH.format(pulse, 'rlim', sequence)).data.T
-        limiter_z = sal.get(DATA_PATH.format(pulse, 'zlim', sequence)).data.T
+        limiter_r = sal.get(data_path.format(pulse, 'rlim', sequence)).data.T
+        limiter_z = sal.get(data_path.format(pulse, 'zlim', sequence)).data.T
     except NodeNotFound:
         limiter_r = None
         limiter_z = None
 
     limiter = np.column_stack([limiter_r, limiter_z])
+
+    # create pleque equilibrium
 
     eq = Equilibrium(ds, limiter)
 
