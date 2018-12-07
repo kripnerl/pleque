@@ -65,16 +65,45 @@ def B_for_soft(shot,time, R, Z):
     wall = np.vstack([eq.first_wall.R, eq.first_wall.Z])
     maxis=np.vstack([eq.magnetic_axis.R,eq.magnetic_axis.Z])
 
+    r=R.T
+    z=Z.T
     print(np.shape(separatrix), np.shape(maxis), np.shape(wall),np.shape(R), np.shape(Z))
 
-    name='JET_{}_t={}s'.format(shot, time)
-    desc=''
+
+
+
+    name='JET_{}_t{}s'.format(shot, time)
+
+    desc='test data form non RE shot'
 
     #save to hdf5
+    listtosave = [Br, Bphi, Bz, desc, maxis, name, r, separatrix, wall, z]
 
-    #fil=h5py.File('/home/oficke/MAGFIELD_FOR_SOFT/JET_{}_t={}s.h5'.format(shot, time), 'w')
-    #for s in
+    names = ['Br', 'Bphi', 'Bz', 'desc', 'maxis', 'name', 'r', 'separatrix', 'wall', 'z']
+    dtypes = ['f','f','f','s10','f','s10','f','f','f','f']
+    savevars=dict(zip(names,listtosave))
+    dtypevars=dict(zip(names,dtypes))
 
 
 
-B_for_soft(92400,47.0,R, Z)
+    fil=h5py.File('/home/oficke/MAGFIELD_FOR_SOFT/JET_{}_t={}s.h5'.format(shot, time), 'w')
+
+    dt=h5py.special_dtype(vlen=str)
+    
+    for x in savevars.keys():
+        print(x)
+        if x in ['name','desc']:
+            print(np.array(len(savevars[x])), np.shape(np.string_(savevars[x])))
+            fil.create_dataset(x, (1,), dtype=dt, data=savevars[x])
+        else:
+            print(np.shape(savevars[x]))
+            fil.create_dataset(x, np.shape(savevars[x]), dtype=float, data=savevars[x])
+
+    fcheck=h5py.File('/home/oficke/MAGFIELD_FOR_SOFT/JET_{}_t={}s.h5'.format(shot, time), 'r')
+    print(list(fcheck.keys()))
+    print(list(fcheck['desc']))
+
+
+# Calling
+
+B_for_soft(92400, 47.0, R, Z)
