@@ -13,8 +13,8 @@ def default_tracer():
     zs = np.zeros_like(rs)
 
     traces = eq.trace_field_line(R=rs, Z=zs)
-    
-    dists, lines = eq.connection_length(R=(0.62, 1.165, 1.18), Z=(0, 0, 0))
+
+    dists, lines = eq.connection_length(R=(0.62, 0.622, 1.165, 1.17, 1.175, 1.18), Z=(0, 0, 0, 0, 0, 0))
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
