@@ -45,13 +45,22 @@ def ffprime_calc(f, deltapsi, lenpsin):
     ffprime = deltapsi[:,np.newaxis]*f.data*np.gradient(f.data, 1/lenpsin,axis=1)
     return ffprime
 
-def sal_jet(pulse, timex=47.0):
+def sal_jet(pulse, timex=47.0, time_unit="s"):
     """
     Main loading routine, based on simple access layer, loads ppf data, calculates derivatives
     :param pulse: JET pulse number
     :param timex: time of slice
+    :param time_unit: (str) "s" or "ms"
     :return: equilibrium
     """
+
+    if time_unit.lower() == "s":
+        time_factor = 1.
+    elif time_unit.lower() == "ms":
+        time_factor = 1000.
+    else:
+        raise ValueError("Unknown `time_unit`.")
+
 
     data_path = '/pulse/{}/ppf/signal/jetppf/efit/{}:{}'
 
@@ -106,7 +115,7 @@ def sal_jet(pulse, timex=47.0):
     )
 
     # select desired time
-    ds = dst.sel(time=timex, method='nearest')
+    ds = dst.sel(time=timex/time_factor, method='nearest')
 
     # try to load limiter from ppfs
 
