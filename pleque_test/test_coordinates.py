@@ -1,7 +1,7 @@
 import numpy as np
 
 from pleque.core import Coordinates
-from pleque_test.testing_utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 
@@ -46,7 +46,7 @@ def test_arrays(a1, a2):
         assert np.abs(a1[i] - a2[i]) < 1e-3
 
 
-if __name__ == '__main__':
+    def test_all(equilibrium):
     # coord = eq.coordinates(eq._lcfs)
 
     # 2d tests (R, Z)
