@@ -1,7 +1,7 @@
 import numpy as np
 
 from pleque.io import omas as plomas
-from pleque_test.testing_utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium
 
 # load the equilibrium data
 
