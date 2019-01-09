@@ -16,7 +16,10 @@ def test_equilibria():
     s = []
     x = []
     o = []
-    for i in range(N_cases):
+
+    test_cases = range(N_cases)
+    # test_cases = [3]
+    for i in test_cases:
 
         #eq = load_testing_equilibrium(i)
 

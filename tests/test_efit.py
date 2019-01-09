@@ -1,4 +1,5 @@
-
+import pytest
+pycdb = pytest.importorskip('pyCDB')
 
 def test_cdb():
     from pleque.io.compass import read_efithdf5

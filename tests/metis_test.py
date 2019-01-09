@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
+
+pydons = pytest.importorskip('pydons')
 
 from pleque.io import metis
 from pleque.tests.utils import load_testing_equilibrium

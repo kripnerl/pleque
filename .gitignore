@@ -26,3 +26,5 @@ pleque\.egg-info/
 \.cache/v/cache/
 
 notes/
+
+tests/_trial_temp/
