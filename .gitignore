@@ -24,3 +24,5 @@ dist/
 pleque\.egg-info/
 
 \.cache/v/cache/
+
+tests/_trial_temp/
