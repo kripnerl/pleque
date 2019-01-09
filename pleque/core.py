@@ -1302,13 +1302,27 @@ class Coordinates(object):
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
             elif self.dim == 3:
-                if tuple(xy_name) in self._valid_coordinates_3d:
-                    # todo: implement various order of coordinates
-                    self._x1_input = xy[0]
-                    self._x2_input = xy[1]
-                    self._x3_input = xy[2]
-                    coord_type_ = tuple(xy_name)
+                #if tuple(xy_name) in self._valid_coordinates_3d:
+                permutations = list(itertools.permutations(xy_name))
+                # if any([p in self._valid_coordinates_3d for p in permutations]):
+                #
+                #     # todo: implement various order of coordinates
+                #     self._x1_input = xy[0]
+                #     self._x2_input = xy[1]
+                #     self._x3_input = xy[2]
+                #     coord_type_ = tuple(xy_name)
+                # todo: make function and use for all
 
+                valid = list(self._valid_coordinates_3d)
+
+                # find the index of the valid coordinate system with known coordinate order
+                ii = [set(item) for item in valid].index(set(xy_name))
+
+                actual = valid[ii]
+                self._x1_input = coords[actual[0]]
+                self._x2_input = coords[actual[1]]
+                self._x3_input = coords[actual[2]]
+                coord_type_ = tuple(actual)
             else:
                 # self._incompatible_dimension_error(self.dim)
                 raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
@@ -1469,11 +1483,13 @@ class Coordinates(object):
                 self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
-            if self._coord_type_input == ('R', 'Z', 'phi'):
+            #if self._coord_type_input == ('R', 'Z', 'phi'):
+            if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
                 self.x3 = self._x3_input
-            elif self._coord_type_input == ('X', 'Y', 'Z'):
+            #elif self._coord_type_input == ('X', 'Y', 'Z'):
+            elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
                 # R(1)**2 = X(1)**2 + Y(2)**2
                 # Z(2) = Z(3)
