@@ -1,6 +1,7 @@
 import os
+import pleque
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def readme():
@@ -9,11 +10,12 @@ def readme():
 
 setup(
     name='pleque',
-    version='0.0.3.beta2',
-    packages=['pleque_test', 'pleque', 'pleque.io', 'pleque.utils'],
-    package_dir={'pleque_test': 'pleque_test'},
-    package_data={'pleque_test': ['test_files/*']},
+    version=pleque.__version__,
+    packages=find_packages(), # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
+    package_dir={'pleque': ['pleque', 'notebooks', 'examples']},
+    package_data={'pleque': ['resources/*', ]},
     url='https://pleque.readthedocs.io',
+    download_url='https://github.com/kripnerl/pleque',
     license='MIT',
     author='Lukas Kripner',
     author_email='kripner@ipp.cas.cz',
