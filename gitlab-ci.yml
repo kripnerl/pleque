@@ -6,4 +6,4 @@ before_script:
 
 test:pytest:
   script:
-    - pylint --include-naming-hint=y --argument-naming-style=any --variable-naming-style=any --method-naming-style=any pleque
+    - pytest
