@@ -22,7 +22,7 @@ def compare_gfile(gfile_name):
     plt.show()
 
 def test_gfile():
-    from .testing_utils import get_test_equilibria_filenames, get_test_cases_number
+    from pleque.tests.utils import get_test_equilibria_filenames, get_test_cases_number
 
     g_files = get_test_equilibria_filenames()
     n_files = get_test_cases_number()

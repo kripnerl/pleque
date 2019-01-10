@@ -2,13 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, point_inside_curve
-from pleque_test.testing_utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 # eq._mg_axis = np.array([0,0.9])
 
-r = np.linspace(eq.r_min, eq.r_max, 300)
-z = np.linspace(eq.z_min, eq.z_max, 400)
+r = np.linspace(eq.R_min, eq.R_max, 300)
+z = np.linspace(eq.Z_min, eq.Z_max, 400)
 
 psipol = eq.psi(R=r, Z=z)
 contour = find_contour(psipol, 0.2, r, z)
@@ -25,7 +25,7 @@ mask_fw = inside_fw.reshape(mesh_z.shape)
 mask_lcfs = inside_lcfs.reshape(mesh_z.shape)
 
 figx, ax = plt.subplots()
-cl = ax.contourf(r, z, psipol.T)
+cl = ax.contourf(r, z, psipol)
 plt.colorbar(cl)
 ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k")
 ax.plot(eq._mg_axis[0], eq._mg_axis[1], "xk")

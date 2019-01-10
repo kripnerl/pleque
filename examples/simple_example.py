@@ -1,12 +1,8 @@
-import os
-import sys
-
 import numpy as np
-import xarray as xa
 
 from pleque.core import Equilibrium
-from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
-from pleque.io import readers
+from pleque.tests.utils import load_testing_equilibrium, get_test_equilibria_filenames
+
 
 def plot_extremes(eq: Equilibrium, ax=None):
     import matplotlib.pyplot as plt

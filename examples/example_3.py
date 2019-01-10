@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
+from pleque.tests.utils import load_testing_equilibrium, get_test_equilibria_filenames
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
