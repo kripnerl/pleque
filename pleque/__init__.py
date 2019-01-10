@@ -1,4 +1,4 @@
-__version__ = '0.0.3.beta3'
+__version__ = '0.0.3b3'
 
 
 from .core import Coordinates
