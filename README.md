@@ -84,5 +84,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 * [OMAS](https://gafusion.github.io/omas/) (Ordered Multidimensional Array Structure) is a Python library designed to simplify the interface of third-party codes with the ITER Integrated Modeling and Analysis Suite (IMAS) . ITER IMAS defines a data model, a data get/put API, and a data storage infrastructure used for manipulating ITER data.
 
 ## References
-* [Sauter, O. & Medvedev, S. Y. "Tokamak coordinate conventions: COCOS." Comput. Phys. Commun. **184**, 293-302 (2013).](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
+* [Sauter, O. & Medvedev, S. Y. "Tokamak coordinate conventions: COCOS." Comput. Phys. Commun. **184**, 293–302 (2013).](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
 * S. Jardin "Computational Methods in Plasma Physics" CRC Press.
