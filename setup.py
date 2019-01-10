@@ -1,19 +1,16 @@
-import os
-import pleque
-
 from setuptools import setup, find_packages
+import os
 
+import pleque
 
 def readme():
     return open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 
-
 setup(
     name='pleque',
     version=pleque.__version__,
-    packages=find_packages(), # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
-    package_dir={'pleque': ['pleque', 'notebooks', 'examples']},
-    package_data={'pleque': ['resources/*', ]},
+    packages=find_packages(),  # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
+    package_data={'pleque': ['resources/*']},
     url='https://pleque.readthedocs.io',
     download_url='https://github.com/kripnerl/pleque',
     license='MIT',
@@ -32,3 +29,5 @@ setup(
     ],
     zip_safe=False
 )
+
+
