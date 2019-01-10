@@ -917,7 +917,7 @@ class Equilibrium(object):
 
         if len(x_points) >= 2:
             self._x_point2 = x_points[sortidx[1]]
-            self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1]))
+            self._psi_xp2 = self._spl_psi(self._x_point2[0], self._x_point2[1], grid=False)
         else:
             self._x_point2 = None
             self._psi_xp2 = None
@@ -948,9 +948,10 @@ class Equilibrium(object):
             # Find the plasma limitation
             if self._first_wall is not None:
                 # find the touch point (strike point)
-                i_sp = np.argmin(np.abs(psi_first_wall - self._psi_axis))
-                self._strike_point = self._first_wall[i_sp]
-                self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1])
+                psi_fw_candidates = psi_first_wall[limiter_candidates]
+                i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
+                self._strike_point = self._first_wall[limiter_candidates][i_sp]
+                self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1], grid=False)
                 self._psi_lcfs = self._psi_strike_point
         else:
             # x-point plasma:
