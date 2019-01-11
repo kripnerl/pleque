@@ -50,7 +50,7 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     ax.contour(coords.R, coords.Z, psi_in, 20)
 
     # todo: psi should be 1-d (!) resolve this
-    ax.contour(coords.R, coords.Z, psi, np.squeeze(contour_out.psi).sort(), colors='C0')
+    ax.contour(coords.R, coords.Z, psi, sorted(np.squeeze(contour_out.psi)), colors='C0')
 
     psi_lcfs = eq._psi_lcfs
     z0 = eq._mg_axis[1]
