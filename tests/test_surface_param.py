@@ -1,4 +1,4 @@
-from .testing_utils import get_test_equilibria_filenames
+from pleque.tests.utils import get_test_equilibria_filenames
 
 def test_q_profiles():
     from pleque.io.compass import read_fiesta_equilibrium
