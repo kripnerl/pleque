@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, point_inside_curve
-from test.testing_utils import load_testing_equilibrium
+from pleque_test.testing_utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
 # eq._mg_axis = np.array([0,0.9])

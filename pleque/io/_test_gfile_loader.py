@@ -1,11 +1,12 @@
 def read_gfile(g_file: str, limiter: str = None):
-    from tokamak.formats import geqdsk
+    from pleque.io import _geqdsk
     import numpy as np
     import xarray as xa
     from ..core import Equilibrium
     from scipy.interpolate import UnivariateSpline
 
-    eq_gfile = geqdsk.read(g_file)
+    with open(g_file, 'r') as f:
+        eq_gfile = _geqdsk.read(f)
 
     psi = eq_gfile['psi']
     r = eq_gfile['r'][:, 0]

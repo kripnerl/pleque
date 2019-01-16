@@ -2,6 +2,8 @@
 Welcome to Plaque's documentation!
 ==================================
 
+Code home: https://github.com/kripnerl/pleque/
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

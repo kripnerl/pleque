@@ -5,3 +5,8 @@ API Reference
     :members:
     :undoc-members:
     :show-inheritance:
+
+.. automodule:: pleque.fluxsurface
+    :members:
+    :undoc-members:
+    :show-inheritance:

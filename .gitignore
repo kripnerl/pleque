@@ -12,3 +12,13 @@ notebooks/\.ipynb_checkpoints/
 \.ipynb_checkpoints/
 
 docs/build/
+
+test/\.pytest_cache/
+
+\.pytest_cache/
+
+build/
+
+dist/
+
+pleque\.egg-info/

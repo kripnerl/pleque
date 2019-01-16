@@ -1,9 +1,9 @@
 if __name__ == '__main__':
     from pleque.io import _geqdsk, _readgeqdsk
-    from test.testing_utils import get_test_equilibria
+    from pleque_test.testing_utils import get_test_equilibria_filenames
     from collections import *
 
-    eqdsk_file = get_test_equilibria()[0]
+    eqdsk_file = get_test_equilibria_filenames()[0]
 
     # Read Matheeesek:
     eq_1 = _readgeqdsk._readeqdsk(eqdsk_file)
