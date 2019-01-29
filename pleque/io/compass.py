@@ -1,4 +1,5 @@
 import numpy as np
+import pkg_resources
 
 from pleque import Equilibrium
 
@@ -79,7 +80,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     from pleque.io._geqdsk import read, data_as_ds
     import pkg_resources
 
-    resource_package = __name__
+    resource_package = 'pleque'
 
     # ds = readeqdsk_xarray(filepath)
     with open(filepath, 'r') as f:
@@ -92,7 +93,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
-        first_wall = '../../pleque_test/test_files/limiter_v3_1_iba_v2.dat'
+        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
 
     if isinstance(first_wall, str):

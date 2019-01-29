@@ -1,6 +1,17 @@
 
+import pkg_resources
+
+resource_package = "pleque"
+equilibria_files = [pkg_resources.resource_filename(resource_package, f) for f in
+                    ['resources/baseline_eqdsk',
+                    'resources/scenario_1_baseline_upward_eqdsk',
+                    'resources/DoubleNull_eqdsk',
+                    'resources/g13127.1050',
+                    'resources/14068@1130_2kA_modified_triang.gfile',
+                    'resources/g15349.1120']]
+
 def get_test_cases_number():
-    return 7
+    return len(equilibria_files)
 
 def load_testing_equilibrium(case=0):
     """
@@ -28,29 +39,13 @@ def get_test_equilibria_filenames():
     Return the list with absolute path (on given instance) to gfiles dedicated for testing.
     :return:
     """
-    import pkg_resources
-    resource_package = __name__
-
-    files = ['test_files/baseline_eqdsk',
-             'test_files/scenario_1_baseline_upward_eqdsk',
-             'test_files/DoubleNull_eqdsk',
-             'test_files/g13127.1050',
-             'test_files/_Equidisk_File__15MA_T_ped_4.5keV_513x51_44WYKU_v1_0.txt',
-             'test_files/14068@1130_2kA_modified_triang.gfile',
-             'test_files/g15349.1120']
-
-    equils = []
-
-    for f in files:
-        equils.append(pkg_resources.resource_filename(resource_package, f))
-
-    return equils
+    return equilibria_files
 
 
 def get_test_divertor():
     import pkg_resources
-    resource_package = __name__
+    resource_package = "pleque"
 
-    limiterfile = 'test_files/limiter_v3_1_iba.dat'
+    limiterfile = 'resources/limiter_v3_1_iba.dat'
     limiter = [pkg_resources.resource_filename(resource_package, limiterfile)]
     return limiter

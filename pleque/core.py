@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import itertools
 
 import numpy as np
 import xarray
@@ -1105,6 +1106,7 @@ class Coordinates(object):
 
 
         """
+
         self._eq = equilibrium
         self._valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
         self._valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
@@ -1280,7 +1282,7 @@ class Coordinates(object):
                     xy_name.append(key)
                     self.dim += 1
 
-            coord_type = ()
+            coord_type_ = ()
             if self.dim == 0:
                 coord_type_ = ()
             elif self.dim == 1:

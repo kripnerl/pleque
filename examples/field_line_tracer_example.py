@@ -3,7 +3,7 @@ import numpy as np
 
 from pleque.utils.field_line_tracers import _trace_field_line_first_attempt
 from pleque.utils.plotting import plot_equilibrium
-from pleque_test.testing_utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium
 
 
 def first_attempt():

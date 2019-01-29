@@ -32,6 +32,11 @@ From PyPI (https://pypi.org/project/pleque/):
 pip install --user pleque
 ```
 
+or use the unstable experimental release (probably with more fixed bugs):
+```bash
+ pip install --user -i https://test.pypi.org/simple/ pleque
+```
+
 or clone/copy the github repository and run
 
 ```bash
@@ -39,6 +44,7 @@ git clone https://github.com/kripnerl/pleque.git
 cd pleque
 pip install --user .
 ```
+
 
 ## Examples
 
@@ -59,11 +65,12 @@ also some examples in `examples` directory.
 
 ## Version
 
-0.0.2
+0.0.3b3
 
 ## Authors
 
 * **Lukas Kripner** - [kripnerl](https://github.com/kripnerl)
+* **Matěj Tomeš** - [Mateesek](https://github.com/MatejTomes)
 
 See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
 
