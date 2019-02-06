@@ -1,8 +1,8 @@
 def read_gfile(g_file: str, limiter: str = None):
     from pleque.io import _geqdsk
     import numpy as np
-    import xarray as xa
-    from ..core import Equilibrium
+    import xarray as xr
+    from pleque.core import Equilibrium
     from scipy.interpolate import UnivariateSpline
 
     with open(g_file, 'r') as f:
@@ -18,7 +18,7 @@ def read_gfile(g_file: str, limiter: str = None):
 
     psi_n = np.linspace(0, 1, len(fpol))
 
-    eq_ds = xa.Dataset({'psi': (['R', 'Z'], psi),
+    eq_ds = xr.Dataset({'psi': (['R', 'Z'], psi),
                         'pressure': ('psi_n', pressure),
                         'fpol': ('psi_n', fpol)},
                        coords={'R': r,

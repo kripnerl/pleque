@@ -1,7 +1,7 @@
 import numpy as np
 from shapely import geometry
 
-from pleque import Coordinates, Equilibrium
+#from pleque.core import Coordinates, Equilibrium
 from pleque.utils.decorators import *
 
 

@@ -5,7 +5,7 @@ from jet.data import sal
 
 from sal.core.exception import NodeNotFound
 
-from pleque import Equilibrium
+from pleque.core import Equilibrium
 
 
 def deltapsi_calc(pulse):
