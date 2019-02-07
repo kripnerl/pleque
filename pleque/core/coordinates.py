@@ -180,6 +180,7 @@ class Coordinates(object):
         :param kwargs: Arguments forwarded to matplotlib plot function.
         :return:
         """
+        #todo: THis function should be somewhere else. A function taking coordinates as input....
         import matplotlib.pyplot as plt
 
         if ax is None:
