@@ -1,8 +1,11 @@
 import numpy as np
+
+from pleque.core import Equilibrium
+
+import h5py
+import xarray as xr
+from pleque.io._geqdsk import read, data_as_ds
 import pkg_resources
-
-from pleque import Equilibrium
-
 
 def cdb(shot=None, time=1060, revision=1):
     """
@@ -13,6 +16,7 @@ def cdb(shot=None, time=1060, revision=1):
     :param revision: EFIT revision, defaults to first (post-shot standard)
     :return: Equilibrium
     """
+
     import pyCDB.client
 
     cdb = pyCDB.client.CDBClient()
@@ -36,8 +40,6 @@ def read_efithdf5(file_path, time):
     :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
     :return: Equilibrium
     """
-    import h5py
-    import xarray as xr
 
     with h5py.File(file_path, 'r') as f5efit:  # open EFITXX.rev.h5
 
@@ -77,8 +79,6 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
-    from pleque.io._geqdsk import read, data_as_ds
-    import pkg_resources
 
     resource_package = 'pleque'
 

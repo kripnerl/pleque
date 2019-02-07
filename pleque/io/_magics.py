@@ -1,3 +1,7 @@
+from pleque.io import _geqdsk
+import matplotlib.pyplot as plt
+
+
 def read_write_geqdsk(file_in, file_out):
     '''
     Read the equilibrium file and then save it again. In principle,
@@ -6,8 +10,6 @@ def read_write_geqdsk(file_in, file_out):
     :param file_out:
     :return:
     '''
-    from . import _geqdsk
-    import matplotlib.pyplot as plt
 
     with open(file_in, 'r') as f:
         eq_in = _geqdsk.read(f)
