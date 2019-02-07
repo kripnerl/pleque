@@ -11,15 +11,15 @@ def compare_gfile(gfile_name):
 
     print(eq_ds.keys())
 
-    import matplotlib.pyplot as plt
-
-    eq._plot_overview()
-
-    plt.figure()
-    psi_n = np.linspace(0, 1, 20, endpoint=False)
-    plt.plot(psi_n, eq.q(psi_n=psi_n))
-
-    plt.show()
+    # import matplotlib.pyplot as plt
+    #
+    # eq._plot_overview()
+    #
+    # plt.figure()
+    # psi_n = np.linspace(0, 1, 20, endpoint=False)
+    # plt.plot(psi_n, eq.q(psi_n=psi_n))
+    #
+    # plt.show()
 
 def test_gfile():
     from pleque.tests.utils import get_test_equilibria_filenames, get_test_cases_number

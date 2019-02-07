@@ -240,6 +240,17 @@ class Equilibrium(object):
         return fpol
 
     def fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        '''
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        '''
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
         fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
