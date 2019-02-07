@@ -1,12 +1,12 @@
 import numpy as np
 from shapely import geometry
 
-#from pleque.core import Coordinates, Equilibrium
+from pleque.core import Coordinates
 from pleque.utils.decorators import *
 
 
 class FluxSurface(Coordinates):
-    def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
         Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
