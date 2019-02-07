@@ -26,6 +26,7 @@ setup(
         'scikit-image',
         'xarray',
         'pandas',
+        'h5py',
     ],
     zip_safe=False
 )

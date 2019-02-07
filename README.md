@@ -23,6 +23,7 @@ shapely
 scikit-image
 xarray
 pandas
+h5py
 ```
 
 ### Installing
