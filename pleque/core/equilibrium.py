@@ -7,9 +7,9 @@ import xarray
 from pleque.utils.decorators import deprecated
 
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
-#from pleque.core import Coordinates
+from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-#from pleque.core import FluxFunction
+from pleque.core import FluxFunction
 
 class Equilibrium(object):
     """
