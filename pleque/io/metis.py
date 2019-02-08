@@ -44,7 +44,6 @@ def read(equilibrium, file, time):
 
     for name in list(toexp.variables.keys()):
         #todo: better handling of complex values
-        print(name)
         if np.all(np.isreal(toexp[name].values)):
             fluxfun.add_flux_func(name, toexp[name].values, crds)
 
