@@ -1,14 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pytest
-
-pydons = pytest.importorskip('pydons')
+import pkg_resources
 
 from pleque.io import metis
 from pleque.tests.utils import load_testing_equilibrium
 
 plt.style.use('seaborn-talk')
-file = "/compass/Shared/Common/IT/projects/compass-u-vp3/metis-scenarios/scans/2018-09-25/CU_Z12n25_Bt40Ip12_EC4.mat"
+file = pkg_resources.resource_filename("pleque", "resources/metis.mat")
 time = 1
 
 eq = load_testing_equilibrium()
@@ -43,14 +41,3 @@ for key, ax in zip(keys, axs):
 ax = axs[-1]
 ax.set_xlabel(r'$\rho$')
 plt.tight_layout()
-
-
-def save_it(name, v=1):
-    file_dir = '/compass/home/kripner/konference/2018_PhdEvent/fig/'
-    plt.savefig(file_dir + name + '_v' + str(v) + '.png', transparent=True)
-    plt.savefig(file_dir + name + '_v' + str(v) + '.pdf', transparent=True)
-
-
-save_it('metis', v=1)
-
-plt.show()
