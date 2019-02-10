@@ -11,7 +11,7 @@ def read(equilibrium, file, time):
     :param equilibrium: Pleque equilibrium object to connect to the metis profiles
     :param file: Metis output file saved as matlab hdf5 file
     :param time: Discharge time specifying which profiles will be loaded. Currently only a single time is supported.
-    :return:
+    :return: FluxFuncs instance of `equilibrium`
     """
     # TODO: Shall whe save 0D values from metis into the FluxFunc object?
 
@@ -45,6 +45,8 @@ def read(equilibrium, file, time):
         #todo: better handling of complex values
         if np.all(np.isreal(toexp[name].values)):
             fluxfun.add_flux_func(name, toexp[name].values, crds)
+
+    return fluxfun
 
 
 def to_omas(fluxfunc, coordinates, ods=None, time=np.array([0], ndmin=1)):

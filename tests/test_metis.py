@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pytest
+import pkg_resources
 
 from pleque.io import metis
 from pleque.tests.utils import load_testing_equilibrium
@@ -41,14 +41,3 @@ for key, ax in zip(keys, axs):
 ax = axs[-1]
 ax.set_xlabel(r'$\rho$')
 plt.tight_layout()
-
-
-def save_it(name, v=1):
-    file_dir = '/compass/home/kripner/konference/2018_PhdEvent/fig/'
-    plt.savefig(file_dir + name + '_v' + str(v) + '.png', transparent=True)
-    plt.savefig(file_dir + name + '_v' + str(v) + '.pdf', transparent=True)
-
-
-save_it('metis', v=1)
-
-plt.show()
