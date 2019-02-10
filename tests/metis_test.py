@@ -2,13 +2,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-pydons = pytest.importorskip('pydons')
-
 from pleque.io import metis
 from pleque.tests.utils import load_testing_equilibrium
 
 plt.style.use('seaborn-talk')
-file = "/compass/Shared/Common/IT/projects/compass-u-vp3/metis-scenarios/scans/2018-09-25/CU_Z12n25_Bt40Ip12_EC4.mat"
+file = pkg_resources.resource_filename("pleque", "resources/metis.mat")
 time = 1
 
 eq = load_testing_equilibrium()
