@@ -26,6 +26,9 @@ from numpy import zeros, pi
 
 from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
 
+import numpy as np
+import xarray as xa
+from pleque.core import Equilibrium
 
 def write(data, fh, label=None, shot=None, time=None):
     """
@@ -272,8 +275,6 @@ def data_as_ds(data):
     :param data:
     :return:
     """
-    import numpy as np
-    import xarray as xa
 
     r_axis = np.linspace(data["rleft"], data["rleft"] + data["rdim"], data["nx"])
     z_axis = np.linspace(data["zmid"] - data["zdim"] / 2, data["zmid"] + data["zdim"] / 2, data["ny"])
@@ -307,8 +308,6 @@ def read_as_equilibrium(fh, cocos=1):
     :param cocos:
     :return: instance of `Equilibrium`
     """
-    from pleque import Equilibrium
-    import numpy as np
 
     data = read(fh, cocos)
     ds = data_as_ds(data)  # as dataset
