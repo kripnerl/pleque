@@ -21,12 +21,12 @@ class FluxSurface(Coordinates):
         # closed surface has to have identical first and last points and then the shape is polygon
         # opened surface is linestring
         if np.isclose(points_RZ[0, 0], points_RZ[-1, 0]) and np.isclose(points_RZ[0, 1], points_RZ[-1, 1]):
-            self.__poly = geometry.polygon.Polygon(points_RZ)
-            self.__string = geometry.linestring.LineString(points_RZ)
-            self.__closed = True
+            self._poly = geometry.polygon.Polygon(points_RZ)
+            self._string = geometry.linestring.LineString(points_RZ)
+            self._closed = True
         else:
-            self.__string = geometry.linestring.LineString(points_RZ)
-            self.__closed = False
+            self._string = geometry.linestring.LineString(points_RZ)
+            self._closed = False
 
     @property
     def closed(self):
@@ -35,7 +35,7 @@ class FluxSurface(Coordinates):
 
         :return:
         """
-        return self.__closed
+        return self._closed
 
     @property
     def area(self):
@@ -44,8 +44,8 @@ class FluxSurface(Coordinates):
 
         :return:
         """
-        if self.__closed:
-            return self.__poly.area
+        if self._closed:
+            return self._poly.area
         else:
             raise Exception("Opened Flux Surface does not have area")
 
@@ -56,7 +56,7 @@ class FluxSurface(Coordinates):
 
         :return:
         """
-        return self.__string.length
+        return self._string.length
 
     @property
     def surface(self):
@@ -66,12 +66,12 @@ class FluxSurface(Coordinates):
 
         :return: float
         """
-        return self.__string.length * 2 * np.pi * self.centroid.R[0]
+        return self._string.length * 2 * np.pi * self.centroid.R[0]
 
     @property
     def centroid(self):
-        return self._eq.coordinates(R=np.array(self.__string.centroid.coords)[0][0],
-                                    Z=np.array(self.__string.centroid.coords)[0][0], coord_type=["R", "Z"])
+        return self._eq.coordinates(R=np.array(self._string.centroid.coords)[0][0],
+                                    Z=np.array(self._string.centroid.coords)[0][0], coord_type=["R", "Z"])
 
     @property
     def volume(self):
@@ -81,8 +81,8 @@ class FluxSurface(Coordinates):
 
         :return: float
         """
-        if self.__closed:
-            return self.__poly.area * 2 * np.pi * self.centroid.R[0]
+        if self._closed:
+            return self._poly.area * 2 * np.pi * self.centroid.R[0]
         else:
             raise Exception("Opened Flux Surface does not have area")
 
@@ -300,13 +300,13 @@ class FluxSurface(Coordinates):
 
     def contains(self, coords: Coordinates):
         points_RZ = coords.as_array(('R', 'Z'))[0, :]
-        if self.__closed:
+        if self._closed:
             pnt = geometry.point.Point(points_RZ)
-            return self.__poly.contains(pnt)
+            return self._poly.contains(pnt)
         else:
             raise Exception("Opened Flux Surface does not have area")
 
     def distance(self, coords: Coordinates):
         point = geometry.Point(coords.as_array()[0])
-        distance = self.__string.distance(point)
+        distance = self._string.distance(point)
         return distance
