@@ -5,12 +5,13 @@ from pleque.core import Coordinates
 from pleque.utils.decorators import *
 
 
-class FluxSurface(Coordinates):
+class Surface(Coordinates):
+
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
-        Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
+        Calculates geometrical properties of a specified surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
-        Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
+        Instance is obtained by calling method `surface` in instance of `Equilibrium`.
 
         :param coords: Instance of coordinate class
         """
@@ -112,6 +113,18 @@ class FluxSurface(Coordinates):
         if not hasattr(self, '_dl'):
             self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dl
+
+class FluxSurface(Surface):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+        """
+        Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
+        the passed coordinates have to be the same.
+        Instance is obtained by calling method `flux_surface` in instance of `Equilibrium`.
+
+        :param coords: Instance of coordinate class
+        """
+
+        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
 
     @property
     def eval_q(self):
