@@ -614,6 +614,27 @@ class Equilibrium(object):
                         self._separatrix = j
                         found = True
     @property
+    def strike_point(self):
+        if not hasattr(self, "strike_") or self._strike_point is None:
+            self._find_strikepoints()
+        return self._strike_point
+
+    def _find_strikepoints(self):
+        """
+        finds strikepoints by utilizing the intersection function provided by shapely on separatrix and first wall
+        contours (_string attributes)
+        :return:
+        """
+        if not hasattr(self, "_separatrix"):
+            self._find_separatrix()
+
+        self._strike_point = []
+        intersection = self.first_wall._string.intersection(self._separatrix._string)
+        if len(intersection) > 0:
+            for i in intersection:
+                    self._strike_point.append(self.coordinates(R=i.x, Z=i.y))
+
+    @property
     def first_wall(self):
         first_wall = self._first_wall
 
