@@ -587,6 +587,33 @@ class Equilibrium(object):
         return self._lcfs_fl
 
     @property
+    def separatrix(self):
+        if not hasattr(self, '_separatrix'):
+            self._find_separatrix()
+        return self._separatrix
+
+    def _find_separatrix(self):
+        """
+        Finds separatrix contour by finding contour with normalized poloidal flux going to 1 from right....
+        The proceedure iterates 1+0.000001*counter and stops when the found contour has intersection points with the
+        first wall contour.
+        :return:
+        """
+
+        found = False
+        cnt = 1
+        while not found and cnt<101:
+            psi_n = 1+0.000001*cnt
+            cnt += 1
+            separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
+            selstrikepoints = []
+            if len(separatrix) > 0:
+                for j in separatrix:
+                    intersection = self.first_wall._string.intersection(j._string)
+                    if len(intersection)> 0:
+                        self._separatrix = j
+                        found = True
+    @property
     def first_wall(self):
         first_wall = self._first_wall
 
