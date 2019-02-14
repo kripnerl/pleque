@@ -614,12 +614,11 @@ class Equilibrium(object):
             cnt += 1
             separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
             selstrikepoints = []
-            if len(separatrix) > 0:
-                for j in separatrix:
-                    intersection = self.first_wall._string.intersection(j._string)
-                    if len(intersection)> 0:
-                        self._separatrix = j.as_array(("R","Z"))
-                        found = True
+            for j in separatrix:
+                intersection = self.first_wall._string.intersection(j._string)
+                if len(intersection)> 0:
+                    self._separatrix = j.as_array(("R","Z"))
+                    found = True
 
         return self._separatrix
 
