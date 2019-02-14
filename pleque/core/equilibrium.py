@@ -610,7 +610,7 @@ class Equilibrium(object):
         found = False
         cnt = 1
         while not found and cnt<101:
-            psi_n = 1+0.000001*cnt
+            psi_n = 1+1e-6*cnt
             cnt += 1
             separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
             selstrikepoints = []
