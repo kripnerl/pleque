@@ -588,9 +588,16 @@ class Equilibrium(object):
 
     @property
     def separatrix(self):
-        if not hasattr(self, '_separatrix'):
-            self._find_separatrix()
-        return self._separatrix
+        """
+        If the equilibrium is limited, returns lcfs. If it is diverted it returns separatrix flux surface
+        :return:
+        """
+        if not self._limiter_plasma:
+            if not hasattr(self, '_separatrix'):
+                self._find_separatrix()
+            return self._as_fluxsurface(self._separatrix)
+        else:
+            return self.lcfs
 
     def _find_separatrix(self):
         """
@@ -611,8 +618,9 @@ class Equilibrium(object):
                 for j in separatrix:
                     intersection = self.first_wall._string.intersection(j._string)
                     if len(intersection)> 0:
-                        self._separatrix = j
+                        self._separatrix = j.as_array(("R","Z"))
                         found = True
+
     @property
     def contact_point(self):
         """
@@ -650,10 +658,10 @@ class Equilibrium(object):
             self._find_separatrix()
 
         self._strike_point = []
-        intersection = self.first_wall._string.intersection(self._separatrix._string)
+        intersection = self.first_wall._string.intersection(self.separatrix._string)
         if len(intersection) > 0:
             for i in intersection:
-                    self._strike_point.append(self.coordinates(R=i.x, Z=i.y))
+                    self._strike_point.append(np.array((i.x, i.y)))
 
     @property
     def first_wall(self):
