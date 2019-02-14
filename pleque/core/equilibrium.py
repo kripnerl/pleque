@@ -621,6 +621,9 @@ class Equilibrium(object):
                         self._separatrix = j.as_array(("R","Z"))
                         found = True
 
+        return self._separatrix
+
+
     @property
     def contact_point(self):
         """
@@ -662,6 +665,8 @@ class Equilibrium(object):
         if len(intersection) > 0:
             for i in intersection:
                     self._strike_point.append(np.array((i.x, i.y)))
+
+        return self._strike_point
 
     @property
     def first_wall(self):
