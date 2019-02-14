@@ -641,7 +641,7 @@ class Equilibrium(object):
         :return:
         """
         if not self._limiter_plasma:
-            if not hasattr(self, "strike_") or self._strike_point is None:#calculate strike_point if it does not exist
+            if not hasattr(self, "_strike_point"):#calculate strike_point if it does not exist
                 self._find_strikepoints()
             strike_point = []
             for i in self._strike_point:
