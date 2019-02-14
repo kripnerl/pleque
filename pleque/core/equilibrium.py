@@ -665,12 +665,21 @@ class Equilibrium(object):
 
     @property
     def first_wall(self):
-        first_wall = self._first_wall
+        """
+        If the first wall polygon is composed of 3 and more points Surface instance is returned.
+        If the wall contour is composed of less than 3 points, coordinate instance is returned, because Surface can't
+        be constructed
+        :return:
+        """
+        if self._first_wall.shape[0] < 3:
+            return self.coordinates(self._first_wall)
+        else:
+            first_wall = self._first_wall
 
-        #first wall should be a closed contour
-        if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
-            first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
-        return Surface(self, first_wall)
+            #first wall should be a closed contour
+            if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
+                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
+            return Surface(self, first_wall)
 
     @property
     def magnetic_axis(self):
