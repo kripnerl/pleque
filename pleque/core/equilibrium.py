@@ -629,7 +629,7 @@ class Equilibrium(object):
         Returns contact point as instance of coordinates for circular plasmas. Returns None otherwise.
         :return:
         """
-        if self._limiter_plasma and self._contact_point is not None:
+        if self._limiter_plasma and hasattr(self, "_contact_point"):
             return self.coordinates(self._contact_point)
         else:
             return None
