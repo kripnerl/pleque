@@ -614,10 +614,31 @@ class Equilibrium(object):
                         self._separatrix = j
                         found = True
     @property
+    def contact_point(self):
+        """
+        Returns contact point as instance of coordinates for circular plasmas. Returns None otherwise.
+        :return:
+        """
+        if self._limiter_plasma and self._contact_point is not None:
+            return self.coordinates(self._contact_point)
+        else:
+            return None
+
+    @property
     def strike_point(self):
-        if not hasattr(self, "strike_") or self._strike_point is None:
-            self._find_strikepoints()
-        return self._strike_point
+        """
+        Returns contact point if the equilibrium is limited. If the equilibrium is diverted it returns strike points.
+        :return:
+        """
+        if not self._limiter_plasma:
+            if not hasattr(self, "strike_") or self._strike_point is None:#calculate strike_point if it does not exist
+                self._find_strikepoints()
+            strike_point = []
+            for i in self._strike_point:
+                strike_point.append(self.coordinates(R=i[0],Z=i[1]))
+            return strike_point
+        else:
+            return self.contact_point
 
     def _find_strikepoints(self):
         """
@@ -958,14 +979,14 @@ class Equilibrium(object):
                 # find the touch point (strike point)
                 psi_fw_candidates = psi_first_wall[limiter_candidates]
                 i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
-                self._strike_point = self._first_wall[limiter_candidates][i_sp]
-                self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1], grid=False)
+                self._contact_point = self._first_wall[limiter_candidates][i_sp]
+                self._psi_strike_point = self._spl_psi(self._contact_point[0], self._contact_point[1], grid=False)
                 self._psi_lcfs = self._psi_strike_point
         else:
             # x-point plasma:
             self._psi_lcfs = self._psi_xp
             # todo: Strike point is None, it will be found later
-            self._strike_point = None
+            self._contact_point = None
 
         # get lcfs, for now using matplotlib contour line
 
@@ -986,7 +1007,7 @@ class Equilibrium(object):
             import shapely.geometry as geo
             for i in range(len(paths)):
                 v = paths[i].vertices
-                distance[i] = geo.Point(self._strike_point).distance(geo.LineString(v))
+                distance[i] = geo.Point(self._contact_point).distance(geo.LineString(v))
             v = paths[np.argmin(distance)].vertices
 
         else:
