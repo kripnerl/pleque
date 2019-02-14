@@ -9,7 +9,7 @@ from pleque.utils.decorators import deprecated
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-from pleque.core import FluxFunction
+from pleque.core import FluxFunction, Surface, FluxSurface
 
 class Equilibrium(object):
     """
@@ -588,7 +588,12 @@ class Equilibrium(object):
 
     @property
     def first_wall(self):
-        return self.coordinates(self._first_wall)
+        first_wall = self._first_wall
+
+        #first wall should be a closed contour
+        if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
+            first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
+        return Surface(self, first_wall)
 
     @property
     def magnetic_axis(self):
