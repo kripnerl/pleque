@@ -9,7 +9,7 @@ from pleque.utils.decorators import deprecated
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-from pleque.core import FluxFunction
+from pleque.core import FluxFunction, Surface, FluxSurface
 
 class Equilibrium(object):
     """
@@ -587,8 +587,103 @@ class Equilibrium(object):
         return self._lcfs_fl
 
     @property
+    def separatrix(self):
+        """
+        If the equilibrium is limited, returns lcfs. If it is diverted it returns separatrix flux surface
+        :return:
+        """
+        if not self._limiter_plasma:
+            if not hasattr(self, '_separatrix'):
+                self._find_separatrix()
+            return self._as_fluxsurface(self._separatrix)
+        else:
+            return self.lcfs
+
+    def _find_separatrix(self):
+        """
+        Finds separatrix contour by finding contour with normalized poloidal flux going to 1 from right....
+        The proceedure iterates 1+0.000001*counter and stops when the found contour has intersection points with the
+        first wall contour.
+        :return:
+        """
+
+        found = False
+        cnt = 1
+        while not found and cnt<101:
+            psi_n = 1+1e-6*cnt
+            cnt += 1
+            separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
+            selstrikepoints = []
+            for j in separatrix:
+                intersection = self.first_wall._string.intersection(j._string)
+                if len(intersection)> 0:
+                    self._separatrix = j.as_array(("R","Z"))
+                    found = True
+
+        return self._separatrix
+
+
+    @property
+    def contact_point(self):
+        """
+        Returns contact point as instance of coordinates for circular plasmas. Returns None otherwise.
+        :return:
+        """
+        if self._limiter_plasma and hasattr(self, "_contact_point"):
+            return self.coordinates(self._contact_point)
+        else:
+            return None
+
+    @property
+    def strike_point(self):
+        """
+        Returns contact point if the equilibrium is limited. If the equilibrium is diverted it returns strike points.
+        :return:
+        """
+        if not self._limiter_plasma:
+            if not hasattr(self, "_strike_point") or self._strike_point is None:#calculate strike_point if it does not exist
+                self._find_strikepoints()
+            strike_point = []
+            for i in self._strike_point:
+                strike_point.append(self.coordinates(R=i[0],Z=i[1]))
+            return strike_point
+        else:
+            return self.contact_point
+
+    def _find_strikepoints(self):
+        """
+        finds strikepoints by utilizing the intersection function provided by shapely on separatrix and first wall
+        contours (_string attributes)
+        :return:
+        """
+        if not hasattr(self, "_separatrix"):
+            self._find_separatrix()
+
+        self._strike_point = []
+        intersection = self.first_wall._string.intersection(self.separatrix._string)
+        if len(intersection) > 0:
+            for i in intersection:
+                    self._strike_point.append(np.array((i.x, i.y)))
+
+        return self._strike_point
+
+    @property
     def first_wall(self):
-        return self.coordinates(self._first_wall)
+        """
+        If the first wall polygon is composed of 3 and more points Surface instance is returned.
+        If the wall contour is composed of less than 3 points, coordinate instance is returned, because Surface can't
+        be constructed
+        :return:
+        """
+        if self._first_wall.shape[0] < 3:
+            return self.coordinates(self._first_wall)
+        else:
+            first_wall = self._first_wall
+
+            #first wall should be a closed contour
+            if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
+                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
+            return Surface(self, first_wall)
 
     @property
     def magnetic_axis(self):
@@ -905,14 +1000,14 @@ class Equilibrium(object):
                 # find the touch point (strike point)
                 psi_fw_candidates = psi_first_wall[limiter_candidates]
                 i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
-                self._strike_point = self._first_wall[limiter_candidates][i_sp]
-                self._psi_strike_point = self._spl_psi(self._strike_point[0], self._strike_point[1], grid=False)
+                self._contact_point = self._first_wall[limiter_candidates][i_sp]
+                self._psi_strike_point = self._spl_psi(self._contact_point[0], self._contact_point[1], grid=False)
                 self._psi_lcfs = self._psi_strike_point
         else:
             # x-point plasma:
             self._psi_lcfs = self._psi_xp
             # todo: Strike point is None, it will be found later
-            self._strike_point = None
+            self._contact_point = None
 
         # get lcfs, for now using matplotlib contour line
 
@@ -933,7 +1028,7 @@ class Equilibrium(object):
             import shapely.geometry as geo
             for i in range(len(paths)):
                 v = paths[i].vertices
-                distance[i] = geo.Point(self._strike_point).distance(geo.LineString(v))
+                distance[i] = geo.Point(self._contact_point).distance(geo.LineString(v))
             v = paths[np.argmin(distance)].vertices
 
         else:
