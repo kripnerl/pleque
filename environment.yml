@@ -6,7 +6,7 @@ dependencies:
   - python=3.6
   - numpy
   - ipython
-  - scipy
+  - scipy>=0.14.2
   - h5py
   - notebook
   - matplotlib
