@@ -6,12 +6,12 @@ dependencies:
   - python=3.6
   - numpy
   - ipython
-  - scipy>=0.14.2
+  - scipy
   - h5py
   - notebook
   - matplotlib
   - shapely
-  - scikit-image
+  - scikit-image>=0.14.2
   - xarray
   - pytest
   - pylint
