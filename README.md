@@ -61,8 +61,8 @@ eq = readers.read_geqdsk(eqdsk_filename)
 eq.plot_overview()
 ```
 
-Some other examples can be found as a notebook in the `notebooks` folder. There are 
-also some examples in `examples` directory. 
+Some other examples can be found as notebooks in the `notebooks` folder or in
+the `examples` directory. 
 
 ## Version
 
