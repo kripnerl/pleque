@@ -4,12 +4,9 @@ import numpy as np
 from pleque.utils.field_line_tracers import _trace_field_line_first_attempt
 from pleque.utils.plotting import plot_equilibrium
 from pleque.tests.utils import load_testing_equilibrium
-
+from pleque.io.jet import reader_jet
 
 def first_attempt():
-    eq = load_testing_equilibrium()
-
-    plot_equilibrium(eq)
     # plt.show()
 
     # N = 20
@@ -70,11 +67,27 @@ def first_attempt():
 
 
 def default_tracer():
-    eq = load_testing_equilibrium()
+    #choose the tokamak out of the too options
 
-    N = 1
-    rs = np.linspace(1.16, 1.17, N, endpoint=False)
-    zs = np.zeros_like(rs)
+    tokamak = 'JET'
+
+    if tokamak == 'COMPASS-U':
+        eq = load_testing_equilibrium()
+        N = 1
+        rs = np.linspace(1.16, 1.17, N, endpoint=False)
+        zs = np.zeros_like(rs)
+    if tokamak == 'JET':
+        eq = reader_jet.sal_jet(92400,timex=43.0)
+        N = 1
+        rs = np.linspace(3.66, 3.67, N, endpoint=False)
+        zs = np.zeros_like(rs)
+    else:
+        raise Exception('Unknown machine')
+
+
+    from mpl_toolkits.mplot3d import axes3d
+
+
 
     traces = eq.trace_field_line(R=rs, Z=zs)
 
