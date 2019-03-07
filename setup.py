@@ -23,7 +23,7 @@ setup(
         'numpy',
         'scipy',
         'shapely',
-        'scikit-image',
+        'scikit-image>=0.14.2',
         'xarray',
         'pandas',
         'h5py',
