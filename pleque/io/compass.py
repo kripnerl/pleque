@@ -53,11 +53,11 @@ def read_efithdf5(file_path, time):
             'fpol': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
             'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-            'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
-            'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
 
         }, coords={
             'time': t,
+            'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
+            'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
             'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
         }
         )
