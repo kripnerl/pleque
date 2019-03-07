@@ -81,17 +81,17 @@ def main():
 
     tokamak = 'JET'
 
-    if tokamak == 'COMPASS-U':
+    if tokamak == 'JET':
+        eq = reader_jet.sal_jet(92400)
+    elif tokamak == 'COMPASS-U':
         test_case = 0
         gfile = get_test_equilibria_filenames()[test_case]
         eq = load_testing_equilibrium(test_case)
-
-    if tokamak == 'JET':
-        eq = reader_jet.sal_jet(92400)
-
-    else:
-        raise Exception('Unknown machine')
-
+    else: 
+        test_case = 0
+        gfile = get_test_equilibria_filenames()[test_case]
+        eq = load_testing_equilibrium(test_case)
+    
     eq.plot_overview()
     plot_extremes(eq)
 
