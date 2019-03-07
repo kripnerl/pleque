@@ -1,14 +1,12 @@
 from setuptools import setup, find_packages
 import os
 
-import pleque
-
 def readme():
     return open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 
 setup(
     name='pleque',
-    version=pleque.__version__,
+    version='0.0.3b5',
     packages=find_packages(),  # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
     package_data={'pleque': ['resources/*']},
     url='https://pleque.readthedocs.io',
