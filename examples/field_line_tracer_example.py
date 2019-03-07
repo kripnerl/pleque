@@ -76,19 +76,22 @@ def default_tracer():
         N = 1
         rs = np.linspace(1.16, 1.17, N, endpoint=False)
         zs = np.zeros_like(rs)
-    if tokamak == 'JET':
+    elif tokamak == 'JET':
         eq = reader_jet.sal_jet(92400,timex=43.0)
         N = 1
         rs = np.linspace(3.66, 3.67, N, endpoint=False)
         zs = np.zeros_like(rs)
     else:
-        raise Exception('Unknown machine')
-
+        eq = load_testing_equilibrium()
+        N = 1
+        rs = np.linspace(1.16, 1.17, N, endpoint=False)
+        zs = np.zeros_like(rs)
 
     from mpl_toolkits.mplot3d import axes3d
-
-
-
+    
+    # Ugly trick to prevent axes3d to be automaticaly deleted by PyCharm. 
+    axes3d.__doc__
+    
     traces = eq.trace_field_line(R=rs, Z=zs)
 
     fig = plt.figure()
