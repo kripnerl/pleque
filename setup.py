@@ -1,19 +1,18 @@
+from setuptools import setup, find_packages
 import os
 
-from setuptools import setup
-
+import pleque
 
 def readme():
     return open(os.path.join(os.path.dirname(__file__), 'README.md')).read()
 
-
 setup(
     name='pleque',
-    version='0.0.3.beta2',
-    packages=['pleque_test', 'pleque', 'pleque.io', 'pleque.utils'],
-    package_dir={'pleque_test': 'pleque_test'},
-    package_data={'pleque_test': ['test_files/*']},
+    version=pleque.__version__,
+    packages=find_packages(),  # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
+    package_data={'pleque': ['resources/*']},
     url='https://pleque.readthedocs.io',
+    download_url='https://github.com/kripnerl/pleque',
     license='MIT',
     author='Lukas Kripner',
     author_email='kripner@ipp.cas.cz',
@@ -27,6 +26,9 @@ setup(
         'scikit-image',
         'xarray',
         'pandas',
+        'h5py',
     ],
     zip_safe=False
 )
+
+
