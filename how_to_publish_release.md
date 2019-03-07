@@ -4,14 +4,15 @@
     - `release_number` format: `major.minor.subminor` (e.g. 0.1.2) for main versions, or
     - `major.minor.subminor.patchnumber` if needed, or
     - `major.minor.subminorbbetaversion` (e.g. 0.1.1b3) for testing release 
-1. Set release number in `README.md`.
-1. Set release number in `pleque/__init__.py`
-1. Set release number in `docs/source/conf.py`
-1. Create push request to master on GitLab.
+1. Set release number 
+    1. in `README.md`,
+    1. in `pleque/__init__.py`,
+    1. minor release number in `docs/source/conf.py` (e. g. 0.1)
+1. Create push request to master/develop on GitLab.
 1. Wait for the approval.
 1. Tag the commit as `v[release_number]`
 1. Upload the release to pip: 
-    1. run `bash` in `pleque` home (checkout to master)
+    1. run `bash` in `pleque` home (checkout to master/develop)
     1. Prepare distribution in `dist` directory:
         ```bash
         python setup.py sdist bdist_wheel 
