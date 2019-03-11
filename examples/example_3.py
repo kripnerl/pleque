@@ -22,12 +22,12 @@ def load_gfile(g_file):
     z = eq_gfile['z'][0, :]
 
     pressure = eq_gfile['pressure']
-    fpol = eq_gfile['fpol']
-    psi_n = np.linspace(0, 1, len(fpol))
+    F = eq_gfile['F']
+    psi_n = np.linspace(0, 1, len(F))
 
     eq_ds = xa.Dataset({'psi': (['Z', 'R'], psi),
                         'pressure': ('psi_n', pressure),
-                        'fpol': ('psi_n', fpol)},
+                        'F': ('psi_n', F)},
                        coords={'R': r,
                                'Z': z,
                                'psi_n': psi_n})
@@ -282,7 +282,7 @@ def plot_overview(eq: Equilibrium):
     #
     # plt.subplot(212)
     # ax = plt.gca()
-    # ax.plot(psi_n, eq.fpol(psi_n=psi_n), 'C1')
+    # ax.plot(psi_n, eq.F(psi_n=psi_n), 'C1')
     # ax.set_xlabel(r'$\psi_\mathrm{N}$')
     # ax.set_ylabel(r'$f$ ', color='C1')
     #
@@ -306,7 +306,7 @@ def main():
 
     show_qprofiles(gfile, eq)
 
-    print(eq.fluxfuncs.fpol)
+    print(eq.fluxfuncs.F)
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests

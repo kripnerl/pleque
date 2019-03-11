@@ -67,7 +67,7 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     # 1d profiles
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["psi"] = equilibrium.psi(grid_1d)
     ods["equilibrium"]["time_slice"][0]["profiles_1d"]["rho_tor"] = equilibrium.tor_flux(grid_1d)
-    ods['equilibrium.time_slice'][0]['profiles_1d.f'] = equilibrium.fpol(grid_1d)
+    ods['equilibrium.time_slice'][0]['profiles_1d.f'] = equilibrium.F(grid_1d)
     ods['equilibrium.time_slice'][0]['profiles_1d.pressure'] = equilibrium.pressure(grid_1d)
     ods['equilibrium.time_slice'][0]['profiles_1d.f_df_dpsi'] = equilibrium.ffprime(grid_1d)
     ods['equilibrium.time_slice'][0]['profiles_1d.dpressure_dpsi'] = equilibrium.pprime(grid_1d)

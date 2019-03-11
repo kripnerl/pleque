@@ -102,7 +102,7 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
         'psi': (['time', 'R', 'Z'], psi.data),
         'pressure': (['time', 'psi_n'], pressure.data),
         'pprime': (['time', 'psi_n'], pprime),
-        'fpol': (['time', 'psi_n'], f.data),
+        'F': (['time', 'psi_n'], f.data),
         'ffprime': (['time', 'psi_n'], ffprime),
         'qpsi': (['time', 'psi_n'], qpsi.data),
         'R': (['R'], r),

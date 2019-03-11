@@ -13,14 +13,14 @@ def read_gfile(g_file: str, limiter: str = None):
     z = eq_gfile['z'][0, :]
 
     pressure = eq_gfile['pressure']
-    fpol = eq_gfile['fpol']
+    F = eq_gfile['F']
     qpsi = eq_gfile['qpsi']
 
-    psi_n = np.linspace(0, 1, len(fpol))
+    psi_n = np.linspace(0, 1, len(F))
 
     eq_ds = xr.Dataset({'psi': (['R', 'Z'], psi),
                         'pressure': ('psi_n', pressure),
-                        'fpol': ('psi_n', fpol)},
+                        'F': ('psi_n', F)},
                        coords={'R': r,
                                'Z': z,
                                'psi_n': psi_n})

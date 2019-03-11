@@ -21,7 +21,7 @@ def readeqdsk_xarray(filepath, order="F"):
     eq_xarray = xr.Dataset({"psi": (("R", "Z"), eq["psi"]),  # 2d psi poloidal profile
                             "r_bound": eq["r_bound"], "z_bound": eq["z_bound"],  # plasma boundary
                             "r_lim": eq["r_lim"], "z_lim": eq["z_lim"],
-                            "fpol": ("psi_n", eq["fpol"]),
+                            "F": ("psi_n", eq["F"]),
                             "pressure": ("psi_n", eq["press"]),
                             "ffprime": ("psi_n", eq["ffprime"]),
                             "qpsi": ("psi_n", eq["qpsi"]),
@@ -82,7 +82,7 @@ def _readeqdsk(filepath, order="F"):
         equi[attrs[i]] = equistuff[attrs_pos[i]]
 
     # get the 1d and 2d arrays
-    names = ["fpol", "press", "ffprime", "pprime", "psi", "qpsi"]
+    names = ["F", "press", "ffprime", "pprime", "psi", "qpsi"]
     index = 20
 
     for i in names:

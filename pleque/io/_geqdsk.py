@@ -46,7 +46,7 @@ def write(data, fh, label=None, shot=None, time=None):
       sibdry        Poloidal flux psi at plasma boundary
       cpasma        Plasma current [Amps]   
 
-      fpol          1D array of f(psi)=R*Bt  [meter-Tesla]
+      F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       qpsi          1D array of q(psi)
       
@@ -108,7 +108,7 @@ def write(data, fh, label=None, shot=None, time=None):
     # Write arrays
     co = ChunkOutput(fh)
 
-    write_1d(data["fpol"], co)
+    write_1d(data["F"], co)
     write_1d(data["pres"], co)
     if 'ffprime' in data:
         write_1d(data["ffprime"], co)
@@ -173,7 +173,7 @@ def read(fh, cocos=1):
       sibdry        Poloidal flux psi at plasma boundary
       cpasma        Plasma current [Amps]   
 
-      fpol          1D array of f(psi)=R*Bt  [meter-Tesla]
+      F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       qpsi          1D array of q(psi)
       
@@ -230,7 +230,7 @@ def read(fh, cocos=1):
                 val[x, y] = next(values)
         return val
 
-    data["fpol"] = read_1d(nx)
+    data["F"] = read_1d(nx)
     data["pres"] = read_1d(nx)
     data["ffprime"] = read_1d(nx)
     data["pprime"] = read_1d(nx)
@@ -283,7 +283,7 @@ def data_as_ds(data):
     eq_xarray = xa.Dataset({"psi": (("R", "Z"), data["psi"]),  # 2d psi poloidal profile
                             "r_bound": data["rbdry"], "z_bound": data["zbdry"],  # plasma boundary
                             "r_lim": data["rlim"], "z_lim": data["zlim"],
-                            "fpol": ("psi_n", data["fpol"]),
+                            "F": ("psi_n", data["F"]),
                             "pressure": ("psi_n", data["pres"]),
                             "ffprime": ("psi_n", data["ffprime"]),
                             "qpsi": ("psi_n", data["qpsi"]),

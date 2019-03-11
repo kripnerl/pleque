@@ -105,7 +105,7 @@ def main():
     plt.show()
 
 
-    print(eq.fluxfuncs.fpol)
+    print(eq.fluxfuncs.F)
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
