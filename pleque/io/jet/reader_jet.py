@@ -1,3 +1,12 @@
+"""
+In case of any issues, questions and comments contact
+
+Ondrej Ficker
+
+ficker@ipp.cas.cz
+
+"""
+
 import numpy as np
 import xarray as xr
 
