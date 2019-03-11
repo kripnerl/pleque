@@ -1001,7 +1001,7 @@ class Equilibrium(object):
 
         for pn in psi_n:
             if self._verbose:
-                print("{}%\r".format(pn / np.max(psi_n) * 100))
+                print("{:.2f}%\r".format(pn / np.max(psi_n) * 100))
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)
