@@ -126,6 +126,8 @@ def point_in_first_wall(equilibrium, points):
 
 def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6):
     """
+    Use field line tracker to trace plasma boundary in x-poin configuration. 
+    The boundary is traced from the possiion of x-point. 
 
     :param equilibrium:
     :type equilibrium: pleque.Equilibrium
