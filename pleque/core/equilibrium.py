@@ -191,7 +191,7 @@ class Equilibrium(object):
         F[mask_out] = self.BvacR
         return F
 
-    def fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+    def Fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         '''
 
         :param coordinates:
@@ -205,9 +205,9 @@ class Equilibrium(object):
         '''
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
-        fprime[mask_out] = 0
-        return fprime
+        Fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        Fprime[mask_out] = 0
+        return Fprime
 
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -564,7 +564,7 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self.fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
+        return self.Fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
