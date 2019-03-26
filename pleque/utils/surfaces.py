@@ -58,11 +58,11 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
 
     # if r is integer make r grid
     if not isinstance(r, np.ndarray):
-        r = np.linspace(equilibrium.r_min, equilibrium.r_max, r)
+        r = np.linspace(equilibrium.R_min, equilibrium.R_max, r)
 
     # if z is integer make z grid
     if not isinstance(z, np.ndarray):
-        z = np.linspace(equilibrium.z_min, equilibrium.z_max, z)
+        z = np.linspace(equilibrium.Z_min, equilibrium.Z_max, z)
 
     # should we work with psi or psi_n
     if norm:

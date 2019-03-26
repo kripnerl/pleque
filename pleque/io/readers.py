@@ -1,3 +1,7 @@
+
+from ._geqdsk import read_as_equilibrium
+
+
 def read_geqdsk(filename, cocos=1):
     """
     Read a G-EQDSK formatted equilibrium file
@@ -13,7 +17,6 @@ def read_geqdsk(filename, cocos=1):
         if < 10 then psi is divided by 2pi, otherwise not.
     :return: instance of `Equilibrium`
     """
-    from ._geqdsk import read_as_equilibrium
 
     with open(filename, 'r') as f:
         eq = read_as_equilibrium(f, cocos)

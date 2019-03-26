@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xa
 
 from pleque.core import Equilibrium
-from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
+from pleque.tests.utils import load_testing_equilibrium, get_test_equilibria_filenames
 
 modpath = os.path.expanduser("/compass/home/kripner/Projects/pyTokamak.git")
 if not modpath in sys.path:  # not to stack same paths continuously if it is already there
@@ -22,12 +22,12 @@ def load_gfile(g_file):
     z = eq_gfile['z'][0, :]
 
     pressure = eq_gfile['pressure']
-    fpol = eq_gfile['fpol']
-    psi_n = np.linspace(0, 1, len(fpol))
+    F = eq_gfile['F']
+    psi_n = np.linspace(0, 1, len(F))
 
     eq_ds = xa.Dataset({'psi': (['Z', 'R'], psi),
                         'pressure': ('psi_n', pressure),
-                        'fpol': ('psi_n', fpol)},
+                        'F': ('psi_n', F)},
                        coords={'R': r,
                                'Z': z,
                                'psi_n': psi_n})
@@ -53,8 +53,8 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
     with open(g_file, 'r') as f:
         eq_gfile = read(f)
 
-    qpsi = eq_gfile['qpsi']
-    psi_n = np.linspace(0, 1, len(qpsi))
+    q = eq_gfile['q']
+    psi_n = np.linspace(0, 1, len(q))
 
     print(eq_gfile.keys())
 
@@ -86,7 +86,7 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, np.abs(qpsi), 'x', label='g-file (abs)')
+    ax.plot(psi_n, np.abs(q), 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Pleque')
@@ -107,7 +107,7 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r"$p' (\times 10^3)$")
     ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C1')
+    ax2.plot(psi_n, eq.FFprime(psi_n=psi_n), 'C1')
     ax2.set_ylabel(r"$ff'$")
 
 
@@ -282,12 +282,12 @@ def plot_overview(eq: Equilibrium):
     #
     # plt.subplot(212)
     # ax = plt.gca()
-    # ax.plot(psi_n, eq.fpol(psi_n=psi_n), 'C1')
+    # ax.plot(psi_n, eq.F(psi_n=psi_n), 'C1')
     # ax.set_xlabel(r'$\psi_\mathrm{N}$')
     # ax.set_ylabel(r'$f$ ', color='C1')
     #
     # ax2 = ax.twinx()
-    # ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
+    # ax2.plot(psi_n, eq.FFprime(psi_n=psi_n), 'C2')
     # ax2.set_ylabel(r"$ff'$ ", color='C2')
 
     return return_axis
@@ -306,7 +306,7 @@ def main():
 
     show_qprofiles(gfile, eq)
 
-    print(eq.fluxfuncs.fpol)
+    print(eq.fluxfuncs.F)
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests
