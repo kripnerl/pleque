@@ -588,6 +588,21 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
 
+    def get_precise_lcfs(self):
+        """
+        Calculate plasma LCFS by field line tracing technique and save LCFS as
+        instance property.
+
+        :return:
+        """
+        from pleque.utils.surfaces import track_plasma_boundary
+
+        lcfs = track_plasma_boundary(self, self._x_point)
+
+        # todo debug this :) after this doesn't work eq.plot_overview()
+        # self._lcfs = lcfs
+        return lcfs
+
     @property
     def lcfs(self):
         if not hasattr(self, '_lcfs_fl'):
@@ -763,7 +778,46 @@ class Equilibrium(object):
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
-    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+    def connection_length(self, *coordinates, R: np.array = None, Z: np.array = None,
+                          coord_type=None, direction = 1, **coords):
+        """
+        Calculate connection length from given coordinates to first wall
+
+        Todo: The field line is traced to min/max value of z of first wall, distance is calculated to the last
+            point before first wall.
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return:
+        """
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        traces = self.trace_field_line(coords, direction = direction)
+        dists = []
+        lines = []
+
+        for t in traces:
+            if t.psi_n[0] > 1:
+                # todo: find first False!
+                mask_in = self.in_first_wall(t)
+                rzp = t.as_array()[mask_in, :]
+
+                #todo: add intersection point!
+
+                line_in = self.coordinates(rzp)
+                dist = line_in.length[-1]
+
+                dists.append(dist)
+                lines.append(line_in)
+            else:
+                dists.append(np.infty)
+                lines.append(None)
+
+        return dists, lines
+
+    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None,
+                         coord_type=None, direction=1,**coords):
         """
         Return traced field lines starting from the given set of at least 2d coordinates.
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
@@ -773,6 +827,7 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param coords:
         :return:
 
@@ -791,7 +846,7 @@ class Equilibrium(object):
 
         coords_rz = coords.as_array(dim=2)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, direction)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
         for i in np.arange(len(coords)):
@@ -805,7 +860,7 @@ class Equilibrium(object):
             if self._verbose:
                 print('tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
 
-            if coords.psi_n[i] < 1:
+            if coords.psi_n[i] <= 1:
                 # todo: determine the direction (now -1) !!
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
             else:
@@ -868,7 +923,7 @@ class Equilibrium(object):
                               (np.max((self.Z_min, z_ex - 0.1)),
                                np.min((self.Z_max, z_ex + 0.1))))
 
-                    res = minimize(psi_xysq_func, x0, bounds=bounds)
+                    res = minimize(psi_xysq_func, x0, bounds=bounds, tol=1e-8)
                     # Remove bad candidates for extreme
                     if res['fun'] > 1e-3:
                         continue
@@ -964,7 +1019,7 @@ class Equilibrium(object):
 
         if len(x_points) >= 2:
             self._x_point2 = x_points[sortidx[1]]
-            self._psi_xp2 = self._spl_psi(self._x_point2[0], self._x_point2[1], grid=False)
+            self._psi_xp2 = np.asscalar(self._spl_psi(self._x_point2[0], self._x_point2[1], grid=False))
         else:
             self._x_point2 = None
             self._psi_xp2 = None
