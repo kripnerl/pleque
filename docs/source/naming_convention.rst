@@ -24,7 +24,7 @@ Here presented naming convention is used to read/create input/output dict/xarray
 2D profiles
 -----------
 * Required on the input
-    * ``psi``: poloidal magnetic flux
+    * ``psi`` (Wb): poloidal magnetic flux
 * Calculated
     * ``B_R`` (T): :math:`R` component of the magnetic field.
     * ``B_Z`` (T): :math:`Z` component of the magnetic field.
@@ -44,16 +44,16 @@ Here presented naming convention is used to read/create input/output dict/xarray
 
 * Required on the input
     * ``pressure`` (Pa)
-    * ``pprime``
+    * ``pprime`` (Pa/Wb)
     * ``F``: :math:`F = R B_\phi`
 
 * Calculated
     * ``pprime``: :math:`p \partial_\psi`
     * ``Fprime``: :math:`F' = \partial_\psi F`
     * ``FFprime``: :math:`FF' = F \partial_\psi F`
-    * ``Fprime``: :math:`f' = \partial_\psi f`
+    * ``fprime``: :math:`f' = \partial_\psi f`
     * ``f``: :math:`f = (1/\mu_0) R B_\phi`
-    * ``FFprime``: :math:`ff' = f \partial_\psi f`
+    * ``ffprime``: :math:`ff' = f \partial_\psi f`
     * ``rho``, ``psi_n``
 
 * Deriver
