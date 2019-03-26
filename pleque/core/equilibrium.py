@@ -209,12 +209,12 @@ class Equilibrium(object):
         fprime[mask_out] = 0
         return fprime
 
-    def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+    def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        ffprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
-        ffprime[mask_out] = 0
-        return ffprime
+        FFprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        FFprime[mask_out] = 0
+        return FFprime
 
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -586,7 +586,7 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.ffprime(coord)
+        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
 
     @property
     def lcfs(self):

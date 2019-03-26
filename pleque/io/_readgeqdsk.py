@@ -23,7 +23,7 @@ def readeqdsk_xarray(filepath, order="F"):
                             "r_lim": eq["r_lim"], "z_lim": eq["z_lim"],
                             "F": ("psi_n", eq["F"]),
                             "pressure": ("psi_n", eq["press"]),
-                            "ffprime": ("psi_n", eq["ffprime"]),
+                            "FFprime": ("psi_n", eq["FFprime"]),
                             "qpsi": ("psi_n", eq["qpsi"]),
                             "pprime": ("psi_n", eq["pprime"])},  # limiter contour
                            coords={"R": r_psi,
@@ -82,7 +82,7 @@ def _readeqdsk(filepath, order="F"):
         equi[attrs[i]] = equistuff[attrs_pos[i]]
 
     # get the 1d and 2d arrays
-    names = ["F", "press", "ffprime", "pprime", "psi", "qpsi"]
+    names = ["F", "press", "FFprime", "pprime", "psi", "qpsi"]
     index = 20
 
     for i in names:

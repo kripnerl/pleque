@@ -107,7 +107,7 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
     ax.set_xlabel(r'$\psi_\mathrm{N}$')
     ax.set_ylabel(r"$p' (\times 10^3)$")
     ax2 = ax.twinx()
-    ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C1')
+    ax2.plot(psi_n, eq.FFprime(psi_n=psi_n), 'C1')
     ax2.set_ylabel(r"$ff'$")
 
 
@@ -287,7 +287,7 @@ def plot_overview(eq: Equilibrium):
     # ax.set_ylabel(r'$f$ ', color='C1')
     #
     # ax2 = ax.twinx()
-    # ax2.plot(psi_n, eq.ffprime(psi_n=psi_n), 'C2')
+    # ax2.plot(psi_n, eq.FFprime(psi_n=psi_n), 'C2')
     # ax2.set_ylabel(r"$ff'$ ", color='C2')
 
     return return_axis

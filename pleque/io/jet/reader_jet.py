@@ -43,16 +43,16 @@ def pprime_calc(pressure, deltapsi, lenpsin):
     return pprime
 
 
-def ffprime_calc(f, deltapsi, lenpsin):
+def FFprime_calc(f, deltapsi, lenpsin):
     """
-    Calculates ffprime
+    Calculates FFprime
     :param f: f function
     :param deltapsi: result of deltapsi_calc
     :param lenpsin: 1/number of points in psi_n axis
     :return: the f*df/fpsi on axis time and psi_n
     """
-    ffprime = deltapsi[:,np.newaxis]*f.data*np.gradient(f.data, 1/lenpsin,axis=1)
-    return ffprime
+    FFprime = deltapsi[:,np.newaxis]*f.data*np.gradient(f.data, 1/lenpsin,axis=1)
+    return FFprime
 
 def sal_jet(pulse, timex=47.0, time_unit="s"):
     """
@@ -98,12 +98,12 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     # q-profile
     qpsi = sal.get(data_path.format(pulse, 'q', sequence))
 
-    # calculate pprime and ffprime
+    # calculate pprime and FFprime
     deltapsi = deltapsi_calc(pulse)
 
     pprime = pprime_calc(pressure, deltapsi, len(psi_n))
 
-    ffprime = ffprime_calc(f, deltapsi, len(psi_n))
+    FFprime = FFprime_calc(f, deltapsi, len(psi_n))
 
     #create dataset
 
@@ -112,7 +112,7 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
         'pressure': (['time', 'psi_n'], pressure.data),
         'pprime': (['time', 'psi_n'], pprime),
         'F': (['time', 'psi_n'], f.data),
-        'ffprime': (['time', 'psi_n'], ffprime),
+        'FFprime': (['time', 'psi_n'], FFprime),
         'qpsi': (['time', 'psi_n'], qpsi.data),
         'R': (['R'], r),
         'Z': (['Z'], z),

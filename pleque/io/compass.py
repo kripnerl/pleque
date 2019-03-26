@@ -51,7 +51,7 @@ def read_efithdf5(file_path, time):
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
             'pprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPPrime']),
             'F': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
-            'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
+            'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
 
         }, coords={

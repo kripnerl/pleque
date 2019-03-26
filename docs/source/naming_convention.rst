@@ -53,7 +53,7 @@ Here presented naming convention is used to read/create input/output dict/xarray
     * ``FFprime``: :math:`FF' = F \partial_\psi F`
     * ``fprime``: :math:`f' = \partial_\psi f`
     * ``f``: :math:`f = (1/\mu_0) R B_\phi`
-    * ``ffprime``: :math:`ff' = f \partial_\psi f`
+    * ``FFprime``: :math:`ff' = f \partial_\psi f`
     * ``rho``, ``psi_n``
 
 * Deriver

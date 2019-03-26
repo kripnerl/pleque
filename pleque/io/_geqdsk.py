@@ -110,8 +110,8 @@ def write(data, fh, label=None, shot=None, time=None):
 
     write_1d(data["F"], co)
     write_1d(data["pres"], co)
-    if 'ffprime' in data:
-        write_1d(data["ffprime"], co)
+    if 'FFprime' in data:
+        write_1d(data["FFprime"], co)
     else:
         write_1d(workk, co)
     if 'pprime' in data:
@@ -232,7 +232,7 @@ def read(fh, cocos=1):
 
     data["F"] = read_1d(nx)
     data["pres"] = read_1d(nx)
-    data["ffprime"] = read_1d(nx)
+    data["FFprime"] = read_1d(nx)
     data["pprime"] = read_1d(nx)
 
     data["psi"] = read_2d(nx, ny)
@@ -285,7 +285,7 @@ def data_as_ds(data):
                             "r_lim": data["rlim"], "z_lim": data["zlim"],
                             "F": ("psi_n", data["F"]),
                             "pressure": ("psi_n", data["pres"]),
-                            "ffprime": ("psi_n", data["ffprime"]),
+                            "FFprime": ("psi_n", data["FFprime"]),
                             "qpsi": ("psi_n", data["qpsi"]),
                             "pprime": ("psi_n", data["pprime"])},  # limiter contour
                            coords={"R": r_axis,
