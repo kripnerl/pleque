@@ -7,10 +7,11 @@ dependencies:
   - numpy
   - ipython
   - scipy
+  - h5py
   - notebook
   - matplotlib
   - shapely
-  - scikit-image
+  - scikit-image>=0.14.2
   - xarray
   - pytest
   - pylint

@@ -1,12 +1,8 @@
-import os
-import sys
-
 import numpy as np
-import xarray as xa
 
 from pleque.core import Equilibrium
-from pleque_test.testing_utils import load_testing_equilibrium, get_test_equilibria_filenames
-from pleque.io import readers
+from pleque.tests.utils import load_testing_equilibrium, get_test_equilibria_filenames
+from pleque.io.jet import reader_jet
 
 def plot_extremes(eq: Equilibrium, ax=None):
     import matplotlib.pyplot as plt
@@ -83,10 +79,19 @@ def plot_overview(eq: Equilibrium):
 def main():
     import matplotlib.pyplot as plt
 
-    test_case = 0
-    gfile = get_test_equilibria_filenames()[test_case]
-    eq = load_testing_equilibrium(test_case)
+    tokamak = 'JET'
 
+    if tokamak == 'JET':
+        eq = reader_jet.sal_jet(92400)
+    elif tokamak == 'COMPASS-U':
+        test_case = 0
+        gfile = get_test_equilibria_filenames()[test_case]
+        eq = load_testing_equilibrium(test_case)
+    else: 
+        test_case = 0
+        gfile = get_test_equilibria_filenames()[test_case]
+        eq = load_testing_equilibrium(test_case)
+    
     eq.plot_overview()
     plot_extremes(eq)
 
@@ -109,7 +114,7 @@ def main():
     plt.show()
 
 
-    print(eq.fluxfuncs.fpol)
+    print(eq.fluxfuncs.F)
     print(eq.fluxfuncs.__dict__)
 
     # Show all plots generated during tests

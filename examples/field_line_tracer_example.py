@@ -4,14 +4,31 @@ import numpy as np
 from pleque_test.testing_utils import load_testing_equilibrium
 
 def default_tracer():
-    from mpl_toolkits.mplot3d import axes3d, Axes3D
+    #choose the tokamak out of the too options
+    tokamak = 'JET'
 
-    eq = load_testing_equilibrium()
 
-    N = 1
-    rs = np.linspace(1.16, 1.17, N, endpoint=False)
-    zs = np.zeros_like(rs)
+    if tokamak == 'COMPASS-U':
+        eq = load_testing_equilibrium()
+        N = 1
+        rs = np.linspace(1.16, 1.17, N, endpoint=False)
+        zs = np.zeros_like(rs)
+    elif tokamak == 'JET':
+        eq = reader_jet.sal_jet(92400,timex=43.0)
+        N = 1
+        rs = np.linspace(3.66, 3.67, N, endpoint=False)
+        zs = np.zeros_like(rs)
+    else:
+        eq = load_testing_equilibrium()
+        N = 1
+        rs = np.linspace(1.16, 1.17, N, endpoint=False)
+        zs = np.zeros_like(rs)
 
+    from mpl_toolkits.mplot3d import axes3d
+    
+    # Ugly trick to prevent axes3d to be automaticaly deleted by PyCharm. 
+    axes3d.__doc__
+    
     traces = eq.trace_field_line(R=rs, Z=zs)
 
     dists, lines = eq.connection_length(R=(0.62, 0.622, 1.165, 1.17, 1.175, 1.18), Z=(0, 0, 0, 0, 0, 0))

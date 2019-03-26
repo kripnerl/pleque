@@ -1,7 +1,11 @@
 import numpy as np
 
-from pleque import Equilibrium
+from pleque.core import Equilibrium
 
+import h5py
+import xarray as xr
+from pleque.io._geqdsk import read, data_as_ds
+import pkg_resources
 
 def cdb(shot=None, time=1060, revision=1):
     """
@@ -12,6 +16,7 @@ def cdb(shot=None, time=1060, revision=1):
     :param revision: EFIT revision, defaults to first (post-shot standard)
     :return: Equilibrium
     """
+
     import pyCDB.client
 
     cdb = pyCDB.client.CDBClient()
@@ -35,8 +40,6 @@ def read_efithdf5(file_path, time):
     :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
     :return: Equilibrium
     """
-    import h5py
-    import xarray as xr
 
     with h5py.File(file_path, 'r') as f5efit:  # open EFITXX.rev.h5
 
@@ -47,14 +50,14 @@ def read_efithdf5(file_path, time):
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
             'pprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPPrime']),
-            'fpol': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
-            'ffprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
-            'qpsi': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-            'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
-            'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
+            'F': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
+            'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
+            'q': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
 
         }, coords={
             'time': t,
+            'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
+            'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
             'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
         }
         )
@@ -76,10 +79,8 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         If `None` IBA limiter v 3.1 is taken.
     :return: Equilibrium: Instance of `Equilibrium`
     """
-    from pleque.io._geqdsk import read, data_as_ds
-    import pkg_resources
 
-    resource_package = __name__
+    resource_package = 'pleque'
 
     # ds = readeqdsk_xarray(filepath)
     with open(filepath, 'r') as f:
@@ -92,7 +93,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
-        first_wall = '../../pleque_test/test_files/limiter_v3_1_iba_v2.dat'
+        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
 
     if isinstance(first_wall, str):
@@ -101,13 +102,13 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq = Equilibrium(ds, first_wall=first_wall)
 
     # todo: now assume cocos = 3 => q < 0
-    if np.sum(ds.qpsi.data) > 0:
-        qpsi = ds.qpsi.data * -1
+    if np.sum(ds.q.data) > 0:
+        q = ds.q.data * -1
     else:
-        qpsi = ds.qpsi.data
+        q = ds.q.data
 
-    # eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.qpsi.data, s=0, k=3)
-    # eq._q_spl = UnivariateSpline(ds.psi_n.data, qpsi, s=0, k=3)
+    # eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.q.data, s=0, k=3)
+    # eq._q_spl = UnivariateSpline(ds.psi_n.data, q, s=0, k=3)
     # eq._dq_dpsin_spl = eq._q_spl.derivative()
     # eq._q_anideriv_spl = eq._q_spl.antiderivative()
     eq.I_plasma = ds.attrs['cpasma']
