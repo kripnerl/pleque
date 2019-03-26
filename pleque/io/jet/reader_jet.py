@@ -43,15 +43,15 @@ def pprime_calc(pressure, deltapsi, lenpsin):
     return pprime
 
 
-def FFprime_calc(f, deltapsi, lenpsin):
+def FFprime_calc(F, deltapsi, lenpsin):
     """
     Calculates FFprime
-    :param f: f function
+    :param F: f function
     :param deltapsi: result of deltapsi_calc
     :param lenpsin: 1/number of points in psi_n axis
     :return: the f*df/fpsi on axis time and psi_n
     """
-    FFprime = deltapsi[:,np.newaxis]*f.data*np.gradient(f.data, 1/lenpsin,axis=1)
+    FFprime = deltapsi[:,np.newaxis] * F.data * np.gradient(F.data, 1 / lenpsin, axis=1)
     return FFprime
 
 def sal_jet(pulse, timex=47.0, time_unit="s"):
