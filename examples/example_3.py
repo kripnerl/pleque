@@ -53,8 +53,8 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
     with open(g_file, 'r') as f:
         eq_gfile = read(f)
 
-    qpsi = eq_gfile['qpsi']
-    psi_n = np.linspace(0, 1, len(qpsi))
+    q = eq_gfile['q']
+    psi_n = np.linspace(0, 1, len(q))
 
     print(eq_gfile.keys())
 
@@ -86,7 +86,7 @@ def show_qprofiles(g_file: str, eq: Equilibrium):
 
     plt.subplot(322)
     ax = plt.gca()
-    ax.plot(psi_n, np.abs(qpsi), 'x', label='g-file (abs)')
+    ax.plot(psi_n, np.abs(q), 'x', label='g-file (abs)')
     ax.plot(psin_axis, q_as_grad, '-',
             label=r'$\mathrm{d} \Phi/\mathrm{d} \psi$')
     ax.plot(psin_axis, q_as_grad, '--', label='Pleque')

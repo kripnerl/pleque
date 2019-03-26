@@ -48,7 +48,7 @@ def write(data, fh, label=None, shot=None, time=None):
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
-      qpsi          1D array of q(psi)
+      q          1D array of q(psi)
       
       psi           2D array (nx,ny) of poloidal flux
     
@@ -120,7 +120,7 @@ def write(data, fh, label=None, shot=None, time=None):
         write_1d(workk, co)
 
     write_2d(data["psi"], co)
-    write_1d(data["qpsi"], co)
+    write_1d(data["q"], co)
 
     # Boundary / limiters
 
@@ -175,7 +175,7 @@ def read(fh, cocos=1):
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
-      qpsi          1D array of q(psi)
+      q          1D array of q(psi)
       
       psi           2D array (nx,ny) of poloidal flux
     
@@ -237,7 +237,7 @@ def read(fh, cocos=1):
 
     data["psi"] = read_2d(nx, ny)
 
-    data["qpsi"] = read_1d(nx)
+    data["q"] = read_1d(nx)
 
     # Ensure that psi is divided by 2pi
     if cocos > 10:
@@ -278,7 +278,7 @@ def data_as_ds(data):
 
     r_axis = np.linspace(data["rleft"], data["rleft"] + data["rdim"], data["nx"])
     z_axis = np.linspace(data["zmid"] - data["zdim"] / 2, data["zmid"] + data["zdim"] / 2, data["ny"])
-    psi_n = np.linspace(0, 1, len(data['qpsi']))
+    psi_n = np.linspace(0, 1, len(data['q']))
 
     eq_xarray = xa.Dataset({"psi": (("R", "Z"), data["psi"]),  # 2d psi poloidal profile
                             "r_bound": data["rbdry"], "z_bound": data["zbdry"],  # plasma boundary
@@ -286,7 +286,7 @@ def data_as_ds(data):
                             "F": ("psi_n", data["F"]),
                             "pressure": ("psi_n", data["pres"]),
                             "FFprime": ("psi_n", data["FFprime"]),
-                            "qpsi": ("psi_n", data["qpsi"]),
+                            "q": ("psi_n", data["q"]),
                             "pprime": ("psi_n", data["pprime"])},  # limiter contour
                            coords={"R": r_axis,
                                    "Z": z_axis,

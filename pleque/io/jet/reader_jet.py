@@ -96,7 +96,7 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     f = sal.get(data_path.format(pulse, 'f', sequence))
 
     # q-profile
-    qpsi = sal.get(data_path.format(pulse, 'q', sequence))
+    q = sal.get(data_path.format(pulse, 'q', sequence))
 
     # calculate pprime and FFprime
     deltapsi = deltapsi_calc(pulse)
@@ -113,7 +113,7 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
         'pprime': (['time', 'psi_n'], pprime),
         'F': (['time', 'psi_n'], f.data),
         'FFprime': (['time', 'psi_n'], FFprime),
-        'qpsi': (['time', 'psi_n'], qpsi.data),
+        'q': (['time', 'psi_n'], q.data),
         'R': (['R'], r),
         'Z': (['Z'], z),
 

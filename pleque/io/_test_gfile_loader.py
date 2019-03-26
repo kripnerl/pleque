@@ -14,7 +14,7 @@ def read_gfile(g_file: str, limiter: str = None):
 
     pressure = eq_gfile['pressure']
     F = eq_gfile['F']
-    qpsi = eq_gfile['qpsi']
+    q = eq_gfile['q']
 
     psi_n = np.linspace(0, 1, len(F))
 
@@ -34,7 +34,7 @@ def read_gfile(g_file: str, limiter: str = None):
 
     eq._geqdsk = eq_gfile
 
-    eq._q_spl = UnivariateSpline(psi_n, qpsi, s=0, k=3)
+    eq._q_spl = UnivariateSpline(psi_n, q, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
 

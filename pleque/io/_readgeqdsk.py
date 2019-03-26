@@ -16,7 +16,7 @@ def readeqdsk_xarray(filepath, order="F"):
     # calculate r, z coordinates for 2d psi profile
     r_psi = np.linspace(eq["rleft"], eq["rleft"] + eq["rdim"], eq["nr"])
     z_psi = np.linspace(eq["zmid"] - eq["zdim"] / 2, eq["zmid"] + eq["zdim"] / 2, eq["nz"])
-    psi_n = np.linspace(0, 1, len(eq['qpsi']))
+    psi_n = np.linspace(0, 1, len(eq['q']))
 
     eq_xarray = xr.Dataset({"psi": (("R", "Z"), eq["psi"]),  # 2d psi poloidal profile
                             "r_bound": eq["r_bound"], "z_bound": eq["z_bound"],  # plasma boundary
@@ -24,7 +24,7 @@ def readeqdsk_xarray(filepath, order="F"):
                             "F": ("psi_n", eq["F"]),
                             "pressure": ("psi_n", eq["press"]),
                             "FFprime": ("psi_n", eq["FFprime"]),
-                            "qpsi": ("psi_n", eq["qpsi"]),
+                            "q": ("psi_n", eq["q"]),
                             "pprime": ("psi_n", eq["pprime"])},  # limiter contour
                            coords={"R": r_psi,
                                    "Z": z_psi,
@@ -82,7 +82,7 @@ def _readeqdsk(filepath, order="F"):
         equi[attrs[i]] = equistuff[attrs_pos[i]]
 
     # get the 1d and 2d arrays
-    names = ["F", "press", "FFprime", "pprime", "psi", "qpsi"]
+    names = ["F", "press", "FFprime", "pprime", "psi", "q"]
     index = 20
 
     for i in names:
