@@ -101,8 +101,8 @@ class Equilibrium(object):
 
         psi_n = basedata.psi_n.data
         pressure = basedata.pressure.data
-        fpol = basedata.fpol.data
-        self.BvacR = fpol[-1]
+        F = basedata.F.data
+        self.BvacR = F[-1]
 
         if verbose:
             print('--- Generate 1D splines ---')
@@ -115,12 +115,12 @@ class Equilibrium(object):
         if verbose:
             print('--- Mapping pressure and f func to psi_n ---')
 
-        self._fpol_spl = UnivariateSpline(psi_n, fpol, k=3, s=0)
+        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
         self._df_dpsin_spl = self._fpol_spl.derivative()
         self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
         self._dp_dpsin_spl = self._pressure_spl.derivative()
 
-        self.fluxfuncs.add_flux_func('fpol', fpol, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
         self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
 
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
@@ -183,27 +183,38 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dp_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
-    def fpol(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+    def F(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo use in_plasma
         mask_out = coord.psi_n > 1
-        fpol = self._fpol_spl(coord.psi_n)
-        fpol[mask_out] = self.BvacR
-        return fpol
+        F = self._fpol_spl(coord.psi_n)
+        F[mask_out] = self.BvacR
+        return F
 
-    def fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+    def Fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        '''
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        '''
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
-        fprime[mask_out] = 0
-        return fprime
+        Fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        Fprime[mask_out] = 0
+        return Fprime
 
-    def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+    def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        ffprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
-        ffprime[mask_out] = 0
-        return ffprime
+        FFprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        FFprime[mask_out] = 0
+        return FFprime
 
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -493,7 +504,7 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self.fpol(coord) / coord.R
+        return self.F(coord) / coord.R
 
     def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_spl'):
@@ -553,7 +564,7 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self.fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
+        return self.Fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
@@ -575,7 +586,7 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.ffprime(coord)
+        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
 
     @property
     def lcfs(self):
@@ -1085,7 +1096,7 @@ class Equilibrium(object):
 
         for pn in psi_n:
             if self._verbose:
-                print("{}%\r".format(pn / np.max(psi_n) * 100))
+                print("{:.2f}%\r".format(pn / np.max(psi_n) * 100))
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)

@@ -46,9 +46,9 @@ def write(data, fh, label=None, shot=None, time=None):
       sibdry        Poloidal flux psi at plasma boundary
       cpasma        Plasma current [Amps]   
 
-      fpol          1D array of f(psi)=R*Bt  [meter-Tesla]
+      F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
-      qpsi          1D array of q(psi)
+      q          1D array of q(psi)
       
       psi           2D array (nx,ny) of poloidal flux
     
@@ -108,10 +108,10 @@ def write(data, fh, label=None, shot=None, time=None):
     # Write arrays
     co = ChunkOutput(fh)
 
-    write_1d(data["fpol"], co)
+    write_1d(data["F"], co)
     write_1d(data["pres"], co)
-    if 'ffprime' in data:
-        write_1d(data["ffprime"], co)
+    if 'FFprime' in data:
+        write_1d(data["FFprime"], co)
     else:
         write_1d(workk, co)
     if 'pprime' in data:
@@ -120,7 +120,7 @@ def write(data, fh, label=None, shot=None, time=None):
         write_1d(workk, co)
 
     write_2d(data["psi"], co)
-    write_1d(data["qpsi"], co)
+    write_1d(data["q"], co)
 
     # Boundary / limiters
 
@@ -173,9 +173,9 @@ def read(fh, cocos=1):
       sibdry        Poloidal flux psi at plasma boundary
       cpasma        Plasma current [Amps]   
 
-      fpol          1D array of f(psi)=R*Bt  [meter-Tesla]
+      F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
-      qpsi          1D array of q(psi)
+      q          1D array of q(psi)
       
       psi           2D array (nx,ny) of poloidal flux
     
@@ -230,14 +230,14 @@ def read(fh, cocos=1):
                 val[x, y] = next(values)
         return val
 
-    data["fpol"] = read_1d(nx)
+    data["F"] = read_1d(nx)
     data["pres"] = read_1d(nx)
-    data["ffprime"] = read_1d(nx)
+    data["FFprime"] = read_1d(nx)
     data["pprime"] = read_1d(nx)
 
     data["psi"] = read_2d(nx, ny)
 
-    data["qpsi"] = read_1d(nx)
+    data["q"] = read_1d(nx)
 
     # Ensure that psi is divided by 2pi
     if cocos > 10:
@@ -278,15 +278,15 @@ def data_as_ds(data):
 
     r_axis = np.linspace(data["rleft"], data["rleft"] + data["rdim"], data["nx"])
     z_axis = np.linspace(data["zmid"] - data["zdim"] / 2, data["zmid"] + data["zdim"] / 2, data["ny"])
-    psi_n = np.linspace(0, 1, len(data['qpsi']))
+    psi_n = np.linspace(0, 1, len(data['q']))
 
     eq_xarray = xa.Dataset({"psi": (("R", "Z"), data["psi"]),  # 2d psi poloidal profile
                             "r_bound": data["rbdry"], "z_bound": data["zbdry"],  # plasma boundary
                             "r_lim": data["rlim"], "z_lim": data["zlim"],
-                            "fpol": ("psi_n", data["fpol"]),
+                            "F": ("psi_n", data["F"]),
                             "pressure": ("psi_n", data["pres"]),
-                            "ffprime": ("psi_n", data["ffprime"]),
-                            "qpsi": ("psi_n", data["qpsi"]),
+                            "FFprime": ("psi_n", data["FFprime"]),
+                            "q": ("psi_n", data["q"]),
                             "pprime": ("psi_n", data["pprime"])},  # limiter contour
                            coords={"R": r_axis,
                                    "Z": z_axis,

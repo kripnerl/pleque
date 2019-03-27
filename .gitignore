@@ -28,3 +28,7 @@ pleque\.egg-info/
 notes/
 
 tests/_trial_temp/
+
+pleque/\.vscode/
+
+\.vscode/

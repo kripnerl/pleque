@@ -13,14 +13,14 @@ def read_gfile(g_file: str, limiter: str = None):
     z = eq_gfile['z'][0, :]
 
     pressure = eq_gfile['pressure']
-    fpol = eq_gfile['fpol']
-    qpsi = eq_gfile['qpsi']
+    F = eq_gfile['F']
+    q = eq_gfile['q']
 
-    psi_n = np.linspace(0, 1, len(fpol))
+    psi_n = np.linspace(0, 1, len(F))
 
     eq_ds = xr.Dataset({'psi': (['R', 'Z'], psi),
                         'pressure': ('psi_n', pressure),
-                        'fpol': ('psi_n', fpol)},
+                        'F': ('psi_n', F)},
                        coords={'R': r,
                                'Z': z,
                                'psi_n': psi_n})
@@ -34,7 +34,7 @@ def read_gfile(g_file: str, limiter: str = None):
 
     eq._geqdsk = eq_gfile
 
-    eq._q_spl = UnivariateSpline(psi_n, qpsi, s=0, k=3)
+    eq._q_spl = UnivariateSpline(psi_n, q, s=0, k=3)
     eq._dq_dpsin_spl = eq._q_spl.derivative()
     eq._q_anideriv_spl = eq._q_spl.antiderivative()
 
