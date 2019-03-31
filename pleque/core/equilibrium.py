@@ -48,7 +48,7 @@ class Equilibrium(object):
 
         basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
                   f = B_tor * R
-        first_wall: required for initialization in case of limiter configuration
+        first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration
         cocos: At the moment module assume cocos to be 3 (no other option).
         """
 
@@ -714,6 +714,18 @@ class Equilibrium(object):
     @property
     def magnetic_axis(self):
         return self.coordinates(self._mg_axis[0], self._mg_axis[1])
+
+
+    @property
+    def I_plasma(self):
+        """
+        Toroidal plasma current. Calculated as toroidal current through the LCFS.
+
+        :return: (float) Value of toroidal plasma current.
+        """
+        if hasattr(self, "_Ip"):
+            self._Ip = self.lcfs.tor_current
+        return self._Ip
 
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
