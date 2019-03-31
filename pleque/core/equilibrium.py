@@ -74,6 +74,21 @@ class Equilibrium(object):
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
 
+        if 'time' in basedata:
+            self.time = basedata['time']
+        else:
+            self.time = -1
+
+        if 'time_unit' in basedata:
+            self.time_unit = basedata['time_unit']
+        else:
+            self.time_unit = "ms"
+
+        if 'shot' in basedata:
+            self.shot = basedata['shot']
+        else:
+            self.shot = 0
+
         self.R_min = np.min(r)
         self.R_max = np.max(r)
         self.Z_min = np.min(z)

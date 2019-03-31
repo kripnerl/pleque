@@ -8,6 +8,7 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
           cocosio=3):
     """
     Function saving contents of equilibrium into the omas data structure.
+
     :param equilibrium: Equilibrium object
     :param grid_1d: Coordinate object with 1D grid (linearly spaced array over psi_n). It is used to save 1D equilibrium
     characteristics into the omas data object. If is None, linearly spaced vector over psi_n inrange [0,1] with 200
@@ -28,12 +29,20 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if grid_2d is None:
         grid_2d = equilibrium.grid(resolution=(1e-3, 1e-3), dim="step")
 
+    shot_time = equilibrium.time
+    if equilibrium.time_unit == "ms":
+        shot_time *= 1e3
+    elif equilibrium.time_unit != "s":
+        print("WARNING: unknown time unit ({}) is used. Seconds will be used insted for saving.".format(
+            equilibrium.time_unit))
+
     # shot info todo
-    ods["info"]["shot"] = 0
+    ods["info"]["shot"] = equilibrium.shot
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
-    ods["wall"]["time"] = np.array(time, ndmin=1)
+    # to MT: is this change correct?
+    ods["wall"]["time"] = np.array(shot_time, ndmin=1)
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"] = equilibrium.first_wall.R
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"] = equilibrium.first_wall.Z
 
@@ -43,15 +52,21 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     ############################
     # time slices
     ods["equilibrium"]["ids_properties"]["homogeneous_time"] = 1
-    ods["equilibrium"]["time"] = np.array(time, ndmin=1)
+    # to MT: is this change correct?
+    ods["equilibrium"]["time"] = np.array(shot_time, ndmin=1)
 
-    # vacuum
+    # Vacuum
     # todo: add vacuum Btor, not in equilibrium
-    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array([5])  # vacuum B tor at Rmaj
-    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = 0.89  # vacuum B tor at Rmaj
+    # As R0 use magnetic axis. Isn't better other definition of R0?
+    # R0 = np.array((np.max(equilibrium.first_wall.R) - np.min(equilibrium.first_wall.R))/2, ndim=1)
+    R0 = equilibrium.magnetic_axis.R
+    F0 = equilibrium.BvacR
+    B0 = F0/R0
+    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = B0  # vacuum B tor at Rmaj
+    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = R0  # vacuum B tor at Rmaj
 
     # time slice time
-    ods["equilibrium"]["time_slice"][0]["time"] = time
+    ods["equilibrium"]["time_slice"][0]["time"] = shot_time
 
     # plasma boundary (lcfs)
     ods["equilibrium"]["time_slice"][0]["boundary"]["outline"]["r"] = equilibrium.lcfs.R
