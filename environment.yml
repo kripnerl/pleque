@@ -8,6 +8,7 @@ dependencies:
   - ipython
   - scipy
   - h5py
+  - omas
   - notebook
   - matplotlib
   - shapely
