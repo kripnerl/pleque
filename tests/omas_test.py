@@ -1,9 +1,6 @@
 import numpy as np
 import pytest
-
-import omas
-#omas = pytest.importorskip("omas")
-
+import  os
 
 user = os.environ["USER", "dummy_user"]
 os.environ["USER"] = user
