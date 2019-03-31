@@ -4,6 +4,13 @@ import pytest
 import omas
 #omas = pytest.importorskip("omas")
 
+
+user = os.environ["USER", "dummy_user"]
+os.environ["USER"] = user
+
+import omas
+#omas = pytest.importorskip("omas")
+
 from pleque.io import omas as plomas
 from pleque.tests.utils import load_testing_equilibrium
 
