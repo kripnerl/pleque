@@ -1,8 +1,17 @@
 import numpy as np
 import pytest
 
-import omas
-#omas = pytest.importorskip("omas")
+import os
+
+try:
+    print(os.environ['HOME'])
+    print(os.environ['USER'])
+except:
+    print(os.environ.get('USER','dummy_user'))
+    print(os.environ.get('HOME', '~'))
+
+#import omas
+omas = pytest.importorskip("omas")
 
 from pleque.io import omas as plomas
 from pleque.tests.utils import load_testing_equilibrium
