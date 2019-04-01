@@ -13,6 +13,7 @@ def cdb(shot=None, time=1060, revision=1):
 
     :param shot: number of shot in cdb, defaults to last
     :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
+                 if None then an EFITSlices instance is returned
     :param revision: EFIT revision, defaults to first (post-shot standard)
     :return: Equilibrium
     """
@@ -32,12 +33,33 @@ def cdb(shot=None, time=1060, revision=1):
     return eq
 
 
-def read_efithdf5(file_path, time):
+class EFITSlices:
+    """Container for a series of time-slices from EFIT"""
+
+    def __init__(self, eqs_dataset, limiter):
+        """Create instance for generating equilibria at given times
+
+        :param eqs_dataset: Dataset containing time-dependent equilibira inputs
+        "param limiter: time-independent limiter [R,Z] coords
+        """
+        self.eqs_dataset = eqs_dataset
+        self.limiter = limiter
+
+    def get_time_slice(self, time:float):
+        """Creates an Equilibrium from the EFIT slice nearest to the specified time"""
+        ds = self.eqs_dataset.sel(time=time, method='nearest').rename(
+            {'Rt': 'R', 'Zt': 'Z'})
+        eq = Equilibrium(ds, self.limiter)
+        return eq
+
+
+def read_efithdf5(file_path, time=None):
     """
     Loads Equilibrium information from an efit file.
 
     :param file_path: path to the hdf5 compass efit file
-    :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
+    :param time: closest time [ms] of target equilibrium,
+                 if None then an EFITSlices instance is returned
     :return: Equilibrium
     """
 
@@ -61,12 +83,15 @@ def read_efithdf5(file_path, time):
             'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
         }
         )
-        ds = dst.sel(time=time, method='nearest').rename({'Rt': 'R', 'Zt': 'Z'})
-        # limiter is not expected to change in tome, so take 0th time index
+        # the limiter is not expected to change in time, so take 0th time index
         limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
                                    for x in 'rz'])
-        eq = Equilibrium(ds, limiter)
-    return eq
+    efit_slices = EFITSlices(dst, limiter)
+    if time is not None:
+        eq = efit_slices.get_time_slice(time)
+        return eq
+    else:
+        return efit_slices
 
 
 def read_fiesta_equilibrium(filepath, first_wall=None):
