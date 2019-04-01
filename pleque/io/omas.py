@@ -24,7 +24,7 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
     try:
         shot = ods["info"]["shot"]
     except:
-        shot = ods["dataset_description"]["data"]["entry"]["pulse"]
+        shot = ods["dataset_description"]["data_entry"]["pulse"]
 
     # Reading wall:
     # TODO: in-time changing wall??
@@ -135,7 +135,7 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
 
     # shot info todo
     ods["info"]["shot"] = equilibrium.shot
-    ods["dataset_description"]["data"]["entry"]["pulse"] = equilibrium.shot
+    ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
