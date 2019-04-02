@@ -27,11 +27,13 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
         shot = ods["dataset_description"]["data_entry"]["pulse"]
 
     # Reading wall:
-    # TODO: in-time changing wall??
-    r_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"]
-    z_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"]
+    try:
+        r_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"]
+        z_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"]
 
-    limiter = np.stack((r_wall, z_wall)).T
+        limiter = np.stack((r_wall, z_wall)).T
+    except ValueError:
+        limiter = None
 
     # Times
     ods_times = ods["equilibrium"]["time"]

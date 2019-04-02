@@ -1,11 +1,9 @@
 import numpy as np
-import pytest
-import  os
+import os
 
-user = os.environ["USER", "dummy_user"]
+user = os.environ("USER", "dummy_user")
 os.environ["USER"] = user
 
-import omas
 #omas = pytest.importorskip("omas")
 
 from pleque.io import omas as plomas

@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-import itertools
 
 import numpy as np
 import xarray
@@ -9,7 +8,7 @@ from pleque.utils.decorators import deprecated
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-from pleque.core import FluxFunction, Surface, FluxSurface
+from pleque.core import FluxFunction, Surface  # , FluxSurface
 
 class Equilibrium(object):
     """
@@ -60,7 +59,6 @@ class Equilibrium(object):
         # todo what is actually used...
         self._basedata = basedata
         self._verbose = verbose
-        self._first_wall = first_wall
         self._psi_lcfs = psi_lcfs
         self._x_points = x_points
         self._strike_point = strike_points
@@ -73,6 +71,24 @@ class Equilibrium(object):
         r = basedata.R.data
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
+
+        # If there is no first_wall build one
+        if first_wall is None:
+            rwall1 = np.min(r)
+            rwall2 = np.max(r)
+            zwall1 = np.max(z)
+            zwall2 = np.min(z)
+            corners = np.array([[rwall1, zwall1], [rwall2, zwall1], [rwall2, zwall2], [rwall1, zwall2]])
+            newwall_r = []
+            newwall_z = []
+            for i in range(-1, 4):
+                rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
+                zs = np.linspace(corners[i, 1], corners[i + 1, 1], 30)
+                newwall_r.append(rs)
+                newwall_z.append(zs)
+            self._first_wall = np.stack((newwall_r, newwall_z)).T
+        else:
+            self._first_wall = first_wall
 
         if 'time' in basedata:
             self.time = basedata['time']
