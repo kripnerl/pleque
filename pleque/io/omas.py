@@ -26,6 +26,16 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
     except:
         shot = ods["dataset_description"]["data_entry"]["pulse"]
 
+    if "wall" not in ods:
+        try:
+            # todo: (Need the latest OMAS)
+            from omas.omas_physics import add_wall
+            omas.add_wall(omas)
+        except ImportError:
+            print("The newest OMAS is required to add wall to IDS.")
+        except KeyError:
+            pass
+
     # Reading wall:
     try:
         r_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"]
@@ -67,6 +77,8 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
     grid_idx = 0
     gridtype = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][0]["grid_type"]["index"]
 
+    if gridtype != 1:
+        raise ValueError("Only rectangular is supported at the moment!")
     # if 1 not in gridtype:
     #     raise ValueError("Only rectangular is supported at the moment!")
     # else:
@@ -77,6 +89,8 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
     z_grid = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][grid_idx]["grid"]["dim2"]
     psi = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][grid_idx]["psi"]
 
+    if psi.shape != (len(r_grid), len(z_grid)):
+        psi = psi.T
 
     # x-array Dataset with time data:
     ds = xr.Dataset({
@@ -209,7 +223,6 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
             surface_volume[i] = surface[0].volume
             surface_area[i] = surface[0].area
         else:
-
             surface_volume[i] = 0
             surface_area[i] = 0
 
@@ -225,10 +238,6 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
 
-    # todo: plasma current is not in equilibrium yet
-    try:
-        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
-    except AttributeError:
-        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = 2e6
+    ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
 
     return ods
