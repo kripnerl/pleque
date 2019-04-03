@@ -78,14 +78,23 @@ class Equilibrium(object):
             rwall2 = np.max(r)
             zwall1 = np.max(z)
             zwall2 = np.min(z)
+            dr = rwall2 - rwall1
+            dz = zwall2 - zwall1
+
+            # lets reduce the wall a bit to the chance of some "extreme" equilibrium.
+            rwall1 += dr / 20
+            rwall2 -= dr / 20
+            zwall1 -= dz / 20
+            zwall2 += dz / 20
+
             corners = np.array([[rwall1, zwall1], [rwall2, zwall1], [rwall2, zwall2], [rwall1, zwall2]])
             newwall_r = []
             newwall_z = []
-            for i in range(-1, 4):
+            for i in range(-1, 3):
                 rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                zs = np.linspace(corners[i, 1], corners[i + 1, 1], 30)
-                newwall_r.append(rs)
-                newwall_z.append(zs)
+                zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
+                newwall_r += list(rs)
+                newwall_z += list(zs)
             self._first_wall = np.stack((newwall_r, newwall_z)).T
         else:
             self._first_wall = first_wall
@@ -134,6 +143,7 @@ class Equilibrium(object):
         pressure = basedata.pressure.data
         F = basedata.F.data
         self.BvacR = F[-1]
+        self.F0 = F[-1]
 
         if verbose:
             print('--- Generate 1D splines ---')
@@ -657,9 +667,9 @@ class Equilibrium(object):
             separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
             selstrikepoints = []
             for j in separatrix:
-                intersection = self.first_wall._string.intersection(j._string)
+                intersection = np.array(self.first_wall._string.intersection(j._string))
                 if len(intersection)> 0:
-                    self._separatrix = j.as_array(("R","Z"))
+                    self._separatrix = j.as_array(("R", "Z"))
                     found = True
 
         return self._separatrix
@@ -672,7 +682,7 @@ class Equilibrium(object):
         :return:
         """
         if self._limiter_plasma and hasattr(self, "_contact_point"):
-            return self.coordinates(self._contact_point)
+            return self.coordinates(*self._contact_point)
         else:
             return None
 
@@ -685,10 +695,11 @@ class Equilibrium(object):
         if not self._limiter_plasma:
             if not hasattr(self, "_strike_point") or self._strike_point is None:#calculate strike_point if it does not exist
                 self._find_strikepoints()
-            strike_point = []
-            for i in self._strike_point:
-                strike_point.append(self.coordinates(R=i[0],Z=i[1]))
-            return strike_point
+            return self.coordinates(self._strike_point[:, 0], self._strike_point[:, 1])
+            # strike_point = []
+            # for i in self._strike_point:
+            #     strike_point.append(self.coordinates(R=i[0],Z=i[1]))
+            # return strike_point
         else:
             return self.contact_point
 
@@ -702,7 +713,10 @@ class Equilibrium(object):
             self._find_separatrix()
 
         self._strike_point = []
+
+        # TODO: this is simply wrong (can apply len to POINT)
         intersection = self.first_wall._string.intersection(self.separatrix._string)
+
         if len(intersection) > 0:
             for i in intersection:
                     self._strike_point.append(np.array((i.x, i.y)))
@@ -988,11 +1002,6 @@ class Equilibrium(object):
             monotonic[i] = is_monotonic(self._spl_psi, self._mg_axis, x_points[i])
             monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
 
-        # xp_dist = (x_points[:, 0] - self._mg_axis[0]) ** 2 + (x_points[:, 1] - self._mg_axis[1]) ** 2
-        # xp_dist = xp_dist / (np.max(xp_dist) - np.min(xp_dist))
-
-        # idx = np.argmin(psi_diff)
-        # sortidx = np.argsort(psi_diff * xp_dist * monotonic)
         sortidx = np.argsort(psi_diff * monotonic)
 
         if len(x_points) >= 1:
