@@ -5,6 +5,7 @@ from pleque.core import Equilibrium
 import h5py
 import xarray as xr
 from pleque.io._geqdsk import read, data_as_ds
+from pleque.io.tools import EquilibriaTimeSlices
 import pkg_resources
 
 def cdb(shot=None, time=1060, revision=1):
@@ -31,26 +32,6 @@ def cdb(shot=None, time=1060, revision=1):
     eq = read_efithdf5(data_ref.full_path, time=time)
 
     return eq
-
-
-class EFITSlices:
-    """Container for a series of time-slices from EFIT"""
-
-    def __init__(self, eqs_dataset, limiter):
-        """Create instance for generating equilibria at given times
-
-        :param eqs_dataset: Dataset containing time-dependent equilibira inputs
-        "param limiter: time-independent limiter [R,Z] coords
-        """
-        self.eqs_dataset = eqs_dataset
-        self.limiter = limiter
-
-    def get_time_slice(self, time:float):
-        """Creates an Equilibrium from the EFIT slice nearest to the specified time"""
-        ds = self.eqs_dataset.sel(time=time, method='nearest').rename(
-            {'Rt': 'R', 'Zt': 'Z'})
-        eq = Equilibrium(ds, self.limiter)
-        return eq
 
 
 def read_efithdf5(file_path, time=None):
@@ -86,7 +67,7 @@ def read_efithdf5(file_path, time=None):
         # the limiter is not expected to change in time, so take 0th time index
         limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
                                    for x in 'rz'])
-    efit_slices = EFITSlices(dst, limiter)
+    efit_slices = EquilibriaTimeSlices(dst, limiter)
     if time is not None:
         eq = efit_slices.get_time_slice(time)
         return eq
