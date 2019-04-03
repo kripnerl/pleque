@@ -9,6 +9,7 @@ from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunction, Surface  # , FluxSurface
+import pleque.utils.equi_tools as eq_tools
 
 class Equilibrium(object):
     """
@@ -27,9 +28,11 @@ class Equilibrium(object):
     def __init__(self,
                  basedata: xarray.Dataset,
                  first_wall=None,
+                 mg_axis=None,
                  psi_lcfs=None,
                  x_points=None,
                  strike_points=None,
+                 init_method="hints",
                  spline_order=3,
                  spline_smooth=0,
                  cocos=3,
@@ -41,14 +44,22 @@ class Equilibrium(object):
 
         Optional arguments may help the initialization.
 
-
-        Arguments
-        ---------
-
-        basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
-                  f = B_tor * R
-        first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration
-        cocos: At the moment module assume cocos to be 3 (no other option).
+        :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
+                         f = B_tor * R
+        :param first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration.
+        :param mg_axis: suspected position of the o-point
+        :param psi_lcfs:
+        :param x_points:
+        :param strike_points:
+        :param init_method: str On of ("full", "hints", "fast_forward").
+                            If "full" no hints are taken and module tries to recognize all critical points itself.
+                            If "hints" module use given optional arguments as a help with initialization.
+                            If "fast-forward" module use given optional arguments as final and doesn't try to correct.
+        :param spline_order:
+        :param spline_smooth:
+        :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
+                      working. Be aware of signs in the module!
+        :param verbose:
         """
 
         if verbose:
@@ -56,24 +67,29 @@ class Equilibrium(object):
             print('Equilibrium module initialization')
             print('---------------------------------')
 
-        # todo what is actually used...
         self._basedata = basedata
         self._verbose = verbose
+        self._mg_axis = mg_axis
         self._psi_lcfs = psi_lcfs
         self._x_points = x_points
         self._strike_point = strike_points
         self._spline_order = spline_order
         self._cocos = cocos
 
-        # todo: resolve this from input
+        # todo: resolve this from input (for COCOS time)
         self._Bpol_sign = 1
 
         r = basedata.R.data
         z = basedata.Z.data
         psi = basedata.psi.transpose('R', 'Z').data
 
+        if first_wall is None and 'first_wall' in basedata:
+            self._first_wall = basedata["first_wall"]
+        else:
+            self._first_wall = first_wall
+
         # If there is no first_wall build one
-        if first_wall is None:
+        if self._first_wall is None:
             rwall1 = np.min(r)
             rwall2 = np.max(r)
             zwall1 = np.max(z)
@@ -81,6 +97,7 @@ class Equilibrium(object):
             dr = rwall2 - rwall1
             dz = zwall2 - zwall1
 
+            # todo: remove this if possible
             # lets reduce the wall a bit to the chance of some "extreme" equilibrium.
             rwall1 += dr / 20
             rwall2 -= dr / 20
@@ -96,8 +113,6 @@ class Equilibrium(object):
                 newwall_r += list(rs)
                 newwall_z += list(zs)
             self._first_wall = np.stack((newwall_r, newwall_z)).T
-        else:
-            self._first_wall = first_wall
 
         if 'time' in basedata:
             self.time = basedata['time']
@@ -114,16 +129,33 @@ class Equilibrium(object):
         else:
             self.shot = 0
 
+        # todo: other machine-related informations
+
         self.R_min = np.min(r)
         self.R_max = np.max(r)
         self.Z_min = np.min(z)
         self.Z_max = np.max(z)
 
+        # TODO: allow FFprime, ffprime, pprime and other on the input
+        psi_n = basedata.psi_n.data
+        pressure = basedata.pressure.data
+        F = basedata.F.data
+        self.BvacR = F[-1]
+        self.F0 = F[-1]
+
+        if verbose:
+            print('--- Generate 1D splines ---')
+        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
+        self._df_dpsin_spl = self._fpol_spl.derivative()
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
+        self._dp_dpsin_spl = self._pressure_spl.derivative()
+
+        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
+
         if verbose:
             print('--- Generate 2D spline ---')
-
         # generate spline:
-        # todo: first assume r, z are ascending:
         spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
                                   s=spline_smooth)
         self._spl_psi = spl
@@ -139,11 +171,6 @@ class Equilibrium(object):
         else:
             self._psi_sign = -1
 
-        psi_n = basedata.psi_n.data
-        pressure = basedata.pressure.data
-        F = basedata.F.data
-        self.BvacR = F[-1]
-        self.F0 = F[-1]
 
         if verbose:
             print('--- Generate 1D splines ---')
@@ -156,13 +183,7 @@ class Equilibrium(object):
         if verbose:
             print('--- Mapping pressure and f func to psi_n ---')
 
-        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
-        self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
-        self._dp_dpsin_spl = self._pressure_spl.derivative()
 
-        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
-        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
 
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
@@ -884,7 +905,7 @@ class Equilibrium(object):
 
     def __find_extremes__(self):
         from scipy.signal import argrelmin
-        from scipy.optimize import minimize
+        # from scipy.optimize import minimize
 
         # for sure not the best algorithm ever...
         rs = np.linspace(self.R_min, self.R_max, 300)
@@ -912,40 +933,45 @@ class Equilibrium(object):
         x_points = []
         o_points = []
 
-        for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-            for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
-                if ar == br and az == bz:
-                    r_ex = rs[ar]
-                    z_ex = zs[az]
-                    x0 = np.array((r_ex, z_ex))
+        x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
+        self._x_points = x_points
+        self._o_points = o_points
 
-                    # minimize in the vicinity:
-                    bounds = ((np.max((self.R_min, r_ex - 0.1)),
-                               np.min((self.R_max, r_ex + 0.1))),
-                              (np.max((self.Z_min, z_ex - 0.1)),
-                               np.min((self.Z_max, z_ex + 0.1))))
+        # for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
+        #     for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
+        #         if ar == br and az == bz:
+        #             r_ex = rs[ar]
+        #             z_ex = zs[az]
+        #             x0 = np.array((r_ex, z_ex))
+        #
+        #             # minimize in the vicinity:
+        #             bounds = ((np.max((self.R_min, r_ex - 0.1)),
+        #                        np.min((self.R_max, r_ex + 0.1))),
+        #                       (np.max((self.Z_min, z_ex - 0.1)),
+        #                        np.min((self.Z_max, z_ex + 0.1))))
+        #
+        #             res = minimize(psi_xysq_func, x0, bounds=bounds)
+        #             # Remove bad candidates for extreme
+        #             if res['fun'] > 1e-3:
+        #                 continue
+        #             r_ex2 = res['x'][0]
+        #             z_ex2 = res['x'][1]
+        #
+        #             #                    psi_xyabs = np.abs(psi_xy[ar, az])
+        #             psi_xy = (self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
+        #             psi_xx = (self._spl_psi(r_ex2, z_ex2, dx=2, dy=0, grid=False))
+        #             psi_yy = (self._spl_psi(r_ex2, z_ex2, dx=0, dy=2, grid=False))
+        #             D = psi_xx * psi_yy - psi_xy
+        #
+        #             if D > 0:
+        #                 # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
+        #                 # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
+        #                 o_points.append((r_ex2, z_ex2))
+        #             else:
+        #                 # plt.plot(rs[ar], zs[az], 'x', markersize=10, color='r')
+        #                 # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
+        #                 x_points.append((r_ex2, z_ex2))
 
-                    res = minimize(psi_xysq_func, x0, bounds=bounds)
-                    # Remove bad candidates for extreme
-                    if res['fun'] > 1e-3:
-                        continue
-                    r_ex2 = res['x'][0]
-                    z_ex2 = res['x'][1]
-
-                    #                    psi_xyabs = np.abs(psi_xy[ar, az])
-                    psi_xy = (self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
-                    psi_xx = (self._spl_psi(r_ex2, z_ex2, dx=2, dy=0, grid=False))
-                    psi_yy = (self._spl_psi(r_ex2, z_ex2, dx=0, dy=2, grid=False))
-                    D = psi_xx * psi_yy - psi_xy
-
-                    if D > 0:
-                        # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
-                        # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
-                        o_points.append((r_ex2, z_ex2))
-                    else:
-                        # plt.plot(rs[ar], zs[az], 'x', markersize=10, color='r')
-                        # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
-                        x_points.append((r_ex2, z_ex2))
 
         def is_monotonic(f, x0, x1, n_test=10):
             rpts = np.linspace(x0[0], x1[0], n_test)
@@ -953,73 +979,90 @@ class Equilibrium(object):
             psi_test = f(rpts, zpts, grid=False)
             return np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test - 1
 
-        # First identify the o-point nearest the operation range as center of plasma
-        r_centr = (self.R_min + self.R_max) / 2
-        z_centr = (self.Z_min + self.Z_max) / 2
-        o_points = np.array(o_points)
-        x_points = np.array(x_points)
-
-        op_dist = (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
-        # assume that psi value has its minimum in the center
-        op_psiscale = self._spl_psi(o_points[:, 0], o_points[:, 1], grid=False)
-        op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
-
-        op_in_first_wall = np.ones_like(op_dist)
-        if self._first_wall is not None and len(self._first_wall) > 2:
-            in_fw = self.in_first_wall(R=o_points[:, 0],
-                                       Z=o_points[:, 1],
-                                       grid=False)
-            # If there is any o-point inside first wall, this is not used in weighting
-            if np.any(in_fw):
-                # weight
-                op_in_first_wall = np.abs(op_in_first_wall * 1 - 1 + 1e-3)
-
-        sortidx = np.argsort(op_dist * op_psiscale * op_in_first_wall)
+        # # First identify the o-point nearest the operation range as center of plasma
+        # r_centr = (self.R_min + self.R_max) / 2
+        # z_centr = (self.Z_min + self.Z_max) / 2
+        #
+        # op_dist = (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
+        # # assume that psi value has its minimum in the center
+        # op_psiscale = self._spl_psi(o_points[:, 0], o_points[:, 1], grid=False)
+        # op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
+        #
+        # op_in_first_wall = np.ones_like(op_dist)
+        # if self._first_wall is not None and len(self._first_wall) > 2:
+        #     in_fw = self.in_first_wall(R=o_points[:, 0],
+        #                                Z=o_points[:, 1],
+        #                                grid=False)
+        #     # If there is any o-point inside first wall, this is not used in weighting
+        #     if np.any(in_fw):
+        #         # weight
+        #         op_in_first_wall = np.abs(op_in_first_wall * 1 - 1 + 1e-3)
+        #
+        # sortidx = np.argsort(op_dist * op_psiscale * op_in_first_wall)
         # idx = np.argmin(op_dist)
-        self._mg_axis = o_points[sortidx[0]]
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1]))
+        r_lim = (self.R_min, self.R_max)
+        z_lim = (self.Z_min, self.Z_max)
+
+        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
+        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
         self._o_points = o_points[sortidx]
+
+        # from pleque.utils.plotting import _plot_debug
+        # _plot_debug(self)
+        # plt.show()
 
         # identify THE x-point as the x-point nearest in psi value to mg_axis
 
-        psi_diff = np.zeros(x_points.shape[0])
-        monotonic = np.zeros(x_points.shape[0])
-        for i in np.arange(x_points.shape[0]):
-            rxp = x_points[i, 0]
-            zxp = x_points[i, 1]
-            psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
-            if self._psi_lcfs is None:
-                psi_diff[i] = np.abs(psi_xp - self._psi_axis)
-            else:
-                psi_diff[i] = np.abs(psi_xp - self._psi_lcfs)
+        # psi_diff = np.zeros(x_points.shape[0])
+        # monotonic = np.zeros(x_points.shape[0])
+        # for i in np.arange(x_points.shape[0]):
+        #     rxp = x_points[i, 0]
+        #     zxp = x_points[i, 1]
+        #     psi_xp = np.asscalar(self._spl_psi(rxp, zxp))
+        #     if self._psi_lcfs is None:
+        #     psi_diff[i] = np.abs(psi_xp - self._psi_axis)
+        # else:
+        #     psi_diff[i] = np.abs(psi_xp - self._psi_lcfs)
+        #
+        #     # pleque_test whether the path from the o-point is monotionic
+        #     # n_test = 10
+        #     # rpts = np.linspace(rxp, self._mg_axis[0], n_test)
+        #     # zpts = np.linspace(zxp, self._mg_axis[1], n_test)
+        #     # psi_test = self._spl_psi(rpts, zpts, grid=False)
+        #     # monotonic[i] = (np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test-1)*1
+        #     monotonic[i] = is_monotonic(self._spl_psi, self._mg_axis, x_points[i])
+        #     monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
+        #
+        # sortidx = np.argsort(psi_diff * monotonic)
+        #
+        # if len(x_points) >= 1:
+        #     self._x_point = x_points[sortidx[0]]
+        #     self._psi_xp = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
+        # else:
+        #     self._x_point = None
+        #     self._psi_xp = None
+        #
+        # # todo: only for limiter plasma...
+        # self._psi_lcfs = self._psi_xp
+        #
+        # if len(x_points) >= 2:
+        #     self._x_point2 = x_points[sortidx[1]]
+        #     self._psi_xp2 = self._spl_psi(self._x_point2[0], self._x_point2[1], grid=False)
+        # else:
+        #     self._x_point2 = None
+        #     self._psi_xp2 = None
 
-            # pleque_test whether the path from the o-point is monotionic
-            # n_test = 10
-            # rpts = np.linspace(rxp, self._mg_axis[0], n_test)
-            # zpts = np.linspace(zxp, self._mg_axis[1], n_test)
-            # psi_test = self._spl_psi(rpts, zpts, grid=False)
-            # monotonic[i] = (np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test-1)*1
-            monotonic[i] = is_monotonic(self._spl_psi, self._mg_axis, x_points[i])
-            monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
+        # todo: use these two x-points
+        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
+                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
 
-        sortidx = np.argsort(psi_diff * monotonic)
+        self._x_point = xp1
+        self._x_point2 = xp1
 
-        if len(x_points) >= 1:
-            self._x_point = x_points[sortidx[0]]
-            self._psi_xp = np.asscalar(self._spl_psi(self._x_point[0], self._x_point[1]))
-        else:
-            self._x_point = None
+        if xp1 is None:
             self._psi_xp = None
-
-        # todo: only for limiter plasma...
-        self._psi_lcfs = self._psi_xp
-
-        if len(x_points) >= 2:
-            self._x_point2 = x_points[sortidx[1]]
-            self._psi_xp2 = self._spl_psi(self._x_point2[0], self._x_point2[1], grid=False)
         else:
-            self._x_point2 = None
-            self._psi_xp2 = None
+            self._psi_xp = self._spl_psi(*xp1, grid=False)
 
         self._x_points = x_points[sortidx]
 

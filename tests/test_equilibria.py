@@ -1,8 +1,14 @@
+from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
+from pleque.io.readers import read_geqdsk
+from numpy import array
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# from pleque.utils.plotting import plot_extremes
+
+
 def test_equilibria():
-    from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
-    from pleque.io.readers import read_geqdsk
-    from numpy import array
-    import numpy as np
 
     N_cases = get_test_cases_number()
     gfiles = get_test_equilibria_filenames()
@@ -28,17 +34,17 @@ def test_equilibria():
         eq = read_geqdsk(gfiles[i])
         # plt.figure()
         # eq._plot_overview()
-        #plot_extremes(eq)
+        # plot_extremes(eq)
 
         assert np.allclose(eq._mg_axis, o_points[i])
         if eq._x_point is not None:
             assert np.allclose(eq._x_point, x_points[i])
-        if eq._strike_point is not None:
-            assert np.allclose(eq._strike_point, st_points[i])
+        # if eq._strike_point is not None:
+        #     assert np.allclose(eq._strike_point, st_points[i])
 
-        print('idx = {}'.format(i))
-        print('mg axis = {}'.format(eq._mg_axis))
-        print('x point = {}'.format(eq._x_point))
-        print('strike point = {}'.format(eq._strike_point))
+        # print('idx = {}'.format(i))
+        # print('mg axis = {}'.format(eq._mg_axis))
+        # print('x point = {}'.format(eq._x_point))
+        # print('strike point = {}'.format(eq._strike_point))
 
-    #plt.show()
+    plt.show()
