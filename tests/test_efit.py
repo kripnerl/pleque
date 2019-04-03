@@ -15,9 +15,10 @@ def test_cdb():
 
 
 def test_cdb_EFITSlices():
-    from pleque.io.compass import cdb, EFITSlices
+    from pleque.io.compass import cdb
+    from pleque.io.tools import SimpleTimeSlice
 
     efit_slices = cdb(17636, time=None)
-    assert isinstance(efit_slices, EFITSlices)
+    assert isinstance(efit_slices, SimpleTimeSlice)
     eq = efit_slices.get_time_slice(1125)
     print(eq)

@@ -1,6 +1,30 @@
 import xarray as xr
 from collections import OrderedDict
 from typing import Union
+from pleque import Equilibrium
+
+
+class SimpleTimeSlice:
+    """
+    Simple container for a series of time-slices from xr Dataset with equilibria's data.
+    *Note:* This is temporary solution before implementation of support of time-evolving equilibrium.
+    """
+
+    def __init__(self, eqs_dataset, limiter):
+        """Create instance for generating equilibria at given times
+
+        :param eqs_dataset: Dataset containing time-dependent equilibira inputs
+        "param limiter: time-independent limiter [R,Z] coords
+        """
+        self.eqs_dataset = eqs_dataset
+        self.limiter = limiter
+
+    def get_time_slice(self, time: float):
+        """Creates an Equilibrium from the slice nearest to the specified time"""
+        ds = self.eqs_dataset.sel(time=time, method='nearest').rename(
+            {'Rt': 'R', 'Zt': 'Z'})
+        eq = Equilibrium(ds, self.limiter)
+        return eq
 
 
 def xr2dict(ds: Union[xr.Dataset, xr.DataArray]):
