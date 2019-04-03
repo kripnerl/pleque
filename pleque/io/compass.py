@@ -88,7 +88,6 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     resource_package = 'pleque'
 
-    # ds = readeqdsk_xarray(filepath)
     with open(filepath, 'r') as f:
         data = read(f)
         ds = data_as_ds(data)
@@ -107,51 +106,6 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    # todo: now assume cocos = 3 => q < 0
-    if np.sum(ds.q.data) > 0:
-        q = ds.q.data * -1
-    else:
-        q = ds.q.data
-
-    # eq._q_spl = UnivariateSpline(ds.psi_n.data, ds.q.data, s=0, k=3)
-    # eq._q_spl = UnivariateSpline(ds.psi_n.data, q, s=0, k=3)
-    # eq._dq_dpsin_spl = eq._q_spl.derivative()
-    # eq._q_anideriv_spl = eq._q_spl.antiderivative()
     eq.I_plasma = ds.attrs['cpasma']
-
-    # noinspection PyPep8Naming
-    def q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return self._q_spl(coord.psi_n)
-
-    # noinspection PyPep8Naming
-    def diff_q(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        """
-
-        :param self:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
-        :return: Derivative of q with respect to psi.
-        """
-        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return self._dq_dpsin_spl(coord.psi_n) * self._diff_psiN
-
-    # noinspection PyPep8Naming
-    def tor_flux(self: eq, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
-        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return eq._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
-
-    # eq.q = q
-    # eq.diff_q = diff_q
-    # eq.tor_flux = tor_flux
-
-    # Equilibrium.q = q
-    # Equilibrium.diff_q = diff_q
-    # Equilibrium.tor_flux = tor_flux
 
     return eq
