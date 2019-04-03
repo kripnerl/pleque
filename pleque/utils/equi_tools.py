@@ -78,12 +78,8 @@ def find_extremes(rs, zs, psi_spl):
                 D = psi_xx * psi_yy - psi_xy
 
                 if D > 0:
-                    # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
-                    # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
                     o_points.append((r_ex, z_ex))
                 else:
-                    # plt.plot(rs[ar], zs[az], 'x', markersize=10, color='r')
-                    # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
                     x_points.append((r_ex, z_ex))
 
     o_points = np.array(o_points)
@@ -176,10 +172,10 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spln, r_lims, z_lims, ps
         monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
 
     sortidx = np.argsort(psi_diff * monotonic * len_diff)
-    xp1 = x_points[0]
+    xp1 = x_points[sortidx[0]]
 
     if len(x_points) < 1:
-        xp2 = x_points[1]
+        xp2 = x_points[sortidx[1]]
 
         if psi_diff[sortidx[0]] > psi_diff[sortidx[1]]:
             xp1, xp2 = xp2, xp1

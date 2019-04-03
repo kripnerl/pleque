@@ -934,8 +934,6 @@ class Equilibrium(object):
         o_points = []
 
         x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
-        self._x_points = x_points
-        self._o_points = o_points
 
         # for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
         #     for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
@@ -1065,6 +1063,10 @@ class Equilibrium(object):
             self._psi_xp = self._spl_psi(*xp1, grid=False)
 
         self._x_points = x_points[sortidx]
+
+        # todo: only for limiter plasma...
+        # tmp fix..
+        self._psi_lcfs = self._psi_xp
 
         # Limiter vs. x-point plasma:
         self._limiter_plasma = False

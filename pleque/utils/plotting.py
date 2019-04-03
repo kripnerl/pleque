@@ -29,6 +29,16 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
         print("WARNING: No first wall?!")
 
     try:
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], color="C1", ls="--")
+    except Exception:
+        print("WARNING: LCFS contour problem.")
+
+    try:
+        ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], "C0")
+    except Exception:
+        print("WARNING: LCFS in troubles?!")
+
+    try:
         ax.plot(eq._o_points[:, 0], eq._o_points[:, 1], "C0o")
     except Exception:
         print("WARNING: O-points in trouble")
@@ -39,12 +49,12 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
         print("WARNING: mg. axis in trouble")
 
     try:
-        ax.plot(eq._x_points[:, 0], eq._x_points[:, 1], "C3x")
+        ax.plot(eq._x_points[:, 0], eq._x_points[:, 1], "C2x")
     except Exception:
         print("WARNING: X-points in trouble")
 
     try:
-        ax.plot(eq._x_point[0], eq._x_point[1], "C2x")
+        ax.plot(eq._x_point[0], eq._x_point[1], "C3x")
     except Exception:
         print("WARNING: THE X-point in trouble")
 
@@ -86,7 +96,7 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     ax.contour(coords.R, coords.Z, psi_in, 20)
 
     # todo: psi should be 1-d (!) resolve this
-    ax.contour(coords.R, coords.Z, psi, sorted(np.squeeze(contour_out.psi)), colors='C0')
+    ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
 
     #    contact = eq.strike_point
     #    ax.plot(contact.R, contact.Z, "C3+")
