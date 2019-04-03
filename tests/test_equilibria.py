@@ -33,14 +33,14 @@ def test_equilibria():
         eq = read_geqdsk(gfiles[i])
 
         plt.figure()
-        eq._plot_overview()
-        plot_extremes(eq)
+        # eq._plot_overview()
+        # plot_extremes(eq)
 
-        # _plot_debug(eq)
+        _plot_debug(eq)
 
-        # assert np.allclose(eq._mg_axis, o_points[i])
-        # if eq._x_point is not None:
-        #     assert np.allclose(eq._x_point, x_points[i])
+        assert np.allclose(eq._mg_axis, o_points[i])
+        if eq._x_point is not None:
+            assert np.allclose(eq._x_point, x_points[i])
         # if eq._strike_point is not None:
         #     assert np.allclose(eq._strike_point, st_points[i])
 

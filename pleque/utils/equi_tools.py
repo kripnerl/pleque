@@ -88,7 +88,7 @@ def find_extremes(rs, zs, psi_spl):
     return x_points, o_points
 
 
-def recognize_mg_axis(o_points, psi_spln, r_lims, z_lims, first_wall=None, mg_axis_candidate=None):
+def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axis_candidate=None):
     """
     Try to recognize which o_points is the magnetic axis.
     If `mg_axis_candidate` is not specified o point is identified as a point most in the center of
@@ -97,7 +97,7 @@ def recognize_mg_axis(o_points, psi_spln, r_lims, z_lims, first_wall=None, mg_ax
     the first partial derivatives of psi.
 
     :param o_points: array-like(N, 2)
-    :param psi_spln: 2D spline psi(R,Z)
+    :param psi_spl: 2D spline psi(R,Z)
     :param r_lims: tuple(Rmin, Rmax)
     :param z_lims: tuple(Zmin, Zmax)
     :param first_wall: array-like (N, 2) specification of the first wall.
@@ -131,27 +131,27 @@ def recognize_mg_axis(o_points, psi_spln, r_lims, z_lims, first_wall=None, mg_ax
     o_point = o_points[sortidx[0]]
 
     def psi_xysq_func(x):
-        return psi_spln(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spln(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
+               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
     o_point = minimize_in_vicinity(o_point, psi_xysq_func, r_lims, z_lims)
 
     return o_point, sortidx
 
 
-def recognize_x_points(x_points, mg_axis, psi_axis, psi_spln, r_lims, z_lims, psi_lcfs_candidate=None,
+def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi_lcfs_candidate=None,
                        x_point_candidates=None):
     if x_points is None or len(x_points) == 0:
         return (None, None), list([])
 
     def psi_xysq_func(x):
-        return psi_spln(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spln(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
+               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
     len_diff = np.ones(x_points.shape[0])
     monotonic = np.zeros(x_points.shape[0])
 
-    psi_xps = psi_spln(x_points[:, 0], x_points[:, 1], grid=False)
+    psi_xps = psi_spl(x_points[:, 0], x_points[:, 1], grid=False)
 
     if psi_lcfs_candidate is None:
         psi_diff = np.abs(psi_xps - psi_axis)
@@ -168,7 +168,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spln, r_lims, z_lims, ps
         len_diff = len_diff / np.max(len_diff)
 
     for i, xpoint in enumerate(x_points):
-        monotonic[i] = is_monotonic(psi_spln, mg_axis, xpoint, 10)
+        monotonic[i] = is_monotonic(psi_spl, mg_axis, xpoint, 10)
         monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
 
     sortidx = np.argsort(psi_diff * monotonic * len_diff)
@@ -188,6 +188,29 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spln, r_lims, z_lims, ps
     xp1 = minimize_in_vicinity(xp1, psi_xysq_func, r_lims, z_lims)
 
     return (xp1, xp2), sortidx
+
+
+def recognize_plasma_type(x_point, first_wall, psi_axis, psi_spl):
+
+    if x_point is not None:
+        print("xp in fw:")
+        print(point_inside_curve(x_point, first_wall))
+
+    psi_wall = psi_spl(first_wall[:, 0], first_wall[:, 1], grid=False)
+    psi_wall_diff = np.abs(psi_wall - psi_axis)
+    iwall_min = np.argmin(psi_wall_diff)
+    wall_min_diff = psi_wall_diff[iwall_min]
+
+    limiter_plasma = True
+    limiter_point = first_wall[iwall_min]
+    if x_point is not None and point_inside_curve(x_point, first_wall):
+        diff_psi_xp = np.abs(psi_spl(*x_point, grid=False) - psi_axis)
+        if diff_psi_xp < wall_min_diff:
+            limiter_plasma = False
+            limiter_point = x_point
+
+    return limiter_plasma, limiter_point
+
 
     # for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
     #     for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):

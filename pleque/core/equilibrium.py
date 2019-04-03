@@ -1064,6 +1064,14 @@ class Equilibrium(object):
 
         self._x_points = x_points[sortidx]
 
+        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type()
+
+
+        self._limiter_plasma = limiter_plasma
+        self._limiter_point = limiter_point
+
+        # todo: ended here (!!)
+
         # todo: only for limiter plasma...
         # tmp fix..
         self._psi_lcfs = self._psi_xp
