@@ -732,8 +732,9 @@ class Equilibrium(object):
     def lcfs(self):
         if not hasattr(self, '_lcfs_fl'):
             if not surf.curve_is_closed(self._lcfs):
-                self._lcfs = np.vstack((self._lcfs, self._lcfs[-1]))
+                self._lcfs = np.vstack((self._lcfs, self._lcfs[0]))
             self._lcfs_fl = self._as_fluxsurface(self._lcfs)
+
         return self._lcfs_fl
 
     @property
