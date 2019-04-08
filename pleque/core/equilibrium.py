@@ -118,7 +118,7 @@ class Equilibrium(object):
             self._first_wall = np.stack((newwall_r, newwall_z)).T
 
         if 'time' in basedata:
-            self.time = basedata['time']
+            self.time = basedata['time'].data
         else:
             self.time = -1
 
@@ -849,7 +849,7 @@ class Equilibrium(object):
 
         :return: (float) Value of toroidal plasma current.
         """
-        if hasattr(self, "_Ip"):
+        if not hasattr(self, "_Ip"):
             self._Ip = self.lcfs.tor_current
         return self._Ip
 
