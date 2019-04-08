@@ -93,21 +93,23 @@ class Equilibrium(object):
 
         # If there is no first_wall build one
         if self._first_wall is None:
-            rwall1 = np.min(r)
-            rwall2 = np.max(r)
-            zwall1 = np.max(z)
-            zwall2 = np.min(z)
-            dr = rwall2 - rwall1
-            dz = zwall2 - zwall1
+            rwall_min = np.min(r)
+            rwall_max = np.max(r)
+            zwall_min = np.min(z)
+            zwall_max = np.max(z)
+
+            dr = rwall_max - rwall_min
+            dz = zwall_max - zwall_min
 
             # todo: remove this if possible
             # lets reduce the wall a bit to be have some plasma behind the wall
-            rwall1 += dr / 100
-            rwall2 -= dr / 100
-            zwall1 += dz / 100
-            zwall2 -= dz / 100
+            rwall_min += dr / 100
+            rwall_max -= dr / 100
+            zwall_min += dz / 100
+            zwall_max -= dz / 100
 
-            corners = np.array([[rwall1, zwall1], [rwall2, zwall1], [rwall2, zwall2], [rwall1, zwall2]])
+            corners = np.array(
+                [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
             newwall_r = []
             newwall_z = []
             for i in range(-1, 3):
