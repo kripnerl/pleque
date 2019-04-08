@@ -1,13 +1,9 @@
-# import matplotlib.pyplot as plt
 import numpy as np
 
-from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, points_inside_curve
-from pleque.tests.utils import load_testing_equilibrium
 import pleque.utils.surfaces as surf
 
 
 def test_surfs():
-    # test intersection function:
 
     l1 = np.array([[-1, 1], [-1, -1], [1, -1], [1, 1]])
     l2 = np.array([[-2, 0], [2, 0]])

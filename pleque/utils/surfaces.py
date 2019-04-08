@@ -116,7 +116,7 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
     for i in range(len(contour)):
         # are we looking for a closed magnetic surface and is it closed?
         if closed and curve_is_closed(
-                contour[i]):  # xxx contour[i][0, 0] == contour[i][-1, 0] and contour[i][0, 1] == contour[i][-1, 1]:
+                contour[i]):
             isinside = measure.points_in_poly(magaxis, contour[i])
             # surface inside lcfs has to be enclosing magnetic axis
             if insidelcfs and np.asscalar(isinside):

@@ -65,27 +65,11 @@ def find_extremes(rs, zs, psi_spl):
     x_points = []
     o_points = []
 
-    # debug:
-    import matplotlib.pyplot as plt
-    plt.contour(rs, zs, psi.T, 100)
-    # plt.plot(rs[mins0[0]], zs[mins0[1]], "x")
-    #
-    # plt.plot(rs[mins1[0]], zs[mins1[1]], "+")
-    # plt.show()
-
     for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
         for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
             if ar == br and az == bz:
                 r_ex = rs[ar]
                 z_ex = zs[az]
-                # x0 = np.array((r_ex, z_ex))
-
-                # plt.contour(rs, zs, psi.T, 100)
-                # plt.plot(r_ex, z_ex, "x")
-                # plt.show()
-
-                # print(psi_xysq_func((r_ex, z_ex)), 1e-3 * psi_diff)
-                # print(x_diff, psi_diff,  dpsidx, dpsidx**-1)
 
                 # Remove bad candidates for the extreme (this is potentional trouble point):
                 if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
@@ -325,38 +309,3 @@ def find_surface_step(psi_spl, psi_target, flux_surf):
     flux_surf[:, 1] -= 0.99 * psiy * (psi - psi_target)
 
     return flux_surf
-
-    # for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-    #     for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
-    #         if ar == br and az == bz:
-    #             r_ex = rs[ar]
-    #             z_ex = zs[az]
-    #             x0 = np.array((r_ex, z_ex))
-    #
-    #             # minimize in the vicinity:
-    #             bounds = ((np.max((rs[0], r_ex - 0.1)),
-    #                        np.min((rs[-1], r_ex + 0.1))),
-    #                       (np.max((zs[0], z_ex - 0.1)),
-    #                        np.min((zs[-1], z_ex + 0.1))))
-    #
-    #             res = minimize(psi_xysq_func, x0, bounds=bounds)
-    #             # Remove bad candidates for extreme
-    #             if res['fun'] > 1e-2:
-    #                 continue
-    #             r_ex2 = res['x'][0]
-    #             z_ex2 = res['x'][1]
-    #
-    #             #                    psi_xyabs = np.abs(psi_xy[ar, az])
-    #             psi_xy = (self._spl_psi(r_ex2, z_ex2, dx=1, dy=1, grid=False)) ** 2
-    #             psi_xx = (self._spl_psi(r_ex2, z_ex2, dx=2, dy=0, grid=False))
-    #             psi_yy = (self._spl_psi(r_ex2, z_ex2, dx=0, dy=2, grid=False))
-    #             D = psi_xx * psi_yy - psi_xy
-    #
-    #             if D > 0:
-    #                 # plt.plot(rs[ar], zs[az], 'o', markersize=10, color='b')
-    #                 # plt.plot(r_ex2, z_ex2, 'o', markersize=8, color='C4')
-    #                 o_points.append((r_ex2, z_ex2))
-    #             else:
-    #                 # plt.plot(rs[ar], zs[az], 'x', markersize=10, color='r')
-    #                 # plt.plot(r_ex2, z_ex2, 'x', markersize=8, color='C5')
-    #                 x_points.append((r_ex2, z_ex2))
