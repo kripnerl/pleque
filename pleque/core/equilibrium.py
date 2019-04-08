@@ -593,7 +593,7 @@ class Equilibrium(object):
         if not hasattr(self, '_lcfs_fl'):
             if not (np.isclose(self._lcfs[0, 0], self._lcfs[-1, 0]) and np.isclose(self._lcfs[0, 1],
                                                                                    self._lcfs[-1, 1])):
-                self._lcfs = np.vstack((self._lcfs, self._lcfs[-1]))
+                self._lcfs = np.vstack((self._lcfs, self._lcfs[0]))
             self._lcfs_fl = self._as_fluxsurface(self._lcfs)
         return self._lcfs_fl
 
