@@ -10,6 +10,12 @@ import matplotlib.pyplot as plt
 ods = omas.load_omas_pkl("/home/kripner/Projects/pleque/notes/iter130501.pkl")
 # omas.save_omas_pkl(ods, "/home/kripner/Projects/pleque/notes/iter130501.pkl")
 
-eq = plomas.read(ods, time=00)
+eq = plomas.read(ods, time=500)
 eq.plot_overview()
+
+plt.figure()
+from pleque.utils.plotting import _plot_debug
+
+_plot_debug(eq)
+
 plt.show()

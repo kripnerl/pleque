@@ -39,18 +39,19 @@ def intersection(line1, line2):
 
     :param line1: array(N, 2)
     :param line2: array(N, 2)
-    :return: list of intersection points. Empty list, if line1 doesn't intersect line2.
+    :return: array(N_intersect, 2) or None
     """
     l1 = geo.LineString(line1)
     l2 = geo.LineString(line2)
 
     intersection = l1.intersection(l2)
 
-    strike_points = []
-    if hasattr(intersection, "len"):
-        for i in intersection:
-            strike_points.append([i.x, i.y])
-    return np.array(strike_points)
+    if hasattr(intersection, "array_interface"):
+        intersection = np.atleast_2d(intersection)
+    else:
+        intersection = None
+
+    return intersection
 
 
 def fluxsurf_error(psi_spl, points, psi_target):

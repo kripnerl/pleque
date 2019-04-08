@@ -1,5 +1,6 @@
 from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
 from pleque.io.readers import read_geqdsk
+from pleque import Coordinates
 from numpy import array
 import numpy as np
 
@@ -43,8 +44,8 @@ def test_equilibria():
         assert np.allclose(eq._mg_axis, o_points[i])
         if eq._x_point is not None:
             assert np.allclose(eq._x_point, x_points[i])
-        # if eq._strike_point is not None:
-        #     assert np.allclose(eq._strike_point, st_points[i])
+        if eq._strike_point is not None:
+            assert np.allclose(eq._strike_point, st_points[i])
 
         # print('idx = {}'.format(i))
         # print('mg axis = {}'.format(eq._mg_axis))
@@ -52,3 +53,17 @@ def test_equilibria():
         # print('strike point = {}'.format(eq._strike_point))
     #
     # plt.show()
+
+
+def test_eq_properties(equilibrium):
+    print(equilibrium.first_wall.R[0])
+    assert np.isclose(equilibrium.magnetic_axis.psi_n, 0)
+    assert isinstance(equilibrium.strike_points, Coordinates)
+
+    if equilibrium._limiter_plasma:
+        assert isinstance(equilibrium.contact_point, Coordinates)
+    else:
+        assert equilibrium.contact_point == None
+        assert len(equilibrium.strike_points) > 0
+
+    print(equilibrium.contact_point)

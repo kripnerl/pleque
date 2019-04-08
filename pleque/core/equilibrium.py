@@ -99,11 +99,11 @@ class Equilibrium(object):
             dz = zwall2 - zwall1
 
             # todo: remove this if possible
-            # lets reduce the wall a bit to the chance of some "extreme" equilibrium.
-            # rwall1 += dr / 20
-            # rwall2 -= dr / 20
-            # zwall1 -= dz / 20
-            # zwall2 += dz / 20
+            # lets reduce the wall a bit to be have some plasma behind the wall
+            rwall1 += dr / 10
+            rwall2 -= dr / 10
+            zwall1 += dz / 10
+            zwall2 -= dz / 10
 
             corners = np.array([[rwall1, zwall1], [rwall2, zwall1], [rwall2, zwall2], [rwall1, zwall2]])
             newwall_r = []
@@ -594,6 +594,21 @@ class Equilibrium(object):
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Calculate toroidal magnetic flux :math:`\Phi` from:
+
+        .. math::
+            q = \frac{\mathrm{d \Phi} }{\mathrm{d \psi}}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
         if not hasattr(self, '_q_anideriv_spl'):
             self.__init_q__()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -654,8 +669,7 @@ class Equilibrium(object):
     @property
     def lcfs(self):
         if not hasattr(self, '_lcfs_fl'):
-            if not (np.isclose(self._lcfs[0, 0], self._lcfs[-1, 0]) and np.isclose(self._lcfs[0, 1],
-                                                                                   self._lcfs[-1, 1])):
+            if not surf.curve_is_closed(self._lcfs):
                 self._lcfs = np.vstack((self._lcfs, self._lcfs[-1]))
             self._lcfs_fl = self._as_fluxsurface(self._lcfs)
         return self._lcfs_fl
@@ -664,6 +678,7 @@ class Equilibrium(object):
     def separatrix(self):
         """
         If the equilibrium is limited, returns lcfs. If it is diverted it returns separatrix flux surface
+
         :return:
         """
         if not self._limiter_plasma:
@@ -683,7 +698,8 @@ class Equilibrium(object):
 
         found = False
         cnt = 1
-        while not found and cnt<101:
+        # todo: This should be rewritten
+        while not found and cnt < 101:
             psi_n = 1+1e-6*cnt
             cnt += 1
             separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
@@ -696,54 +712,56 @@ class Equilibrium(object):
 
         return self._separatrix
 
-
     @property
     def contact_point(self):
         """
         Returns contact point as instance of coordinates for circular plasmas. Returns None otherwise.
         :return:
         """
-        if self._limiter_plasma and hasattr(self, "_contact_point"):
-            return self.coordinates(*self._contact_point)
-        else:
+        if self._contact_point is None:
             return None
+        else:
+            return self.coordinates(self._contact_point[0], self._contact_point[1])
 
     @property
-    def strike_point(self):
+    def strike_points(self):
         """
         Returns contact point if the equilibrium is limited. If the equilibrium is diverted it returns strike points.
         :return:
         """
-        if not self._limiter_plasma:
-            if not hasattr(self, "_strike_point") or self._strike_point is None:#calculate strike_point if it does not exist
-                self._find_strikepoints()
-            return self.coordinates(self._strike_point[:, 0], self._strike_point[:, 1])
-            # strike_point = []
-            # for i in self._strike_point:
-            #     strike_point.append(self.coordinates(R=i[0],Z=i[1]))
-            # return strike_point
+        if self._strike_points is None:
+            return None
         else:
-            return self.contact_point
+            return self.coordinates(self._strike_points[:, 0], self._strike_points[:, 1])
 
-    def _find_strikepoints(self):
+    def limiter_point(self):
         """
-        finds strikepoints by utilizing the intersection function provided by shapely on separatrix and first wall
-        contours (_string attributes)
-        :return:
+        The point which "limits" the LCFS of plasma. I.e. contact point in case of limiter plasma and x-point
+        in case of x-point plasma.
+
+        :return: Coordinates
         """
-        if not hasattr(self, "_separatrix"):
-            self._find_separatrix()
+        return self.coordinates(self._limiter_point[0], self._limiter_point[1])
 
-        self._strike_point = []
-
-        # TODO: this is simply wrong (can apply len to POINT)
-        intersection = self.first_wall._string.intersection(self.separatrix._string)
-
-        if len(intersection) > 0:
-            for i in intersection:
-                    self._strike_point.append(np.array((i.x, i.y)))
-
-        return self._strike_point
+    # def _find_strikepoints(self):
+    #     """
+    #     finds strikepoints by utilizing the intersection function provided by shapely on separatrix and first wall
+    #     contours (_string attributes)
+    #     :return:
+    #     """
+    #     if not hasattr(self, "_separatrix"):
+    #         self._find_separatrix()
+    #
+    #     self._strike_point = []
+    #
+    #     # TODO: this is simply wrong (can apply len to POINT)
+    #     intersection = self.first_wall._string.intersection(self.separatrix._string)
+    #
+    #     if len(intersection) > 0:
+    #         for i in intersection:
+    #                 self._strike_point.append(np.array((i.x, i.y)))
+    #
+    #     return self._strike_point
 
     @property
     def first_wall(self):
@@ -759,7 +777,7 @@ class Equilibrium(object):
             first_wall = self._first_wall
 
             #first wall should be a closed contour
-            if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
+            if not surf.curve_is_closed(first_wall):
                 first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
             return Surface(self, first_wall)
 
@@ -1071,27 +1089,29 @@ class Equilibrium(object):
         self._limiter_plasma = limiter_plasma
         self._limiter_point = limiter_point
 
+        if self._verbose:
+            if limiter_plasma:
+                print(">> Limiter plasma found.")
+            else:
+                print(">> X-point plasma found.")
         self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
         # Boundary:
         rs = np.linspace(self.R_min, self.R_max, 700)
         zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
-        # todo: separatrix:
-
         if limiter_plasma:
-            self._strike_points = [self._limiter_point]
+            self._strike_points = self._limiter_point[np.newaxis, :]
             self._contact_point = self._limiter_point
         else:
             self._contact_point = None
             self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs, self._first_wall)
 
-        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                              self._mg_axis, self._psi_axis)
-
         if self._verbose:
             print("--- Looking for LCFS: ---")
 
+        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
+                                              self._mg_axis, self._psi_axis)
         while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-5:
             close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 

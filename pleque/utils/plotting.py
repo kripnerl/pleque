@@ -24,19 +24,19 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
         print("WARNING: Something wrong with psi spline.")
 
     try:
-        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k-")
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k+-")
     except Exception:
         print("WARNING: No first wall?!")
-
-    try:
-        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
-    except Exception:
-        print("WARNING: LCFS contour problem.")
 
     try:
         ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], "C0")
     except Exception:
         print("WARNING: LCFS in troubles?!")
+
+    try:
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
+    except Exception:
+        print("WARNING: LCFS contour problem.")
 
     try:
         ax.plot(eq._o_points[:, 0], eq._o_points[:, 1], "C0o")
@@ -54,9 +54,19 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
         print("WARNING: X-points in trouble")
 
     try:
-        ax.plot(eq._x_point[0], eq._x_point[1], "C3x")
+        ax.plot(eq._x_point[0], eq._x_point[1], "rx", lw=2)
     except Exception:
         print("WARNING: THE X-point in trouble")
+
+    try:
+        ax.plot(eq._limiter_point[0], eq._limiter_point[1], "g+", lw=3)
+    except:
+        print("WARNING: Limiter point is in trouble.")
+
+    try:
+        ax.plot(eq._strike_points[:, 0], eq._strike_points[:, 1], "C3+", lw=2)
+    except:
+        print("WARNING: Strike-points in trouble.")
 
     ax.set_aspect("equal")
 
@@ -98,7 +108,7 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     # todo: psi should be 1-d (!) resolve this
     ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
 
-    #    contact = eq.strike_point
+    #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
 
     op = eq.magnetic_axis
