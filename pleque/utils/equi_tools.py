@@ -1,6 +1,7 @@
 from scipy.signal import argrelmin
 from scipy.optimize import minimize
-from pleque.utils.surfaces import point_inside_curve
+import pleque.utils.surfaces as surf
+from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 
 
@@ -53,6 +54,10 @@ def find_extremes(rs, zs, psi_spl):
     mins0 = tuple(argrelmin(psi_xysq, axis=0))
     mins1 = tuple(argrelmin(psi_xysq, axis=1))
 
+    psi_diff = (np.max(psi) - np.min(psi)) ** 2
+    x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
+    dpsidx = np.sqrt(psi_diff / x_diff)
+
     def psi_xysq_func(x):
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
@@ -60,15 +65,30 @@ def find_extremes(rs, zs, psi_spl):
     x_points = []
     o_points = []
 
+    # debug:
+    import matplotlib.pyplot as plt
+    plt.contour(rs, zs, psi.T, 100)
+    # plt.plot(rs[mins0[0]], zs[mins0[1]], "x")
+    #
+    # plt.plot(rs[mins1[0]], zs[mins1[1]], "+")
+    # plt.show()
+
     for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
         for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
             if ar == br and az == bz:
                 r_ex = rs[ar]
                 z_ex = zs[az]
-                x0 = np.array((r_ex, z_ex))
+                # x0 = np.array((r_ex, z_ex))
 
-                # Remove bad candidates for the extreme:
-                if psi_xysq_func((r_ex, z_ex)) > 1e-2:
+                # plt.contour(rs, zs, psi.T, 100)
+                # plt.plot(r_ex, z_ex, "x")
+                # plt.show()
+
+                # print(psi_xysq_func((r_ex, z_ex)), 1e-3 * psi_diff)
+                # print(x_diff, psi_diff,  dpsidx, dpsidx**-1)
+
+                # Remove bad candidates for the extreme (this is potentional trouble point):
+                if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
                     continue
 
                 psi_xx = (psi_spl(r_ex, z_ex, dx=2, dy=0, grid=False))
@@ -122,7 +142,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
 
     op_in_first_wall = np.zeros_like(op_dist)
     if first_wall is not None and len(first_wall) > 2:
-        mask_in = point_inside_curve(o_points, first_wall)
+        mask_in = points_inside_curve(o_points, first_wall)
         op_in_first_wall[mask_in] = 1
         op_in_first_wall[not mask_in] = 1e-3
 
@@ -190,27 +210,121 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     return (xp1, xp2), sortidx
 
 
-def recognize_plasma_type(x_point, first_wall, psi_axis, psi_spl):
+def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     if x_point is not None:
         print("xp in fw:")
-        print(point_inside_curve(x_point, first_wall))
+        print(points_inside_curve([x_point], first_wall))
 
     psi_wall = psi_spl(first_wall[:, 0], first_wall[:, 1], grid=False)
     psi_wall_diff = np.abs(psi_wall - psi_axis)
+    idxs_wall = np.argsort(psi_wall_diff)
     iwall_min = np.argmin(psi_wall_diff)
     wall_min_diff = psi_wall_diff[iwall_min]
 
+    # todo: tmp solution (this is not the fastest way of doing this
+    #       I would like to take x-point - mg_axis vector and check whethet the point is
+    #       on reliable place
+    i = 0
+
+    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis)):
+        i += 1
+    if i == len(idxs_wall):
+        iwall_min = -1
+        wall_min_diff = np.inf
+    else:
+        iwall_min = i
+        wall_min_diff = psi_wall_diff[idxs_wall[i]]
+
     limiter_plasma = True
-    limiter_point = first_wall[iwall_min]
-    if x_point is not None and point_inside_curve(x_point, first_wall):
+    limiter_point = first_wall[idxs_wall[iwall_min]]
+    if x_point is not None and (len(first_wall) < 4 or points_inside_curve([x_point], first_wall)[0]):
         diff_psi_xp = np.abs(psi_spl(*x_point, grid=False) - psi_axis)
-        if diff_psi_xp < wall_min_diff:
+        if diff_psi_xp < wall_min_diff or iwall_min == -1:
             limiter_plasma = False
             limiter_point = x_point
 
     return limiter_plasma, limiter_point
 
+
+def find_close_lcfs(psi_lcfs, rs, zs, psi_spl, mg_axis, psi_axis=0):
+    """
+    Localize the field line at the 99.9% of psi.
+
+    :param psi_lcfs:
+    :param rs:
+    :param zs:
+    :param first_wall:
+    :param psi_spl:
+    :param psi_axis:
+    :return:
+    """
+
+    new_psi_lcfs = psi_lcfs - 1e-4 * (psi_lcfs - psi_axis)
+
+    contours = find_contour(psi_spl(rs, zs, grid=True).T, new_psi_lcfs, rs, zs)
+
+    if contours is not None:
+        for contour in contours:
+
+            # import matplotlib.pyplot as plt
+            # plt.plot(contour[:, 0], contour[:, 1])
+            if surf.curve_is_closed(contour) and surf.points_inside_curve([mg_axis], contour):
+                return contour
+    return None
+
+
+def find_strike_points(psi_spl, rs, zs, psi_lcfs, first_wall):
+    """
+    Find strike points. As a strike point is assumed any intersection iso-psi-value with the first wall.
+
+    :param psi_spl: 2D spline
+    :param rs: array(N) - R component of grid used for contour finding.
+    :param zs: array(Z) - Z component of grid used for contour finding.
+    :param psi_lcfs: float
+    :param first_wall: array(N, 2)
+    :return: array(M, 2) or None
+    """
+
+    contours = find_contour(psi_spl(rs, zs, grid=True).T, psi_lcfs, rs, zs)
+
+    sp = []
+
+    if contours is not None:
+        for contour in contours:
+            intersects = surf.intersection(contour, first_wall)
+            if len(intersects) > 0:
+                sp.append(intersects)
+
+    if len(sp) > 0:
+        sp_array = np.concatenate(sp)
+    else:
+        sp_array = None
+
+    return sp_array
+
+
+def find_surface_step(psi_spl, psi_target, flux_surf):
+    """
+    Use simple down-hill algorithm to make step towards `psi_target`.
+
+    :param psi_spl: 2D spline
+    :param psi_target: float
+    :param flux_surf: array(2, N)
+    :return:
+    """
+    psi = psi_spl(flux_surf[:, 0], flux_surf[:, 1], grid=False)
+    psix = psi_spl(flux_surf[:, 0], flux_surf[:, 1], grid=False, dx=1, dy=0)
+    psiy = psi_spl(flux_surf[:, 0], flux_surf[:, 1], grid=False, dx=0, dy=1)
+
+    deriv_norm = np.sqrt(psix ** 2 + psiy ** 2)
+    psix = psix / (deriv_norm ** 2)
+    psiy = psiy / (deriv_norm ** 2)
+
+    flux_surf[:, 0] -= 0.99 * psix * (psi - psi_target)
+    flux_surf[:, 1] -= 0.99 * psiy * (psi - psi_target)
+
+    return flux_surf
 
     # for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
     #     for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):

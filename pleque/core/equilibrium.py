@@ -10,6 +10,7 @@ from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunction, Surface  # , FluxSurface
 import pleque.utils.equi_tools as eq_tools
+import pleque.utils.surfaces as surf
 
 class Equilibrium(object):
     """
@@ -99,10 +100,10 @@ class Equilibrium(object):
 
             # todo: remove this if possible
             # lets reduce the wall a bit to the chance of some "extreme" equilibrium.
-            rwall1 += dr / 20
-            rwall2 -= dr / 20
-            zwall1 -= dz / 20
-            zwall2 += dz / 20
+            # rwall1 += dr / 20
+            # rwall2 -= dr / 20
+            # zwall1 -= dz / 20
+            # zwall2 += dz / 20
 
             corners = np.array([[rwall1, zwall1], [rwall2, zwall1], [rwall2, zwall2], [rwall1, zwall2]])
             newwall_r = []
@@ -812,7 +813,7 @@ class Equilibrium(object):
             return FluxSurface(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def in_first_wall(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        from pleque.utils.surfaces import point_inside_curve
+        from pleque.utils.surfaces import points_inside_curve
         # if grid:
         #     r_mesh, z_mesh = np.meshgrid(R, Z)
         #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
@@ -822,13 +823,13 @@ class Equilibrium(object):
         # return mask_in
         points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        mask_in = point_inside_curve(points.as_array(), self._first_wall)
+        mask_in = points_inside_curve(points.as_array(), self._first_wall)
         if points.grid:
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
     def in_lcfs(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        from pleque.utils.surfaces import point_inside_curve
+        from pleque.utils.surfaces import points_inside_curve
         # if grid:
         #     r_mesh, z_mesh = np.meshgrid(R, Z)
         #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
@@ -836,7 +837,7 @@ class Equilibrium(object):
         #     points = np.vstack((R, Z)).T
         points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
-        mask_in = point_inside_curve(points.as_array(), self._lcfs)
+        mask_in = points_inside_curve(points.as_array(), self._lcfs)
         if points.grid:
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
@@ -919,7 +920,7 @@ class Equilibrium(object):
         mins0 = tuple(argrelmin(psi_xysq, axis=0))
         mins1 = tuple(argrelmin(psi_xysq, axis=1))
 
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         # plt.figure()
         # plt.pcolormesh(rs, zs, psi.T)
         # plt.plot(mins0[0], mins0[1])
@@ -1064,110 +1065,88 @@ class Equilibrium(object):
 
         self._x_points = x_points[sortidx]
 
-        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type()
-
+        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
+                                                                       self._mg_axis, self._psi_axis, self._spl_psi)
 
         self._limiter_plasma = limiter_plasma
         self._limiter_point = limiter_point
 
-        # todo: ended here (!!)
+        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
-        # todo: only for limiter plasma...
-        # tmp fix..
-        self._psi_lcfs = self._psi_xp
+        # Boundary:
+        rs = np.linspace(self.R_min, self.R_max, 700)
+        zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
-        # Limiter vs. x-point plasma:
-        self._limiter_plasma = False
-        # Evaluate psi along the limiter and find whether it limits the plasma
-        psi_first_wall = self._spl_psi(self._first_wall[:, 0], self._first_wall[:, 1], grid=False)
-        limiter_candidates = np.full_like(psi_first_wall, True, dtype=bool)
+        # todo: separatrix:
 
-        if self._first_wall is not None and self._psi_xp is not None:
-
-            # some circular plasmas can have xpoint on hfs so some advance testing for low number walls
-            if len(self._first_wall) < 3:
-                for wpoint, psi_wall in zip(self.first_wall, psi_first_wall):
-                    if np.linalg.norm(wpoint - self._mg_axis) < np.linalg.norm(
-                            self._x_point - self._mg_axis) and np.abs(psi_wall - self._psi_axis) < np.abs(
-                        self._psi_xp - self._psi_axis):
-                        self._limiter_plasma = True
-            elif not self.in_first_wall(self._x_point[0], self._x_point[1]):
-                self._limiter_plasma = True
-            else:
-
-                wall_zdist = np.abs(self._first_wall[:, 1] - self._mg_axis[1])
-                xp_zdist = np.abs(self._x_point[1] - self._mg_axis[1])
-
-                limiter_candidates = np.logical_and(np.abs(psi_first_wall - self._psi_axis) <
-                                                    np.abs(self._psi_xp - self._psi_axis),
-                                                    wall_zdist < xp_zdist)
-
-                if np.any(limiter_candidates):
-                    for wpoint in self._first_wall[limiter_candidates]:
-                        if is_monotonic(self._spl_psi, wpoint, self._mg_axis):
-                            self._limiter_plasma = True
-
-        elif self._psi_xp is None:
-            self._limiter_plasma = True
-
-        if self._limiter_plasma:
-            # Find the plasma limitation
-            if self._first_wall is not None:
-                # find the touch point (strike point)
-                psi_fw_candidates = psi_first_wall[limiter_candidates]
-                i_sp = np.argmin(np.abs(psi_fw_candidates - self._psi_axis))
-                self._contact_point = self._first_wall[limiter_candidates][i_sp]
-                self._psi_strike_point = self._spl_psi(self._contact_point[0], self._contact_point[1], grid=False)
-                self._psi_lcfs = self._psi_strike_point
+        if limiter_plasma:
+            self._strike_points = [self._limiter_point]
+            self._contact_point = self._limiter_point
         else:
-            # x-point plasma:
-            self._psi_lcfs = self._psi_xp
-            # todo: Strike point is None, it will be found later
             self._contact_point = None
+            self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs, self._first_wall)
 
-        # get lcfs, for now using matplotlib contour line
+        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
+                                              self._mg_axis, self._psi_axis)
 
-        # todo: replace this by Matisek's function (!!!)
-        rs = np.linspace(self.R_min, self.R_max, 1000)
-        zs = np.linspace(self.Z_min, self.Z_max, 2000)
-        psi = self._spl_psi(rs, zs)
+        if self._verbose:
+            print("--- Looking for LCFS: ---")
 
-        plt.figure(1111)
-        cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
-        paths = cl.collections[0].get_paths()
-        plt.close(1111)
+        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-5:
+            close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 
-        # todo: first wall
-        if self._limiter_plasma:
-            print('>>> looking for flux surface limited by limiter')
-            distance = np.zeros(len(paths))
-            import shapely.geometry as geo
-            for i in range(len(paths)):
-                v = paths[i].vertices
-                distance[i] = geo.Point(self._contact_point).distance(geo.LineString(v))
-            v = paths[np.argmin(distance)].vertices
+        self._lcfs = close_lcfs
 
-        else:
-            v = np.concatenate([p.vertices for p in paths], axis=0)
+        # import matplotlib.pyplot as plt
+        # from pleque.utils.plotting import _plot_debug
 
-            if self._x_point[1] < self._x_point2[1]:
-                if self._verbose:
-                    print('>>> lower x-point configuration found')
-                v = v[v[:, 1] > self._x_point[1], :]
-                v = v[v[:, 1] < self._x_point2[1], :]
+        # plt.figure()
+        # _plot_debug(self)
+        # plt.plot(close_lcfs[:, 0], close_lcfs[:, 1], "r-")
+        # plt.show()
 
-            else:
-                if self._verbose:
-                    print('>>> upper x-point configuration found')
-                v = v[v[:, 1] < self._x_point[1], :]
-                v = v[v[:, 1] > self._x_point2[1], :]
+        #
+        # # todo: replace this by Matisek's function (!!!)
+        # rs = np.linspace(self.R_min, self.R_max, 1000)
+        # zs = np.linspace(self.Z_min, self.Z_max, 2000)
+        # psi = self._spl_psi(rs, zs)
 
-            if len(self._first_wall) > 2:
-                mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
-                v = v[mask_in, :]
+        # plt.figure(1111)
+        # cl = plt.contour(rs, zs, psi.T, [self._psi_lcfs])
+        # paths = cl.collections[0].get_paths()
+        # plt.close(1111)
 
-        #        lcfs = self._flux_surface(psi_n=1)[0]
-        self._lcfs = v
+        # # todo: first wall
+        # if self._limiter_plasma:
+        #     print('>>> looking for flux surface limited by limiter')
+        #     distance = np.zeros(len(paths))
+        #     import shapely.geometry as geo
+        #     for i in range(len(paths)):
+        #         v = paths[i].vertices
+        #         distance[i] = geo.Point(self._contact_point).distance(geo.LineString(v))
+        #     v = paths[np.argmin(distance)].vertices
+        #
+        # else:
+        #     v = np.concatenate([p.vertices for p in paths], axis=0)
+        #
+        #     if self._x_point[1] < self._x_point2[1]:
+        #         if self._verbose:
+        #             print('>>> lower x-point configuration found')
+        #         v = v[v[:, 1] > self._x_point[1], :]
+        #         v = v[v[:, 1] < self._x_point2[1], :]
+        #
+        #     else:
+        #         if self._verbose:
+        #             print('>>> upper x-point configuration found')
+        #         v = v[v[:, 1] < self._x_point[1], :]
+        #         v = v[v[:, 1] > self._x_point2[1], :]
+        #
+        #     if len(self._first_wall) > 2:
+        #         mask_in = self.in_first_wall(R=v[:, 0], Z=v[:, 1], grid=False)
+        #         v = v[mask_in, :]
+        #
+        # #        lcfs = self._flux_surface(psi_n=1)[0]
+        # self._lcfs = v
         # self._lcfs = lcfs.as_array()
 
     @property

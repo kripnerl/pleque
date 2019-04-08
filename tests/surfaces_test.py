@@ -1,7 +1,7 @@
 # import matplotlib.pyplot as plt
 import numpy as np
 
-from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, point_inside_curve
+from pleque.utils.surfaces import find_contour, get_surface, point_in_first_wall, points_inside_curve
 from pleque.tests.utils import load_testing_equilibrium
 
 eq = load_testing_equilibrium()
@@ -20,7 +20,7 @@ mesh_r, mesh_z = np.meshgrid(r[::10], z[::10])
 points = np.vstack((mesh_r.ravel(), mesh_z.ravel())).T
 
 inside_fw = point_in_first_wall(eq, points)
-inside_lcfs = point_inside_curve(points, eq._lcfs)
+inside_lcfs = points_inside_curve(points, eq._lcfs)
 mask_fw = inside_fw.reshape(mesh_z.shape)
 mask_lcfs = inside_lcfs.reshape(mesh_z.shape)
 

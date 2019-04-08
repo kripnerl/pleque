@@ -1,10 +1,12 @@
 import numpy as np
 from skimage import measure
+import shapely.geometry as geo
 
 
 def find_contour(array, level, r=None, z=None, fully_connected="low", positive_orientation="low"):
     """
     Finds contour using skimage,measure.find_contours function.
+
     :param array: 2d map of function values viz. skimage.measure.find_contours
     :param level: function value on the contour viz. skimage.measure.find_contours
     :param r: if none, coordinates in r.shape[0] dimension given. If r coordinates are specified, the coordinates
@@ -31,7 +33,41 @@ def find_contour(array, level, r=None, z=None, fully_connected="low", positive_o
     return coords
 
 
-def point_inside_curve(points, contour):
+def intersection(line1, line2):
+    """
+    Find the intersection points of two lines.
+
+    :param line1: array(N, 2)
+    :param line2: array(N, 2)
+    :return: list of intersection points. Empty list, if line1 doesn't intersect line2.
+    """
+    l1 = geo.LineString(line1)
+    l2 = geo.LineString(line2)
+
+    intersection = l1.intersection(l2)
+
+    strike_points = []
+    if hasattr(intersection, "len"):
+        for i in intersection:
+            strike_points.append([i.x, i.y])
+    return np.array(strike_points)
+
+
+def fluxsurf_error(psi_spl, points, psi_target):
+    """
+    Calculate :math:`1/N \sum_i (\psi_i - \psi_\mathrm{target})^2`
+
+    :param psi_spl: 2D spline
+    :param points: array(N, 2)
+    :param psi_target: float
+    :return:
+    """
+    psi = psi_spl(points[:, 0], points[:, 1], grid=False)
+
+    return 1 / len(psi) * np.sum((psi - psi_target) ** 2)
+
+
+def points_inside_curve(points, contour):
     """
     Uses skimage.measure.points_in_poly function to find whether points are inside a contour (polygon)
     :param points: 2d array (N, 2) of points coordinates viz. skimage.measure.points_in_poly
@@ -78,7 +114,8 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
     magaxis = np.expand_dims(equilibrium._mg_axis, axis=0)
     for i in range(len(contour)):
         # are we looking for a closed magnetic surface and is it closed?
-        if closed and contour[i][0, 0] == contour[i][-1, 0] and contour[i][0, 1] == contour[i][-1, 1]:
+        if closed and curve_is_closed(
+                contour[i]):  # xxx contour[i][0, 0] == contour[i][-1, 0] and contour[i][0, 1] == contour[i][-1, 1]:
             isinside = measure.points_in_poly(magaxis, contour[i])
             # surface inside lcfs has to be enclosing magnetic axis
             if insidelcfs and np.asscalar(isinside):
@@ -86,10 +123,23 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
     return fluxsurface
 
 
+def curve_is_closed(points):
+    """
+    Check whether the curve given by points is closed. The curve as assumed to be closed if the last point is
+    close to the first one.
+
+    :param points: array (N, 2)
+    :return: boolean
+    """
+
+    return np.isclose(points[0, 0], points[-1, 0]) and np.isclose(points[0, 1], points[-1, 1])
+
+
 def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
                              insidelcfs=True):
     """
     Checks if a point is inside a flux surface with specified value of psi.
+
     :param equilibrium: Equilibrium object
     :param points: 2d numpy array (N, 2) of points coordinates
     :param psi: value of the psi on the surface
@@ -107,7 +157,7 @@ def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
                           insidelcfs=insidelcfs)
     isinside = []
     for i in range(len(contour)):
-        isinside.append(point_inside_curve(points, contour[i]))
+        isinside.append(points_inside_curve(points, contour[i]))
 
     return isinside, contour
 
@@ -120,6 +170,6 @@ def point_in_first_wall(equilibrium, points):
     :return:
     """
 
-    isinside = point_inside_curve(points, equilibrium._first_wall)
+    isinside = points_inside_curve(points, equilibrium._first_wall)
 
     return isinside

@@ -19,7 +19,7 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
     zs = np.linspace(eq.Z_min, eq.Z_max, 250)
 
     try:
-        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, 100)
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, 60)
     except Exception:
         print("WARNING: Something wrong with psi spline.")
 
@@ -29,7 +29,7 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
         print("WARNING: No first wall?!")
 
     try:
-        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], color="C1", ls="--")
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
     except Exception:
         print("WARNING: LCFS contour problem.")
 

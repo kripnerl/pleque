@@ -2,9 +2,11 @@ from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filena
 from pleque.io.readers import read_geqdsk
 from numpy import array
 import numpy as np
-import matplotlib.pyplot as plt
 
-from pleque.utils.plotting import plot_extremes, _plot_debug
+
+# import matplotlib.pyplot as plt
+#
+# from pleque.utils.plotting import plot_extremes, _plot_debug
 
 
 def test_equilibria():
@@ -32,11 +34,11 @@ def test_equilibria():
 
         eq = read_geqdsk(gfiles[i])
 
-        plt.figure()
+        # plt.figure()
         # eq._plot_overview()
         # plot_extremes(eq)
 
-        _plot_debug(eq)
+        # _plot_debug(eq)
 
         assert np.allclose(eq._mg_axis, o_points[i])
         if eq._x_point is not None:
@@ -48,5 +50,5 @@ def test_equilibria():
         # print('mg axis = {}'.format(eq._mg_axis))
         # print('x point = {}'.format(eq._x_point))
         # print('strike point = {}'.format(eq._strike_point))
-
-    plt.show()
+    #
+    # plt.show()
