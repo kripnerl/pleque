@@ -1,20 +1,134 @@
 import numpy as np
 import omas
+import xarray as xr
 
 from pleque.core import Equilibrium
 
+def read(ods: omas.ODS, time=None, time_unit="s"):
+    """
 
-def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=None, time=np.array(0, ndmin=1),
+    :param ods: OMAS object with description of `wall` and `equilibrium`
+    :param time: (int, float or None) Time of required equilibria. The nearest time slice is taken. If `None`
+                 the first time slice is taken.
+    :param time_unit:  (str) "s" or "ms"
+    :return: Instance of `Equilibrioum` from the `OMAS` object keeping the IMAS data structure.
+    """
+
+    if time_unit.lower() == "s":
+        time_factor = 1.
+    elif time_unit.lower() == "ms":
+        time_factor = 1000.
+    else:
+        raise ValueError("Unknown `time_unit`.")
+
+    try:
+        shot = ods["info"]["shot"]
+    except:
+        shot = ods["dataset_description"]["data_entry"]["pulse"]
+
+    if "wall" not in ods:
+        try:
+            # todo: (Need the latest OMAS)
+            from omas.omas_physics import add_wall
+            omas.add_wall(omas)
+        except ImportError:
+            print("The newest OMAS is required to add wall to IDS.")
+        except KeyError:
+            pass
+
+    # Reading wall:
+    try:
+        r_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"]
+        z_wall = ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"]
+
+        limiter = np.stack((r_wall, z_wall)).T
+    except ValueError:
+        limiter = None
+
+    # Times
+    ods_times = ods["equilibrium"]["time"]
+    if time is None:
+        time_idx = 0
+    else:
+        time_idx = np.argmin(np.abs(np.array(ods_times) - time / time_factor))
+
+    # Plasma boundary (LCFS)
+    rbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["r"]
+    zbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["z"]
+    psibnd = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_boundary"]
+
+    # Magnetic axis
+    rmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["r"]
+    zmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["z"]
+    psimgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_axis"]
+
+    # 1D profiles
+    psi_1d = ods["equilibrium"]["time_slice"][time_idx]["profiles_1d"]["psi"]
+    F = ods['equilibrium.time_slice'][time_idx]['profiles_1d.f']
+    pressure = ods['equilibrium.time_slice'][time_idx]['profiles_1d.pressure']
+    FFp = ods['equilibrium.time_slice'][time_idx]['profiles_1d.f_df_dpsi']
+    pprime = ods['equilibrium.time_slice'][time_idx]['profiles_1d.dpressure_dpsi']
+    q = ods['equilibrium.time_slice'][time_idx]['profiles_1d.q']
+
+    psi_n = (psi_1d - psi_1d[0]) / (psibnd - psimgax)
+
+    # 2D profiles:
+    # todo: resolve this (!)
+    grid_idx = 0
+    gridtype = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][0]["grid_type"]["index"]
+
+    if gridtype != 1:
+        raise ValueError("Only rectangular is supported at the moment!")
+    # if 1 not in gridtype:
+    #     raise ValueError("Only rectangular is supported at the moment!")
+    # else:
+    #     grid_idx = gridtype.index(1)
+
+
+    r_grid = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][grid_idx]["grid"]["dim1"]
+    z_grid = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][grid_idx]["grid"]["dim2"]
+    psi = ods["equilibrium"]["time_slice"][time_idx]["profiles_2d"][grid_idx]["psi"]
+
+    if psi.shape != (len(r_grid), len(z_grid)):
+        psi = psi.T
+
+    # x-array Dataset with time data:
+    ds = xr.Dataset({
+            'psi': (['R', 'Z'], psi),
+            'pressure': (['psi_n'], pressure),
+            'pprime': (['psi_n'], pprime),
+            'F': (['psi_n'], F),
+            'FFprime': (['psi_n'], FFp),
+            'q': (['psi_n'], q),
+        },
+        coords={
+            'time': ods_times[time_idx],
+            'R': r_grid,
+            'Z': z_grid,
+            'psi_n': psi_n,
+         },
+        attrs={
+            'shot' : shot,
+            'time_unit' : time_unit,
+        })
+
+    eq = Equilibrium(ds, limiter)
+    return eq
+
+
+def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=None,
           cocosio=3):
     """
     Function saving contents of equilibrium into the omas data structure.
+
     :param equilibrium: Equilibrium object
     :param grid_1d: Coordinate object with 1D grid (linearly spaced array over psi_n). It is used to save 1D equilibrium
-    characteristics into the omas data object. If is None, linearly spaced vector over psi_n inrange [0,1] with 200
-    points is used.
+                    characteristics into the omas data object. If is None, linearly spaced vector over psi_n inrange [0,1] with 200
+                    points is used.
     :param grid_2d: Coordinate object with 2D grid (can be the whole reconstruction space). It is used to save 2D
-    equilibrium profiles. If None, default Equilibrium.grid() is used to generate the parameter.
-    :param gridtype: Grid type specification for omas data structure. 1...rectangular
+                    equilibrium profiles. If None, default Equilibrium.grid() is used to generate the parameter.
+    :param gridtype: Grid type specification for omas data structure. 1...rectangular.
+                     (Any other grid  type is not supported at them moment!)
     :param ods: ods object to save the equilibrium into. If None, new ods object is created.
     :return:
     """
@@ -28,30 +142,44 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if grid_2d is None:
         grid_2d = equilibrium.grid(resolution=(1e-3, 1e-3), dim="step")
 
+    shot_time = equilibrium.time
+    if equilibrium.time_unit == "ms":
+        shot_time *= 1e3
+    elif equilibrium.time_unit != "s":
+        print("WARNING: unknown time unit ({}) is used. Seconds will be used insted for saving.".format(
+            equilibrium.time_unit))
+
     # shot info todo
-    ods["info"]["shot"] = 0
+    ods["info"]["shot"] = equilibrium.shot
+    ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot
 
     # fill the wall part
     ods["wall"]["ids_properties"]["homogeneous_time"] = 1
-    ods["wall"]["time"] = np.array(time, ndmin=1)
+    # to MT: is this change correct?
+    ods["wall"]["time"] = np.array(shot_time, ndmin=1)
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["r"] = equilibrium.first_wall.R
     ods["wall"]["description_2d"][0]["limiter"]["unit"][0]["outline"]["z"] = equilibrium.first_wall.Z
 
-    #
     ############################
     # The Equilibrium Part
     ############################
     # time slices
     ods["equilibrium"]["ids_properties"]["homogeneous_time"] = 1
-    ods["equilibrium"]["time"] = np.array(time, ndmin=1)
+    # to MT: is this change correct?
+    ods["equilibrium"]["time"] = np.array(shot_time, ndmin=1)
 
-    # vacuum
+    # Vacuum
     # todo: add vacuum Btor, not in equilibrium
-    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = np.array([5])  # vacuum B tor at Rmaj
-    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = 0.89  # vacuum B tor at Rmaj
+    # As R0 use magnetic axis. Isn't better other definition of R0?
+    # R0 = np.array((np.max(equilibrium.first_wall.R) - np.min(equilibrium.first_wall.R))/2, ndim=1)
+    R0 = equilibrium.magnetic_axis.R[0]
+    F0 = equilibrium.BvacR
+    B0 = F0/R0*np.ones_like(ods["equilibrium"]["time"])
+    ods["equilibrium"]["vacuum_toroidal_field"]["b0"] = B0  # vacuum B tor at Rmaj
+    ods["equilibrium"]["vacuum_toroidal_field"]["r0"] = R0  # vacuum B tor at Rmaj
 
     # time slice time
-    ods["equilibrium"]["time_slice"][0]["time"] = time
+    ods["equilibrium"]["time_slice"][0]["time"] = shot_time
 
     # plasma boundary (lcfs)
     ods["equilibrium"]["time_slice"][0]["boundary"]["outline"]["r"] = equilibrium.lcfs.R
@@ -95,7 +223,6 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
             surface_volume[i] = surface[0].volume
             surface_area[i] = surface[0].area
         else:
-
             surface_volume[i] = 0
             surface_area[i] = 0
 
@@ -111,10 +238,6 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["psi"] = equilibrium.psi(grid_2d).T
     ods["equilibrium"]["time_slice"][0]["profiles_2d"][0]["b_field_tor"] = equilibrium.B_tor(grid_2d).T
 
-    # todo: plasma current is not in equilibrium yet
-    try:
-        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
-    except AttributeError:
-        ods['equilibrium.time_slice'][0]['global_quantities.ip'] = 2e6
+    ods['equilibrium.time_slice'][0]['global_quantities.ip'] = equilibrium.I_plasma
 
     return ods

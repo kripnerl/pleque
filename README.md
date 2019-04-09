@@ -24,6 +24,7 @@ scikit-image
 xarray
 pandas
 h5py
+omas
 ```
 
 ### Installing

@@ -1,7 +1,10 @@
 import numpy as np
-import pytest
+import os
 
-omas = pytest.importorskip("omas")
+user = os.environ.get("USER", "dummy_user")
+os.environ["USER"] = user
+
+# omas = pytest.importorskip("omas")
 
 from pleque.io import omas as plomas
 from pleque.tests.utils import load_testing_equilibrium
@@ -16,3 +19,10 @@ gridtype = 1
 # ods = plomas.write(eq)
 ods = plomas.write(eq, grid_1d, grid_2d)
 ods = plomas.write(eq, grid_1d, grid_2d, gridtype=1, ods=ods)
+
+eq2 = plomas.read(ods)
+
+import matplotlib.pyplot as plt
+eq2.plot_overview()
+
+plt.show()
