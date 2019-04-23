@@ -239,11 +239,7 @@ class Equilibrium(object):
             self._psi_sign = -1
 
         if verbose:
-            print('--- Generate 1D splines ---')
-
-        if verbose:
             print('--- Mapping midplane to psi_n ---')
-
         self.__map_midplane2psi__()
 
         if verbose:
@@ -1027,7 +1023,7 @@ class Equilibrium(object):
         zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
         if limiter_plasma:
-            self._strike_points = self._limiter_point[np.newaxis, :]
+            self._strike_points = np.array([self._limiter_point[np.newaxis, :]])
             self._contact_point = self._limiter_point
         else:
             self._contact_point = None

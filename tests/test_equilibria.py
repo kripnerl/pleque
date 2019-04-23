@@ -44,8 +44,8 @@ def test_equilibria():
         assert np.allclose(eq._mg_axis, o_points[i])
         if eq._x_point is not None:
             assert np.allclose(eq._x_point, x_points[i])
-        if eq._strike_point is not None:
-            assert np.allclose(eq._strike_point, st_points[i])
+        if eq._strike_points is not None and st_points[i] is not None:
+            assert np.allclose(eq._strike_points[0], st_points[i])
 
         # print('idx = {}'.format(i))
         # print('mg axis = {}'.format(eq._mg_axis))

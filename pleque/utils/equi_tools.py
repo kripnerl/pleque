@@ -195,11 +195,17 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
 
 
 def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
+    """
+    Recognize whether the plasma is limited or with x-point and find point which limit the plasma (limiter point).
+    In case of limiter plasma it is contact point, in case of x-point the plasma is limited by x-point.
 
-    if x_point is not None:
-        print("xp in fw:")
-        print(points_inside_curve([x_point], first_wall))
-
+    :param x_point: (R, Z) position of point suspected to by x-point or `None` if there is any.
+    :param first_wall: array(N, 2) Points which may limit the plasma.
+    :param mg_axis: (R, Z) position of the magnetic axis of plasma.
+    :param psi_axis: psi on axis
+    :param psi_spl: 2D (R, Z) spline with psi values
+    :return: tuple of (bool, array of points) if bool is True plasma is limited, x-point otherwise.
+    """
     psi_wall = psi_spl(first_wall[:, 0], first_wall[:, 1], grid=False)
     psi_wall_diff = np.abs(psi_wall - psi_axis)
     idxs_wall = np.argsort(psi_wall_diff)
@@ -207,7 +213,7 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
     wall_min_diff = psi_wall_diff[iwall_min]
 
     # todo: tmp solution (this is not the fastest way of doing this
-    #       I would like to take x-point - mg_axis vector and check whethet the point is
+    #       I would like to take x-point - mg_axis vector and check whether the point is
     #       on reliable place
     i = 0
 
@@ -235,7 +241,7 @@ def find_close_lcfs(psi_lcfs, rs, zs, psi_spl, mg_axis, psi_axis=0):
     """
     Localize the field line at the 99.9% of psi.
 
-    :param psi_lcfs:
+    :param psi_lcfs: float
     :param rs:
     :param zs:
     :param first_wall:
@@ -250,9 +256,6 @@ def find_close_lcfs(psi_lcfs, rs, zs, psi_spl, mg_axis, psi_axis=0):
 
     if contours is not None:
         for contour in contours:
-
-            # import matplotlib.pyplot as plt
-            # plt.plot(contour[:, 0], contour[:, 1])
             if surf.curve_is_closed(contour) and surf.points_inside_curve([mg_axis], contour):
                 return contour
     return None
