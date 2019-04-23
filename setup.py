@@ -25,6 +25,7 @@ setup(
         'xarray',
         'pandas',
         'h5py',
+        'omas',
     ],
     zip_safe=False
 )

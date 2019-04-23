@@ -50,6 +50,13 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     # todo: psi should be 1-d (!) resolve this
     ax.contour(coords.R, coords.Z, psi, sorted(np.squeeze(contour_out.psi)), colors='C0')
 
+    #    contact = eq.strike_point
+    #    ax.plot(contact.R, contact.Z, "C3+")
+
+    op = eq.magnetic_axis
+    ax.plot(op.R, op.Z, "C0o")
+
+
     psi_lcfs = eq._psi_lcfs
     z0 = eq._mg_axis[1]
 
@@ -71,8 +78,8 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
         size = zlim[1] - zlim[0]
         zlim[0] -= size / 12
         zlim[1] += size / 12
-        ax.set_xlim(rlim)
-        ax.set_ylim(zlim)
+        ax.set_xlim(*rlim)
+        ax.set_ylim(*zlim)
     ax.set_aspect('equal')
 
     return ax
