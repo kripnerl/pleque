@@ -1,12 +1,12 @@
+import h5py
 import numpy as np
+import pkg_resources
+import xarray as xr
 
 from pleque.core import Equilibrium
-
-import h5py
-import xarray as xr
 from pleque.io._geqdsk import read, data_as_ds
 from pleque.io.tools import EquilibriaTimeSlices
-import pkg_resources
+
 
 def cdb(shot=None, time=1060, revision=1):
     """
@@ -46,7 +46,7 @@ def read_efithdf5(file_path, time=None):
 
     with h5py.File(file_path, 'r') as f5efit:  # open EFITXX.rev.h5
 
-        t = f5efit['time'].value
+        t = f5efit['time'][:]
         if t[0] < 100:  # heuristic, first time should be above 100 if in ms
             t *= 1e3  # put into ms
         dst = xr.Dataset({
@@ -61,12 +61,14 @@ def read_efithdf5(file_path, time=None):
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
             'Zt': (['time', 'Z'], f5efit['output/profiles2D/z']),
-            'psi_n': f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux'],
+            'psi_n': (['psi_n'], f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux']),
         }
         )
         # the limiter is not expected to change in time, so take 0th time index
         limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
                                    for x in 'rz'])
+        dst.load()
+
     efit_slices = EquilibriaTimeSlices(dst, limiter)
     if time is not None:
         eq = efit_slices.get_time_slice(time)
