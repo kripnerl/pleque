@@ -106,6 +106,6 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
-    eq.I_plasma = ds.attrs['cpasma']
+    eq._Ip = ds.attrs['cpasma']
 
     return eq
