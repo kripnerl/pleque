@@ -56,7 +56,6 @@ def find_extremes(rs, zs, psi_spl):
 
     psi_diff = (np.max(psi) - np.min(psi)) ** 2
     x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
-    dpsidx = np.sqrt(psi_diff / x_diff)
 
     def psi_xysq_func(x):
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
@@ -121,6 +120,8 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
 
     # assume that psi value has its minimum in the center (is this check really needed?
     op_psiscale = 1
+
+    # this code may be usfull for axis recognition
     # op_psiscale = psi_spln(o_points[:, 0], o_points[:, 1], grid=False)
     # op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
@@ -209,12 +210,13 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
     psi_wall = psi_spl(first_wall[:, 0], first_wall[:, 1], grid=False)
     psi_wall_diff = np.abs(psi_wall - psi_axis)
     idxs_wall = np.argsort(psi_wall_diff)
-    iwall_min = np.argmin(psi_wall_diff)
-    wall_min_diff = psi_wall_diff[iwall_min]
 
     # todo: tmp solution (this is not the fastest way of doing this
     #       I would like to take x-point - mg_axis vector and check whether the point is
     #       on reliable place
+    # iwall_min = np.argmin(psi_wall_diff)
+    # wall_min_diff = psi_wall_diff[iwall_min]
+
     i = 0
 
     while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis)):
@@ -242,11 +244,11 @@ def find_close_lcfs(psi_lcfs, rs, zs, psi_spl, mg_axis, psi_axis=0):
     Localize the field line at the 99.9% of psi.
 
     :param psi_lcfs: float
-    :param rs:
-    :param zs:
-    :param first_wall:
-    :param psi_spl:
-    :param psi_axis:
+    :param rs: array(N), R axis of the grid where to find the contour
+    :param zs: array(M), Z axis of the grid where to find the contour
+    :param first_wall: array(N_wall, 2)
+    :param psi_spl: float
+    :param psi_axis: float
     :return:
     """
 

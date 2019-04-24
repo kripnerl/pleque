@@ -56,13 +56,13 @@ def da2dict(da: xr.DataArray):
 
     # add data:
     if da.name is None:
-        ret_dict["data"] = da.data
+        ret_dict["data"] = da.values
     else:
-        ret_dict[da.name] = da.data
+        ret_dict[da.name] = da.values
 
     # Add axes:
     for k, val in da.coords.items():
-        ret_dict[k] = val.data
+        ret_dict[k] = val.values
         # axis attributes:
 
         for ka, atr in val.attrs.items():
@@ -84,7 +84,7 @@ def ds2dict(ds: xr.Dataset):
 
     # Add all variables:
     for k, val in ds.variables.items():
-        ret_dict[k] = val.data
+        ret_dict[k] = val.values
         for ka, atr in val.attrs.items():
             ret_dict["{}/{}".format(k, ka)] = atr
 

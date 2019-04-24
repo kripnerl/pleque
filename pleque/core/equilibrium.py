@@ -82,9 +82,9 @@ class Equilibrium(object):
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
 
-        r = basedata.R.data
-        z = basedata.Z.data
-        psi = basedata.psi.transpose('R', 'Z').data
+        r = basedata.R.values
+        z = basedata.Z.values
+        psi = basedata.psi.transpose('R', 'Z').values
 
         if first_wall is None and 'first_wall' in basedata:
             self._first_wall = basedata["first_wall"]
@@ -120,7 +120,7 @@ class Equilibrium(object):
             self._first_wall = np.stack((newwall_r, newwall_z)).T
 
         if 'time' in basedata:
-            self.time = basedata['time'].data
+            self.time = basedata['time'].values
         else:
             self.time = -1
 
@@ -142,9 +142,9 @@ class Equilibrium(object):
         self.Z_max = np.max(z)
 
         # TODO: allow FFprime, ffprime, pprime and other on the input
-        psi_n = basedata.psi_n.data
-        pressure = basedata.pressure.data
-        F = basedata.F.data
+        psi_n = basedata.psi_n.values
+        pressure = basedata.pressure.values
+        F = basedata.F.values
         self.BvacR = F[-1]
         self.F0 = F[-1]
 
@@ -521,7 +521,7 @@ class Equilibrium(object):
 
             if isinstance(dim, Sequence) and len(dim) == 2:
                 if res_R is None:
-                    R = self._basedata.R.data
+                    R = self._basedata.R.values
                 elif dim[0] == "step":
                     R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
                 elif dim[0] == "size":
@@ -530,7 +530,7 @@ class Equilibrium(object):
                     raise ValueError("Wrong dim[0] value passed")
 
                 if res_Z is None:
-                    Z = self._basedata.Z.data
+                    Z = self._basedata.Z.values
                 elif dim[1] == "step":
                     Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
                 elif dim[1] == "size":
@@ -540,20 +540,20 @@ class Equilibrium(object):
             elif isinstance(dim, str):
                 if dim == "step":
                     if res_R is None:
-                        R = self._basedata.R.data
+                        R = self._basedata.R.values
                     else:
                         R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
                     if res_Z is None:
-                        Z = self._basedata.Z.data
+                        Z = self._basedata.Z.values
                     else:
                         Z = np.arange(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
                 elif dim == "size":
                     if res_R is None:
-                        R = self._basedata.R.data
+                        R = self._basedata.R.values
                     else:
                         R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_R)
                     if res_Z is None:
-                        Z = self._basedata.Z.data
+                        Z = self._basedata.Z.values
                     else:
                         Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
                 else:

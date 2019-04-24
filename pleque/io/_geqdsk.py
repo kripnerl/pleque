@@ -311,6 +311,6 @@ def read_as_equilibrium(fh, cocos=1):
 
     data = read(fh, cocos)
     ds = data_as_ds(data)  # as dataset
-    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T  # first wall
+    fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
     eq = Equilibrium(ds, fw)
     return eq

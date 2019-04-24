@@ -27,7 +27,7 @@ def deltapsi_calc(pulse):
     DATA_PATH = '/pulse/{}/ppf/signal/jetppf/efit/{}:{}'
     psi_lcfs = sal.get(DATA_PATH.format(pulse, 'fbnd', 0))
     psi_axis = sal.get(DATA_PATH.format(pulse, 'faxs', 0))
-    deltapsi = (psi_lcfs.data - psi_axis.data)
+    deltapsi = (psi_lcfs.values - psi_axis.values)
     return deltapsi
 
 
@@ -39,7 +39,7 @@ def pprime_calc(pressure, deltapsi, lenpsin):
     :param lenpsin: 1/number of points in psi_n axis
     :return: the dp/dpsi on axis time and psi_n
     """
-    pprime = deltapsi[:, np.newaxis]*np.gradient(pressure.data, 1/lenpsin, axis=1)
+    pprime = deltapsi[:, np.newaxis]*np.gradient(pressure.values, 1/lenpsin, axis=1)
     return pprime
 
 
@@ -51,7 +51,7 @@ def FFprime_calc(F, deltapsi, lenpsin):
     :param lenpsin: 1/number of points in psi_n axis
     :return: the f*df/fpsi on axis time and psi_n
     """
-    FFprime = deltapsi[:,np.newaxis] * F.data * np.gradient(F.data, 1 / lenpsin, axis=1)
+    FFprime = deltapsi[:,np.newaxis] * F.values * np.gradient(F.values, 1 / lenpsin, axis=1)
     return FFprime
 
 def sal_jet(pulse, timex=47.0, time_unit="s"):
@@ -79,18 +79,18 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     # obtain psi data (reshape, transpose) and time axis
     packed_psi = sal.get(data_path.format(pulse, 'psi', sequence))
     psi = packed_psi
-    psi.data = packed_psi.data[:, :].reshape(len(packed_psi.dimensions[0]), 33, 33)
-    psi.data = np.swapaxes(psi.data, 1, 2)
+    psi.values = packed_psi.values[:, :].reshape(len(packed_psi.dimensions[0]), 33, 33)
+    psi.values = np.swapaxes(psi.values, 1, 2)
 
-    time = packed_psi.dimensions[0].data
+    time = packed_psi.dimensions[0].values
 
     # psi grid axis
-    r = sal.get(data_path.format(pulse, 'psir', sequence)).data
-    z = sal.get(data_path.format(pulse, 'psiz', sequence)).data
+    r = sal.get(data_path.format(pulse, 'psir', sequence)).values
+    z = sal.get(data_path.format(pulse, 'psiz', sequence)).values
 
     # pressure profile
     pressure = sal.get(data_path.format(pulse, 'p', sequence))
-    psi_n = pressure.dimensions[1].data
+    psi_n = pressure.dimensions[1].values
 
     # f-profile
     f = sal.get(data_path.format(pulse, 'f', sequence))
@@ -108,12 +108,12 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     #create dataset
 
     dst = xr.Dataset({
-        'psi': (['time', 'R', 'Z'], psi.data),
-        'pressure': (['time', 'psi_n'], pressure.data),
+        'psi': (['time', 'R', 'Z'], psi.values),
+        'pressure': (['time', 'psi_n'], pressure.values),
         'pprime': (['time', 'psi_n'], pprime),
-        'F': (['time', 'psi_n'], f.data),
+        'F': (['time', 'psi_n'], f.values),
         'FFprime': (['time', 'psi_n'], FFprime),
-        'q': (['time', 'psi_n'], q.data),
+        'q': (['time', 'psi_n'], q.values),
         'R': (['R'], r),
         'Z': (['Z'], z),
 
@@ -129,8 +129,8 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     # try to load limiter from ppfs
 
     try:
-        limiter_r = sal.get(data_path.format(pulse, 'rlim', sequence)).data.T
-        limiter_z = sal.get(data_path.format(pulse, 'zlim', sequence)).data.T
+        limiter_r = sal.get(data_path.format(pulse, 'rlim', sequence)).values.T
+        limiter_z = sal.get(data_path.format(pulse, 'zlim', sequence)).values.T
     except NodeNotFound:
         limiter_r = None
         limiter_z = None
