@@ -67,7 +67,7 @@ the `examples` directory.
 
 ## Version
 
-0.0.3b5
+0.0.3
 
 ## Authors
 
