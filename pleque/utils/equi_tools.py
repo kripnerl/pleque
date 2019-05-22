@@ -10,8 +10,8 @@ def is_monotonic(f, x0, x1, n_test=10):
     Test whether line connection of two points is monotonic on f.
 
     :param f: 2D spline `f(x[0], x[1])`
-    :param x0: start point of the line
-    :param x1: end point of the line
+    :param x0: start point (2d) of the line
+    :param x1: end point (2d) of the line
     :param n_test: number of points which are tested.
     :return: logic value
     """
@@ -54,8 +54,9 @@ def find_extremes(rs, zs, psi_spl):
     mins0 = tuple(argrelmin(psi_xysq, axis=0))
     mins1 = tuple(argrelmin(psi_xysq, axis=1))
 
-    psi_diff = (np.max(psi) - np.min(psi)) ** 2
-    x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
+    # use these values to define psi_xysq_func threshold
+    # psi_diff = (np.max(psi) - np.min(psi)) ** 2
+    # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
     def psi_xysq_func(x):
         """
@@ -75,7 +76,7 @@ def find_extremes(rs, zs, psi_spl):
                 r_ex = rs[ar]
                 z_ex = zs[az]
 
-                # Remove bad candidates for the extreme (this is potentional trouble point):
+                # XXX Remove bad candidates for the extreme (this is potentional trouble point):
                 if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
                     continue
 
@@ -126,7 +127,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     # assume that psi value has its minimum in the center (is this check really needed?
     op_psiscale = 1
 
-    # this code may be usfull for axis recognition
+    # XXX this code may be usefull for axis recognition
     # op_psiscale = psi_spln(o_points[:, 0], o_points[:, 1], grid=False)
     # op_psiscale = 1 + (op_psiscale - np.min(op_psiscale)) / (np.max(op_psiscale) - np.min(op_psiscale))
 
