@@ -1,3 +1,3 @@
-__version__ = '0.0.3b5'
+__version__ = '0.0.3'
 
 from pleque.core import *
