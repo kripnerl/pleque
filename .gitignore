@@ -32,3 +32,9 @@ tests/_trial_temp/
 pleque/\.vscode/
 
 \.vscode/
+
+docs/\.doctrees/
+
+docs/_sources/
+
+docs/_static/
