@@ -1,5 +1,5 @@
 
-Welcome to Plaque's documentation!
+Welcome to Pleque's documentation!
 ==================================
 
 Code home: https://github.com/kripnerl/pleque/
@@ -10,6 +10,7 @@ Code home: https://github.com/kripnerl/pleque/
 
    coordinates
    examples
+   naming_convention
 
 API Reference
 -------------

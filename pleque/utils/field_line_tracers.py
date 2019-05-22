@@ -1,8 +1,10 @@
-
-from pleque import Equilibrium
 import numpy as np
 
-def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=None, sign=1, step=5e-1, t_max=150, **coords):
+from pleque import Equilibrium
+
+
+def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=None, sign=1, step=5e-1, t_max=150,
+                                    **coords):
     """Deprecated.
     :param coordinates:
     :param coord_type:
@@ -10,7 +12,6 @@ def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=No
     :return:
     """
     # from numba import autojit
-    import multiprocessing
     from scipy.integrate import ode
     crds = eq.coordinates(*coordinates, coord_type=coord_type, grid=False, **coords)
 
@@ -90,6 +91,7 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
     ----
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
+
     def dphi_func(phi, x):
         R, Z = x
         BR = BR_func(R, Z)
@@ -98,6 +100,7 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
         dRdphi = R * BR / Bphi
         dZdphi = R * BZ / Bphi
         return np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+
     return dphi_func
 
 
@@ -121,6 +124,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
     ----
     This function is mostly useful when only the field line length is required
     """
+
     def ds_func(s, x):
         R, Z = x
         BR = BR_func(R, Z)
@@ -130,10 +134,11 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         dRds = R * BR / B
         dZds = R * BZ / B
         return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
+
     return ds_func
 
 
-def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi/180):
+def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 180):
     """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
     
@@ -149,22 +154,27 @@ def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi/180):
         stopping offset to stop before initial position
         necessary to prevent stopping at initial position
     """
-    y_center = np.asarray(y_center)   # should be [R0, Z0]
+    y_center = np.asarray(y_center)  # should be [R0, Z0]
+
     def full_arc(y):
         Dy = y - y_center
         theta = np.arctan2(Dy[1], Dy[0])
-        theta = np.remainder(theta, 2*np.pi)
+        theta = np.remainder(theta, 2 * np.pi)
         return theta
+
     theta_start = full_arc(np.asarray(y0))
-    theta_target = theta_start - direction*stop_res
-    theta_target = np.remainder(theta_target, 2*np.pi)
+    theta_target = theta_start - direction * stop_res
+    theta_target = np.remainder(theta_target, 2 * np.pi)
+
     def stopper(t, y):
         theta = full_arc(y)
-        dth =  theta - theta_target
+        dth = theta - theta_target
         return np.squeeze(dth)
+
     stopper.terminal = True
     stopper.direction = direction
     return stopper
+
 
 def z_coordinate_stopper_factory(z_0):
     """
@@ -173,7 +183,6 @@ def z_coordinate_stopper_factory(z_0):
 
     :param z_0: [float, float]
         [Z_bottom, Z_upper] boundary
-    :param z_end:
     :return:
     """
 

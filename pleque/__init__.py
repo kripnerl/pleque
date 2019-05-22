@@ -1,3 +1,3 @@
-from .core import Equilibrium
-from .core import Coordinates
-from .fluxsurface import FluxSurface
+__version__ = '0.0.3'
+
+from pleque.core import *

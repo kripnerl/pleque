@@ -17,7 +17,7 @@ def find_contour(array, level, r=None, z=None, fully_connected="low", positive_o
     """
     # calling skimage function to get counturs
     coords = measure.find_contours(array.T, level, fully_connected=fully_connected,
-                                   positive_orientation = positive_orientation)
+                                   positive_orientation=positive_orientation)
 
     # if r, z coordinates are passed contour points are recalculated
     if isinstance(r, np.ndarray) or r is not None:
@@ -58,11 +58,11 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
 
     # if r is integer make r grid
     if not isinstance(r, np.ndarray):
-        r = np.linspace(equilibrium.r_min, equilibrium.r_max, r)
+        r = np.linspace(equilibrium.R_min, equilibrium.R_max, r)
 
     # if z is integer make z grid
     if not isinstance(z, np.ndarray):
-        z = np.linspace(equilibrium.z_min, equilibrium.z_max, z)
+        z = np.linspace(equilibrium.Z_min, equilibrium.Z_max, z)
 
     # should we work with psi or psi_n
     if norm:

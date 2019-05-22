@@ -1,0 +1,9 @@
+image: continuumio/miniconda3
+
+before_script:
+  - conda env create -f environment.yml
+  - source activate pleque
+
+test:pytest:
+  script:
+    - pytest

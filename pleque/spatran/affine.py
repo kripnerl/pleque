@@ -1,6 +1,7 @@
-import numpy as np
-import numbers
 import copy
+
+import numpy as np
+
 from pleque.core import Coordinates
 
 
@@ -9,9 +10,9 @@ class Affine:
     def __init__(self, transform: np.ndarray = np.eye(4), name: str = ""):
         """
         Affine transformation class.
+
         :param name: name of the affine transformation
-        :param transform: Affine transformation matrix of the snape (ndi+1, ndim+1)
-        :param dim: if dim = None
+        :param transform: Affine transformation matrix of the snape (ndim+1, ndim+1)
         """
         self.name = name
         self.transformation = transform
@@ -21,10 +22,12 @@ class Affine:
 
     def __mul__(self, other):
         """
-        MUltiplication of Affine object from left
-        :param other: the multiplicator. If it is of type Affine, the Affine transformation is updated by multiplication from left.
-         If it is of type np.ndarray of shape (dim, n), understand n column vectors to be transformed, a new transformed vector or vectors are returned.
-        :param inplace: if True, update of the tranformation is done in place, of other is of type Affine
+        Multiplication of Affine object from left
+
+        :param other: the multiplicator. If it is of type Affine, the Affine transformation is updated by
+            multiplication from left.
+            If it is of type np.ndarray of shape (dim, n), understand n column vectors to be transformed, a new
+            transformed vector or vectors are returned.
         :return:
         """
 
@@ -44,7 +47,7 @@ class Affine:
             else:
                 raise ValueError("Array has to be of shape (dim, n) or (dim+1, n)")
         elif isinstance(other, Coordinates):
-            #todo: Add treatment of coordinates objectj
+            # todo: Add treatment of coordinates objectj
             pass
 
     def __invert__(self):
@@ -64,9 +67,10 @@ class Affine:
     def __rmul__(self, other):
         """
         MUltiplication of Affine object from left
-        :param other: the multiplicator. If it is of type Affine, the Affine transformation is updated by multiplication from left.
-         If it is of type np.ndarray of shape (dim, n), understand n column vectors to be transformed, a new transformed vector or vectors are returned.
-        :param inplace: if True, update of the tranformation is done in place, of other is of type Affine
+        :param other: the multiplicator. If it is of type Affine, the Affine transformation is updated by
+            multiplication from left.
+            If it is of type np.ndarray of shape (dim, n), understand n column vectors to be transformed, a new
+            transformed vector or vectors are returned.
         :return:
         """
         if isinstance(other, Affine):
@@ -134,71 +138,76 @@ class Affine:
         """
         return self.transformation[:, -1]
 
+
 class Identity(Affine):
 
     def __init__(self, dim: int = 3, name: str = ""):
-        transform = np.eye(dim+1)
+        transform = np.eye(dim + 1)
         super().__init__(transform, name)
+
 
 class Translate(Affine):
 
     def __init__(self, transform, name: str = ""):
         dim = transform.shape[0]
-        transformation = np.eye(dim+1)
+        transformation = np.eye(dim + 1)
         transformation[0:dim, -1] = transform
         super().__init__(transformation, name)
+
 
 class Scale(Affine):
 
     def __init__(self, transform, name: str = ""):
         dim = transform.shape[0]
-        transformation = np.eye(dim+1)
-        #for i in range(dim):
+        transformation = np.eye(dim + 1)
+        # for i in range(dim):
         #    transformation[i,i] = transform[i]
         diag = np.diag_indices_from(transformation[0:-1, 0:-1])
         transformation[diag] = transform
 
         super().__init__(transformation, name)
 
+
 class Rotx(Affine):
 
-    def __init__(self, angle, name : str = "", rad = True):
+    def __init__(self, angle, name: str = "", rad=True):
         if rad:
             radians = angle
         else:
             radians = np.deg2rad(angle)
 
         transformation = np.array([[1, 0, 0, 0],
-                        [0, np.cos(radians), -1*np.sin(radians), 0],
-                        [0, np.sin(radians), np.cos(radians), 0],
-                        [0, 0, 0, 1]])
+                                   [0, np.cos(radians), -1 * np.sin(radians), 0],
+                                   [0, np.sin(radians), np.cos(radians), 0],
+                                   [0, 0, 0, 1]])
         super().__init__(transformation, name)
 
+
 class Roty(Affine):
-    def __init__(self, angle, name : str = "", rad = True):
+    def __init__(self, angle, name: str = "", rad=True):
         if rad:
             radians = angle
         else:
             radians = np.deg2rad(angle)
 
         transformation = np.array([[np.cos(radians), 0, np.sin(radians), 0],
-                        [0, 1, 0, 0],
-                        [-1*np.sin(radians), 0, np.cos(radians), 0],
-                        [0, 0, 0, 1]])
+                                   [0, 1, 0, 0],
+                                   [-1 * np.sin(radians), 0, np.cos(radians), 0],
+                                   [0, 0, 0, 1]])
         super().__init__(transformation, name)
+
 
 class Rotz(Affine):
 
-    def __init__(self, angle, name : str = "", rad = True):
+    def __init__(self, angle, name: str = "", rad=True):
         if rad:
             radians = angle
         else:
             radians = np.deg2rad(angle)
 
-
         transformation = np.array([[np.cos(radians), -1 * np.sin(radians), 0, 0],
-                        [np.sin(radians), np.cos(radians), 0, 0],
-                        [0, 0, 1, 0],
-                        [0, 0, 0, 1]])
+                                   [np.sin(radians), np.cos(radians), 0, 0],
+                                   [0, 0, 1, 0],
+                                   [0, 0, 0, 1]])
 
         super().__init__(transformation, name)
