@@ -58,6 +58,11 @@ def find_extremes(rs, zs, psi_spl):
     x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
     def psi_xysq_func(x):
+        """
+        Return sum of squre of gradients of psi spline in R a Z direction.
+        
+        return: array
+        """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
@@ -136,6 +141,11 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     o_point = o_points[sortidx[0]]
 
     def psi_xysq_func(x):
+        """
+        Return sum of squre of gradients of psi spline in R a Z direction.
+        
+        return: array
+        """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
@@ -150,6 +160,11 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
         return (None, None), list([])
 
     def psi_xysq_func(x):
+        """
+        Return sum of squre of gradients of psi spline in R a Z direction.
+        
+        return: array
+        """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
