@@ -10,6 +10,7 @@ from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunction, Surface  # , FluxSurface
 
+
 class Equilibrium(object):
     """
     Equilibrium class ...
@@ -661,19 +662,18 @@ class Equilibrium(object):
 
         found = False
         cnt = 1
-        while not found and cnt<101:
-            psi_n = 1+1e-6*cnt
+        while not found and cnt < 101:
+            psi_n = 1 + 1e-6 * cnt
             cnt += 1
-            separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
+            separatrix = self._flux_surface(inlcfs=False, closed=False, psi_n=psi_n)
             selstrikepoints = []
             for j in separatrix:
                 intersection = np.array(self.first_wall._string.intersection(j._string))
-                if len(intersection)> 0:
+                if len(intersection) > 0:
                     self._separatrix = j.as_array(("R", "Z"))
                     found = True
 
         return self._separatrix
-
 
     @property
     def contact_point(self):
@@ -693,7 +693,8 @@ class Equilibrium(object):
         :return:
         """
         if not self._limiter_plasma:
-            if not hasattr(self, "_strike_point") or self._strike_point is None:#calculate strike_point if it does not exist
+            if not hasattr(self,
+                           "_strike_point") or self._strike_point is None:  # calculate strike_point if it does not exist
                 self._find_strikepoints()
             return self.coordinates(self._strike_point[:, 0], self._strike_point[:, 1])
             # strike_point = []
@@ -719,7 +720,7 @@ class Equilibrium(object):
 
         if len(intersection) > 0:
             for i in intersection:
-                    self._strike_point.append(np.array((i.x, i.y)))
+                self._strike_point.append(np.array((i.x, i.y)))
 
         return self._strike_point
 
@@ -736,15 +737,14 @@ class Equilibrium(object):
         else:
             first_wall = self._first_wall
 
-            #first wall should be a closed contour
+            # first wall should be a closed contour
             if not first_wall[0, 0] == first_wall[-1, 0] or not first_wall[0, 1] == first_wall[-1, 1]:
-                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
+                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis=0)
             return Surface(self, first_wall)
 
     @property
     def magnetic_axis(self):
         return self.coordinates(self._mg_axis[0], self._mg_axis[1])
-
 
     @property
     def I_plasma(self):
@@ -1036,7 +1036,7 @@ class Equilibrium(object):
                 for wpoint, psi_wall in zip(self.first_wall, psi_first_wall):
                     if np.linalg.norm(wpoint - self._mg_axis) < np.linalg.norm(
                             self._x_point - self._mg_axis) and np.abs(psi_wall - self._psi_axis) < np.abs(
-                        self._psi_xp - self._psi_axis):
+                            self._psi_xp - self._psi_axis):
                         self._limiter_plasma = True
             elif not self.in_first_wall(self._x_point[0], self._x_point[1]):
                 self._limiter_plasma = True
@@ -1123,12 +1123,24 @@ class Equilibrium(object):
             self._fluxfunc = FluxFunction(self)  # filters out methods from self
         return self._fluxfunc
 
+    def to_geqdsk(self, file, nx=64, ny=128):
+        """
+        Write a GEQDSK equilibrium file.
+
+        :param file: str, file name
+        :param nx: int
+        :param ny: int
+        """
+        import pleque.io.geqdsk as geqdsk
+
+        geqdsk.write(self, file, nx=nx, ny=ny)
+
+
     def __map_midplane2psi__(self):
         from scipy.interpolate import UnivariateSpline
 
         r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
         psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
-
 
         if self._psi_axis < self._psi_lcfs:
             # psi increasing:
