@@ -173,6 +173,51 @@ class Coordinates(object):
     #
     #     return
 
+    def resample(self, multiple=None):
+        """
+        Return new, resampled instance of `pleque.Coordinates`
+
+        :param multiple: int, use multiple to multiply number of points.
+        :return: pleque.Coordinates
+        """
+        # TODO: TEST ME (!!!!!!)
+
+        grid = self.grid
+        eq = self._eq
+        if self.dim == 1:
+            psi_n = self.psi_n
+            len_psi_n = len(psi_n)
+            psi_n = np.interp(np.arange(len_psi_n*multiple), multiple*np.arange(len_psi_n), psi_n)
+
+            return Coordinates(eq, psi_n, grid=grid)
+
+        elif self.dim == 2:
+            rs = self.R
+            zs = self.Z
+            len_rs = len(rs)
+            len_zs = len(zs)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+
+            return Coordinates(eq, rs, zs, grid=grid)
+
+        elif self.dim == 3:
+            rs = self.R
+            zs = self.Z
+            phi = self.phi
+
+            len_rs = len(rs)
+            len_zs = len(zs)
+            len_phi = len(phi)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+            phi = np.interp(np.arange(phi * multiple), multiple * np.arange(len_phi), phi)
+
+            return Coordinates(eq, rs, zs, phi, grid=grid)
+        else:
+            return Coordinates(eq)
+
+
     def plot(self, ax=None, **kwargs):
         """
 
