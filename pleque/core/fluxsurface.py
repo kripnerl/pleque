@@ -108,11 +108,6 @@ class Surface(Coordinates):
 
         return 2 * np.pi * np.sum(Rs * dl / dpsi)
 
-    @property
-    def dl(self):
-        if not hasattr(self, '_dl'):
-            self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
-        return self._dl
 
 class FluxSurface(Surface):
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):

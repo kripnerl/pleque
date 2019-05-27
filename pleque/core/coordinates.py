@@ -70,7 +70,7 @@ class Coordinates(object):
         self.dim = -1  # init only
         self.grid = grid
 
-        self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
+        self._evaluate_input(*coordinates, coord_type=coord_type, **coords)
 
     def __iter__(self):
         if self.grid:
@@ -217,7 +217,20 @@ class Coordinates(object):
             # todo: replace this by split method
             return np.array([self.x1, self.x2, self.x3]).T
 
-    def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
+    @property
+    def dl(self):
+        if not hasattr(self, '_dl'):
+            self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
+        return self._dl
+
+    @property
+    def cum_length(self):
+        if not hasattr(self, '_cum_length'):
+            self._cum_length = np.hstack((0, np.cumsum(self.dl)))
+        return self._cum_length
+
+
+    def _evaluate_input(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
 
         if len(coordinates) == 0:
