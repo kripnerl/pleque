@@ -1,8 +1,16 @@
+from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
+from pleque.io.readers import read_geqdsk
+from pleque import Coordinates
+from numpy import array
+import numpy as np
+
+
+# import matplotlib.pyplot as plt
+#
+# from pleque.utils.plotting import plot_extremes, _plot_debug
+
+
 def test_equilibria():
-    from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
-    from pleque.io.readers import read_geqdsk
-    from numpy import array
-    import numpy as np
 
     N_cases = get_test_cases_number()
     gfiles = get_test_equilibria_filenames()
@@ -26,19 +34,36 @@ def test_equilibria():
         print("Reading {}".format(gfiles[i]))
 
         eq = read_geqdsk(gfiles[i])
+
         # plt.figure()
         # eq._plot_overview()
-        #plot_extremes(eq)
+        # plot_extremes(eq)
+
+        # _plot_debug(eq)
 
         assert np.allclose(eq._mg_axis, o_points[i])
         if eq._x_point is not None:
             assert np.allclose(eq._x_point, x_points[i])
-        if eq._strike_point is not None:
-            assert np.allclose(eq._strike_point, st_points[i])
+        if eq._strike_points is not None and st_points[i] is not None:
+            assert np.allclose(eq._strike_points[0], st_points[i])
 
-        print('idx = {}'.format(i))
-        print('mg axis = {}'.format(eq._mg_axis))
-        print('x point = {}'.format(eq._x_point))
-        print('strike point = {}'.format(eq._strike_point))
+        # print('idx = {}'.format(i))
+        # print('mg axis = {}'.format(eq._mg_axis))
+        # print('x point = {}'.format(eq._x_point))
+        # print('strike point = {}'.format(eq._strike_point))
+    #
+    # plt.show()
 
-    #plt.show()
+
+def test_eq_properties(equilibrium):
+    print(equilibrium.first_wall.R[0])
+    assert np.isclose(equilibrium.magnetic_axis.psi_n, 0)
+    assert isinstance(equilibrium.strike_points, Coordinates)
+
+    if equilibrium._limiter_plasma:
+        assert isinstance(equilibrium.contact_point, Coordinates)
+    else:
+        assert equilibrium.contact_point == None
+        assert len(equilibrium.strike_points) > 0
+
+    print(equilibrium.contact_point)

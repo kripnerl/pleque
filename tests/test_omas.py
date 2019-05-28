@@ -22,7 +22,7 @@ ods = plomas.write(eq, grid_1d, grid_2d, gridtype=1, ods=ods)
 
 eq2 = plomas.read(ods)
 
-import matplotlib.pyplot as plt
-eq2.plot_overview()
+# import matplotlib.pyplot as plt
+# eq2.plot_overview()
 
-plt.show()
+# plt.show()

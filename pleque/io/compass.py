@@ -96,7 +96,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     # If there are some limiter data. Use them as and limiter.
     if 'r_lim' in ds and 'z_lim' in ds and ds.r_lim.size > 3 and first_wall is None:
-        first_wall = np.stack((ds.r_lim.data, ds.z_lim.data)).T
+        first_wall = np.stack((ds.r_lim.values, ds.z_lim.values)).T
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
