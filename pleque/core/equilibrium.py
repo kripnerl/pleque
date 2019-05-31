@@ -158,16 +158,22 @@ class Equilibrium(object):
         self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
         self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
 
+        # ---------------------------
+        # --- Generate psi spline ---
+        # ---------------------------
         if verbose:
             print('--- Generate 2D spline ---')
-        # generate spline:
+
         spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
                                   s=spline_smooth)
         self._spl_psi = spl
 
+        # -------------------------------
+        # ---- Find critical points -----
+        # -------------------------------
         if verbose:
-            print('--- Looking for extremes ---')
-        # find extremes:
+            print('--- Looking for critical points ---')
+
         rs = np.linspace(self.R_min, self.R_max, 300)
         zs = np.linspace(self.Z_min, self.Z_max, 400)
 
@@ -180,12 +186,18 @@ class Equilibrium(object):
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
         self._o_points = o_points[sortidx]
 
+        # ------------------------------------------
+        # Recognize x-point plasma vs limiter plasma
+        # ------------------------------------------
+        if verbose:
+            print('--- Recognizing equilibrium type ---')
+
         # todo: use these two x-points in the future
         (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
                                                           r_lim, z_lim, self._psi_lcfs, self._x_points)
 
         self._x_point = xp1
-        self._x_point2 = xp1
+        self._x_point2 = xp2
 
         if xp1 is None:
             self._psi_xp = None
@@ -207,7 +219,10 @@ class Equilibrium(object):
                 print(">> X-point plasma found.")
         self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
-        # Boundary:
+        # -----------------------
+        # --- Plasma boundary ---
+        # -----------------------
+
         rs = np.linspace(self.R_min, self.R_max, 700)
         zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
@@ -792,10 +807,11 @@ class Equilibrium(object):
         :return:
         """
         if self._strike_points is None:
-            return None
+            return None  # This should not happen
         else:
             return self.coordinates(self._strike_points[:, 0], self._strike_points[:, 1])
 
+    @property
     def limiter_point(self):
         """
         The point which "limits" the LCFS of plasma. I.e. contact point in case of limiter plasma and x-point
@@ -805,6 +821,7 @@ class Equilibrium(object):
         """
         return self.coordinates(self._limiter_point[0], self._limiter_point[1])
 
+    @property
     def x_point(self):
         """
         Return x-point closest in psi to mg-axis if presented on grid. None otherwise.
@@ -976,74 +993,29 @@ class Equilibrium(object):
 
         return res
 
-    def __find_extremes__(self):
-        from scipy.signal import argrelmin
-
-        rs = np.linspace(self.R_min, self.R_max, 300)
-        zs = np.linspace(self.Z_min, self.Z_max, 400)
-
-        x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
-
-        r_lim = (self.R_min, self.R_max)
-        z_lim = (self.Z_min, self.Z_max)
-
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
-        self._o_points = o_points[sortidx]
-
-        # todo: use these two x-points in the future
-        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
-                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
-
-        self._x_point = xp1
-        self._x_point2 = xp1
-
-        if xp1 is None:
-            self._psi_xp = None
-        else:
-            self._psi_xp = self._spl_psi(*xp1, grid=False)
-
-        self._x_points = x_points[sortidx]
-
-        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                       self._mg_axis, self._psi_axis, self._spl_psi)
-
-        self._limiter_plasma = limiter_plasma
-        self._limiter_point = limiter_point
-
-        if self._verbose:
-            if limiter_plasma:
-                print(">> Limiter plasma found.")
-            else:
-                print(">> X-point plasma found.")
-        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
-
-        # Boundary:
-        rs = np.linspace(self.R_min, self.R_max, 700)
-        zs = np.linspace(self.Z_min, self.Z_max, 1200)
-
-        if limiter_plasma:
-            self._strike_points = np.array([self._limiter_point[np.newaxis, :]])
-            self._contact_point = self._limiter_point
-        else:
-            self._contact_point = None
-            self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs, self._first_wall)
-
-        if self._verbose:
-            print("--- Looking for LCFS: ---")
-
-        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                              self._mg_axis, self._psi_axis)
-        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-5:
-            close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
-
-        self._lcfs = close_lcfs
-
     @property
     def fluxfuncs(self):
         if not hasattr(self, '_fluxfunc'):
             self._fluxfunc = FluxFunction(self)  # filters out methods from self
         return self._fluxfunc
+
+    @property
+    def is_limter_plasma(self):
+        """
+        Return true if the plasma is limited by point or some limiter point.
+
+        :return: bool
+        """
+        return self._limiter_plasma
+
+    @property
+    def is_xpoint_plasma(self):
+        """
+        Return true for x-point plasma.
+
+        :return: bool
+        """
+        return not self._limiter_plasma
 
     def __map_midplane2psi__(self):
         from scipy.interpolate import UnivariateSpline

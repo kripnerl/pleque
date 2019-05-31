@@ -235,7 +235,7 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     i = 0
 
-    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis)):
+    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, 50)):
         i += 1
     if i == len(idxs_wall):
         iwall_min = -1

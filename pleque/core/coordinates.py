@@ -90,6 +90,21 @@ class Coordinates(object):
         else:
             return len(self.x1)
 
+    def __eq__(self, other):
+        if isinstance(other, Coordinates):
+            if self.dim != other.dim or self.grid != other.grid or len(self) != len(other):
+                return False
+            if self.dim == 0:
+                return True
+            elif self.dim == 1:
+                return np.allclose(self.psi_n, other.psi_n)
+            elif self.dim == 2:
+                return np.allclose(self.R, other.R) and np.allclose(self.Z, other.Z)
+            elif self.dim == 3:
+                return np.allclose(self.R, other.R) and np.allclose(self.Z, other.Z) and np.allclose(self.phi,
+                                                                                                     other.phi)
+        return False
+
     # def sort(self, order):
     #     pass
 

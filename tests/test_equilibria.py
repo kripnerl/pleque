@@ -9,6 +9,22 @@ import numpy as np
 #
 # from pleque.utils.plotting import plot_extremes, _plot_debug
 
+def test_critical(equilibrium):
+    """
+    Test if all critical points are properly set. It differ for x-point and limter plasma.
+    """
+
+    # x-point plasma:
+    if equilibrium.is_xpoint_plasma:
+        assert equilibrium.x_point == equilibrium.limiter_point
+        assert np.isclose(equilibrium._psi_lcfs, equilibrium._psi_xp)
+        assert equilibrium.contact_point is None
+        if len(equilibrium.first_wall) > 4:
+            assert len(equilibrium.strike_points) > 1
+
+    else:
+        assert equilibrium.contact_point == equilibrium.strike_points
+        assert equilibrium.contact_point == equilibrium.limiter_point
 
 def test_equilibria():
 
@@ -25,7 +41,7 @@ def test_equilibria():
     x = []
     o = []
 
-    test_cases = range(N_cases)
+    test_cases = range(N_cases - 1)
     # test_cases = [3]
     for i in test_cases:
 
@@ -58,12 +74,17 @@ def test_equilibria():
 def test_eq_properties(equilibrium):
     print(equilibrium.first_wall.R[0])
     assert np.isclose(equilibrium.magnetic_axis.psi_n, 0)
-    assert isinstance(equilibrium.strike_points, Coordinates)
+    if len(equilibrium.first_wall) > 4:
+        assert isinstance(equilibrium.strike_points, Coordinates)
+    else:
+        assert equilibrium._strike_points is None
 
     if equilibrium._limiter_plasma:
         assert isinstance(equilibrium.contact_point, Coordinates)
+        assert isinstance(equilibrium.strike_points, Coordinates)
     else:
         assert equilibrium.contact_point == None
-        assert len(equilibrium.strike_points) > 0
+        if len(equilibrium.first_wall) > 4:
+            assert len(equilibrium.strike_points) > 1
 
     print(equilibrium.contact_point)
