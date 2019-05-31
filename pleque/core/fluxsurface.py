@@ -131,7 +131,7 @@ class FluxSurface(Surface):
         if not hasattr(self, '_q'):
             self._q = self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
                       * self.surface_average(1 / self.R ** 2)
-            # self._q = self._eq.BvacR * self.diff_volume/\
+            # self._q = self._eq.BvacR * self.diff_volume/\P
             #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
         return self._q
 

@@ -12,4 +12,5 @@ ods = omas.load_omas_iter_scenario(pulse=130501, run=1)
 
 eq = plomas.read(ods, time=500)
 eq.plot_overview()
+
 plt.show()

@@ -3,6 +3,7 @@ import numpy as np
 from pleque.core import Coordinates
 from pleque.tests.utils import load_testing_equilibrium
 
+# todo: rewrite test to not use this
 eq = load_testing_equilibrium()
 
 
