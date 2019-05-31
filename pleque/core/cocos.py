@@ -22,8 +22,8 @@ def cocos_coefs(cocos_idx):
     :return: dict with COCOS coefficients
     """
 
-    # cocos = dict.fromkeys(['exp_Bp', 'sigma_Bp', 'sigma_cyl', 'sigma_pol', 'sign_q', 'sign_pprime'])
-    cocos = dict()
+    cocos = dict.fromkeys(['exp_Bp', 'sigma_Bp', 'sigma_cyl', 'sigma_pol', 'sign_q', 'sign_pprime'])
+    # cocos = dict()
 
     # Check valid COCOS index:
     if cocos_idx not in range(1, 19) or cocos_idx in [9, 10]:

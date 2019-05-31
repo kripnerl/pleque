@@ -8,7 +8,8 @@ from pleque.utils.decorators import deprecated
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-from pleque.core import FluxFunction, Surface  # , FluxSurface
+from pleque.core import FluxFunctions, Surface  # , FluxSurface
+import pleque.core.cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 
@@ -78,6 +79,7 @@ class Equilibrium(object):
         # TODO TODO TODO
         self._init_method = init_method
         self._cocos = cocos
+        self._cocosdic = cc.cocos_coefs(cocos)
 
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
@@ -278,7 +280,7 @@ class Equilibrium(object):
 
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""
-        Return the value of :math:`|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
+        Return the value of :math:`\nabla \psi`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
         :param coordinates:
         :param R:
@@ -292,6 +294,7 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         ret = np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1) ** 2 +
                       self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1) ** 2)
+        ret *= np.sign(self._psi_lcfs - self._psi_axis)
         if coord.grid:
             ret = ret.T
         return ret
@@ -594,7 +597,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return -self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return - cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -609,7 +613,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -644,9 +649,23 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.F(coord) / coord.R
 
+    def abs_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Absolute value of q.
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        return np.abs(self.q(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords))
+
     def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_spl(coord.psi_n)
 
@@ -664,7 +683,7 @@ class Equilibrium(object):
         :return: Derivative of q with respect to psi.
         """
         if not hasattr(self, '_dq_dpsin_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
@@ -685,7 +704,7 @@ class Equilibrium(object):
         """
 
         if not hasattr(self, '_q_anideriv_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
@@ -703,7 +722,7 @@ class Equilibrium(object):
         Calculated as
 
         .. math::
-          \frac{f'|\nabla \psi |}{R \mu_0}
+          \frac{f' \nabla \psi }{R \mu_0}
 
         [Wesson: Tokamaks, p. 105]
 
@@ -739,7 +758,8 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
+        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
 
     @property
     def lcfs(self):
@@ -807,7 +827,7 @@ class Equilibrium(object):
         :return:
         """
         if self._strike_points is None:
-            return None  # This should not happen
+            return None  # This should not happen if the wall consists of enough points
         else:
             return self.coordinates(self._strike_points[:, 0], self._strike_points[:, 1])
 
@@ -996,8 +1016,17 @@ class Equilibrium(object):
     @property
     def fluxfuncs(self):
         if not hasattr(self, '_fluxfunc'):
-            self._fluxfunc = FluxFunction(self)  # filters out methods from self
+            self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
+
+    @property
+    def cocos(self):
+        """
+        Number of internal COCOS representation.
+
+        :return: int
+        """
+        return self._cocos
 
     @property
     def is_limter_plasma(self):
@@ -1036,13 +1065,15 @@ class Equilibrium(object):
         r_mid = r_mid[idxs]
         self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
 
-    def __init_q__(self):
+    def _init_q(self):
         psi_n = np.arange(0.01, 1, 0.005)
         qs = []
 
-        for pn in psi_n:
-            if self._verbose:
-                print("{:.2f}%\r".format(pn / np.max(psi_n) * 100))
+        if self._verbose:
+            print("--- Generating q-splines ---")
+        for i, pn in enumerate(psi_n):
+            if self._verbose and np.mod(i, 20) == 0:
+                print("{:.0f}%\r".format(pn / np.max(psi_n) * 100))
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)

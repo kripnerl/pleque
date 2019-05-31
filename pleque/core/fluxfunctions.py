@@ -7,7 +7,7 @@ import numpy as np
 #from pleque.utils.decorators import deprecated
 
 
-class FluxFunction:
+class FluxFunctions:
     # def interpolate(self, coords, data)
     # def interpolate(self, R, Z, data):
     #     pass

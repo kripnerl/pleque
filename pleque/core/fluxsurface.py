@@ -2,6 +2,7 @@ import numpy as np
 from shapely import geometry
 
 from pleque.core import Coordinates
+import pleque.core.cocos as cc
 from pleque.utils.decorators import *
 
 
@@ -125,14 +126,12 @@ class FluxSurface(Surface):
         """
 
         super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+        self._cocosdic = cc.cocos_coefs(equilibrium.cocos)
 
     @property
     def eval_q(self):
         if not hasattr(self, '_q'):
-            self._q = self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
-                      * self.surface_average(1 / self.R ** 2)
-            # self._q = self._eq.BvacR * self.diff_volume/\P
-            #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
+            self._q = self.get_eval_q('sum')
         return self._q
 
     def get_eval_q(self, method):
@@ -140,7 +139,8 @@ class FluxSurface(Surface):
         :param method: str, ['sum', 'trapz', 'simps']
         :return:
         """
-        return self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
+        return self._cocosdic['rho_Bp'] * self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) ** (
+                    1 - self.cocosdic['exp_Bp']) \
                * self.surface_average(1 / self.R ** 2, method=method)
 
     @property
@@ -218,7 +218,8 @@ class FluxSurface(Surface):
 
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        return 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
+        cc_coef = self._cocosdic['rho_Bp'] * 1 / (2 * np.pi) ** (self._cocosdic['exp_Bp'])
+        return cc_coef * 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')

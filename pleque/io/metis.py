@@ -2,7 +2,7 @@ import numpy as np
 import xarray as xr
 import h5py
 
-from pleque.core import Coordinates, FluxFunction
+from pleque.core import Coordinates, FluxFunctions
 
 
 def read(equilibrium, file, time):
@@ -52,7 +52,7 @@ def read(equilibrium, file, time):
 def to_omas(fluxfunc, coordinates, ods=None, time=np.array([0], ndmin=1)):
     """
 
-    :param fluxfunc: FluxFunction with metis profiles
+    :param fluxfunc: FluxFunctions with metis profiles
     :param coordinates: 1D coordinates specifying the independent variable (allows control over resolution).
     :param ods: omas ODS file
     :param time: ods data strucutr time to be used
