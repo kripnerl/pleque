@@ -3,7 +3,6 @@ import numpy as np
 
 from pleque import Equilibrium
 
-
 def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
     if ax is None:
         ax = plt.gca()
@@ -11,6 +10,65 @@ def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
     ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue', **kwargs)
     ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
 
+
+def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
+    if ax is None:
+        ax = plt.gca()
+
+    rs = np.linspace(eq.R_min, eq.R_max, 200)
+    zs = np.linspace(eq.Z_min, eq.Z_max, 250)
+
+    try:
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, 60)
+    except Exception:
+        print("WARNING: Something wrong with psi spline.")
+
+    try:
+        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k+-")
+    except Exception:
+        print("WARNING: No first wall?!")
+
+    try:
+        ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], "C0")
+    except Exception:
+        print("WARNING: LCFS in troubles?!")
+
+    try:
+        ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
+    except Exception:
+        print("WARNING: LCFS contour problem.")
+
+    try:
+        ax.plot(eq._o_points[:, 0], eq._o_points[:, 1], "C0o")
+    except Exception:
+        print("WARNING: O-points in trouble")
+
+    try:
+        ax.plot(*eq._mg_axis, "C1o")
+    except Exception:
+        print("WARNING: mg. axis in trouble")
+
+    try:
+        ax.plot(eq._x_points[:, 0], eq._x_points[:, 1], "C2x")
+    except Exception:
+        print("WARNING: X-points in trouble")
+
+    try:
+        ax.plot(eq._x_point[0], eq._x_point[1], "rx", lw=2)
+    except Exception:
+        print("WARNING: THE X-point in trouble")
+
+    try:
+        ax.plot(eq._limiter_point[0], eq._limiter_point[1], "g+", lw=3)
+    except:
+        print("WARNING: Limiter point is in trouble.")
+
+    try:
+        ax.plot(eq._strike_points[:, 0], eq._strike_points[:, 1], "C3+", lw=2)
+    except:
+        print("WARNING: Strike-points in trouble.")
+
+    ax.set_aspect("equal")
 
 def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
     if ax is None:
@@ -48,9 +106,9 @@ def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
     ax.contour(coords.R, coords.Z, psi_in, 20)
 
     # todo: psi should be 1-d (!) resolve this
-    ax.contour(coords.R, coords.Z, psi, sorted(np.squeeze(contour_out.psi)), colors='C0')
+    ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
 
-    #    contact = eq.strike_point
+    #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
 
     op = eq.magnetic_axis

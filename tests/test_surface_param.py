@@ -27,9 +27,9 @@ def test_q_profiles():
 
     q_1 = np.array(q_1)
 
-    plt.figure()
-    plt.plot(np.linspace(0, 1, eq_dict['nx']), eq_dict['q'], 'o--', label='gfile')
-    plt.plot(psi_ns, q_1, 'x-', label='calculated')
-    plt.legend()
-
-    plt.show()
+    # plt.figure()
+    # plt.plot(np.linspace(0, 1, eq_dict['nx']), eq_dict['q'], 'o--', label='gfile')
+    # plt.plot(psi_ns, q_1, 'x-', label='calculated')
+    # plt.legend()
+    #
+    # plt.show()
