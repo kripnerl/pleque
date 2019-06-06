@@ -89,8 +89,10 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
     bnd_z = np.roll(bnd_z, -ind)
     bnd_z = np.append(bnd_z, bnd_z[0])
 
-    data["rbdry"] = bnd_r
-    data["zbdry"] = bnd_z
+    # TODO Something more clever...
+    # XXX force downsample:
+    data["rbdry"] = bnd_r[::12]
+    data["zbdry"] = bnd_z[::12]
 
     # 1d profiles:
     data['F'] = equilibrium.F(grid_1d, grid=False)
