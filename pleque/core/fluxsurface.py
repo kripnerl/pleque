@@ -2,7 +2,7 @@ import numpy as np
 from shapely import geometry
 
 from pleque.core import Coordinates
-import pleque.core.cocos as cc
+from pleque.core import cocos as cc
 from pleque.utils.decorators import *
 
 

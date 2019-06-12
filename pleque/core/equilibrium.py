@@ -9,9 +9,10 @@ from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunctions, Surface  # , FluxSurface
-import pleque.core.cocos as cc
+from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
+
 
 class Equilibrium(object):
     """

@@ -18,7 +18,7 @@ def cocos_coefs(cocos_idx):
 
     For more details see Table 1 in O. Sauer, et al., Comp. Phys. Comm. 184 (2013), p. 296
 
-    :param cocos_id: int,
+    :param cocos_idx: int, COCOS index
     :return: dict with COCOS coefficients
     """
 
