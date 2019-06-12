@@ -232,7 +232,6 @@ class Coordinates(object):
         else:
             return Coordinates(eq)
 
-
     def plot(self, ax=None, **kwargs):
         """
 
@@ -259,6 +258,8 @@ class Coordinates(object):
         :param coord_type: not effected at the moment (TODO)
         :return:
         """
+        # TODO integrate with numpy _as_array 
+
         if self.dim == 0:
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
@@ -506,7 +507,7 @@ class Coordinates(object):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
             elif self._coord_type_input == ('r', 'theta'):
-                # todo: COCOS
+                # todo COCOS
                 r_mgax, z_mgax = self._eq._mg_axis
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
