@@ -22,6 +22,8 @@ def cocos_coefs(cocos_idx):
     :return: dict with COCOS coefficients
     """
 
+    # Note: sign_q and sign_pprime assumes Ip and B0 to be in direction of a toroidal coordinate.
+
     cocos = dict.fromkeys(['exp_Bp', 'sigma_Bp', 'sigma_cyl', 'sigma_pol', 'sign_q', 'sign_pprime'])
     # cocos = dict()
 

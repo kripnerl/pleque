@@ -115,6 +115,7 @@ class Surface(Coordinates):
             self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dl
 
+
 class FluxSurface(Surface):
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
@@ -136,12 +137,16 @@ class FluxSurface(Surface):
 
     def get_eval_q(self, method):
         """
+        Evaluete q usiong formula (5.35) from [Jardin, 2010: Computational methods in Plasma Physics]
+
         :param method: str, ['sum', 'trapz', 'simps']
         :return:
         """
-        return self._cocosdic['rho_Bp'] * self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) ** (
-                    1 - self.cocosdic['exp_Bp']) \
-               * self.surface_average(1 / self.R ** 2, method=method)
+        # psi_sign = self._eq._psi_sign
+        cc = self.cocos_dict['sigma_Bp'] * self.cocos_dict['sigma_pol']
+        return cc * self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / \
+               (2 * np.pi) ** (1 - self._cocosdic['exp_Bp']) * \
+               self.surface_average(1 / self.R ** 2, method=method)
 
     @property
     def straight_fieldline_theta(self):
@@ -210,15 +215,20 @@ class FluxSurface(Surface):
 
     def _eval_tor_current(self):
         """
-        to be tested (!)
+        Evalute magnitude of toroidal current through
 
         :return:
         """
         from scipy.constants import mu_0
 
+        # TODO: Precision of this method is quite poor. rel_err ~ 10e-5
+        # * Try improve precision by different integration techniques.
+        # * Increase fluxsurface position
+        # * Is it numeric error?
+
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        cc_coef = self._cocosdic['rho_Bp'] * 1 / (2 * np.pi) ** (self._cocosdic['exp_Bp'])
+        cc_coef = self._cocosdic['sigma_Bp'] / (2 * np.pi) ** self._cocosdic['exp_Bp']
         return cc_coef * 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
 
     @property

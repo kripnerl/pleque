@@ -706,8 +706,9 @@ class Equilibrium(object):
 
         if not hasattr(self, '_q_anideriv_spl'):
             self._init_q()
+        cc = self._cocosdic['sigma_Bp'] * self._cocosdic['sigma_pol'] / ((2 * np.pi) ** (1 - self._cocosdic['exp_Bp']))
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
+        return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -759,8 +760,8 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
+        cc_norm = - self._cocosdic["sigma_Bp"] * (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * (coord.R * self.pprime(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord))
 
     @property
     def lcfs(self):
