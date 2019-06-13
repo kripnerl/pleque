@@ -2,13 +2,14 @@ import numpy as np
 from shapely import geometry
 
 from pleque.core import Coordinates
+from pleque.core import Equilibrium
 from pleque.core import cocos as cc
 from pleque.utils.decorators import *
 
 
 class Surface(Coordinates):
 
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
         Calculates geometrical properties of a specified surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
@@ -117,7 +118,7 @@ class Surface(Coordinates):
 
 
 class FluxSurface(Surface):
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium: Equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
         Calculates geometrical properties of the flux surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
@@ -126,8 +127,8 @@ class FluxSurface(Surface):
         :param coords: Instance of coordinate class
         """
 
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
-        self._cocosdic = cc.cocos_coefs(equilibrium.cocos)
+        # FluxSurface can use only equilibrium default inner cocos (!).
+        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
 
     @property
     def eval_q(self):
@@ -145,7 +146,7 @@ class FluxSurface(Surface):
         # psi_sign = self._eq._psi_sign
         cc = self.cocos_dict['sigma_Bp'] * self.cocos_dict['sigma_pol']
         return cc * self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / \
-               (2 * np.pi) ** (1 - self._cocosdic['exp_Bp']) * \
+               (2 * np.pi) ** (1 - self.cocos_dict['exp_Bp']) * \
                self.surface_average(1 / self.R ** 2, method=method)
 
     @property
@@ -228,7 +229,7 @@ class FluxSurface(Surface):
 
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        cc_coef = self._cocosdic['sigma_Bp'] / (2 * np.pi) ** self._cocosdic['exp_Bp']
+        cc_coef = self.cocos_dict['sigma_Bp'] / (2 * np.pi) ** self.cocos_dict['exp_Bp']
         return cc_coef * 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
 
     @property
