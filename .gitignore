@@ -33,8 +33,6 @@ pleque/\.vscode/
 
 \.vscode/
 
-*.doctree
-
 docs/\.doctrees/
 
 docs/_sources/
