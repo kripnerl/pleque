@@ -245,8 +245,12 @@ class Equilibrium(object):
 
         close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
                                               self._mg_axis, self._psi_axis)
-        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-5:
+
+        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
             close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
+
+        if not limiter_plasma:
+            close_lcfs = surf.add_xpoint(xp1, close_lcfs, self._mg_axis)
 
         self._lcfs = close_lcfs
 

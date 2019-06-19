@@ -83,7 +83,7 @@ class Coordinates(object):
 
         self.cocos_dict = cocos_coefs(self.cocos)
 
-        self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
+        self._evaluate_input(*coordinates, coord_type=coord_type, **coords)
 
     def __iter__(self):
         if self.grid:
@@ -304,7 +304,6 @@ class Coordinates(object):
         if not hasattr(self, '_cum_length'):
             self._cum_length = np.hstack((0, np.cumsum(self.dl)))
         return self._cum_length
-
 
     def _evaluate_input(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
