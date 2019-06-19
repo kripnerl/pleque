@@ -28,7 +28,7 @@ from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
 
 import numpy as np
 import xarray as xa
-from pleque.core import Equilibrium
+import pleque
 
 def write(data, fh, label=None, shot=None, time=None):
     """
@@ -302,9 +302,9 @@ def data_as_ds(data):
     return eq_xarray
 
 
-def read_as_equilibrium(fh, cocos=1):
+def read_as_equilibrium(fh, cocos=3):
     """
-    Read the eqdsk file and open it as `Equilibrium`.
+    Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
     :param cocos:

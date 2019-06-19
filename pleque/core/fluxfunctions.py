@@ -49,7 +49,10 @@ class FluxFunctions:
             coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
             return interp(coord.psi_n)
 
-        setattr(type(self), name, new_func)
+        # setattr(type(self), name, new_func)
+        # add function to instance, not to Object (!)
+        # XXXX WRITE TEST HERE
+        setattr(self, name, new_func)
 
     def __getitem__(self, item):
         return getattr(self, item)
