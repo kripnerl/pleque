@@ -71,7 +71,7 @@ def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=No
     return ret
 
 
-def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
+def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func, direction = 1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -80,7 +80,8 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
     Parameters
     ----------
     BR_func, BZ_func, Bphi_func : 
-        
+    :param direction: if positive trace field line in/cons the direction of magnetic field.
+
     Returns
     -------
     dphi_func: function (phi: float, X: [float, float]) -> [float, float]
@@ -99,7 +100,7 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
         Bphi = Bphi_func(R, Z)
         dRdphi = R * BR / Bphi
         dZdphi = R * BZ / Bphi
-        return np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+        return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return dphi_func
 
@@ -138,7 +139,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
     return ds_func
 
 
-def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 180):
+def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 360):
     """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
     

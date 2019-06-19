@@ -197,3 +197,50 @@ def point_in_first_wall(equilibrium, points):
     isinside = points_inside_curve(points, equilibrium._first_wall)
 
     return isinside
+
+def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no = 0, direction = 1):
+    """
+    Tracing one of two separatrix branches (switched by `vect_no`) which are goes around magnetic axis
+    for `direction = 1` or in the opposite direction for `direction = -1`.
+
+    :param equilibrium:
+    :type equilibrium: pleque.Equilibrium
+    :param xp: x-point position
+    :param vect_no: (0, 1) Choose one of the eigen vectors of matrix of field line differential equation.
+    :param direction: (1, -1) whether the traced fieldl line goes around magnetic axis or in opposite direction.
+    :return:
+    """
+    from pleque.utils.tools import xp_vecs
+    import numpy.linalg as la
+
+    evecs, _ = xp_vecs(equilibrium._spl_psi, *xp)
+    mg_axis = equilibrium._mg_axis
+
+    evec = evecs[vect_no]
+
+    # if there is obtuse angle between line connecting x-point and mg axis and
+    # the separatrix branch multiply t
+    vec_dir = np.sign(evec.dot(mg_axis - xp))
+    if evec.dot(mg_axis - xp) < 0:
+        evec *= -1
+
+    evec /= la.norm(evec) / xp_shift
+
+    br = equilibrium.B_R(*(xp + evec))[0]
+    bz = equilibrium.B_Z(*(xp + evec))[0]
+
+    bpol = np.square(np.array([br, bz]))
+
+    direction = evec.dot(bpol)
+    trace = equilibrium.trace_field_line(*(xp + evec), direction=direction)
+    t = trace[0]
+    rs = t.R
+    zs = t.Z
+    rs = np.hstack((rs[-1], rs))
+    zs = np.hstack((zs[-1], zs))
+    fs = equilibrium._as_fluxsurface(rs, zs)
+    return fs
+
+
+
+
