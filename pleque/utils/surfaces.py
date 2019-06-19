@@ -65,7 +65,30 @@ def fluxsurf_error(psi_spl, points, psi_target):
     """
     psi = psi_spl(points[:, 0], points[:, 1], grid=False)
 
-    return 1 / len(psi) * np.sum((psi - psi_target) ** 2)
+    abs_err = 1 / len(psi) * np.sqrt(np.sum((psi - psi_target) ** 2))
+    rel_err = abs_err / psi_target
+
+    return rel_err
+
+
+def add_xpoint(xp, lcfs, center):
+    """
+    Add x-point to boundary and roll it to be x-point first.
+
+    :param xp: [x, y]
+    :param lcfs: array(n, 2)
+    :param center: [x, y]
+    :return: array(n+1, 2)
+    """
+
+    xp_theta = np.arctan2(xp[1] - center[1], xp[0] - center[0])
+    thetas = np.arctan2(lcfs[:, 1] - center[1], lcfs[:, 0] - center[0])
+    idx = np.argmin(np.mod(thetas - xp_theta, np.pi * 2))
+
+    new_lcfs = np.roll(lcfs[:, :], -idx, axis=0)
+    new_lcfs = np.insert(new_lcfs, 0, xp, axis=0)
+
+    return new_lcfs
 
 
 def points_inside_curve(points, contour):
