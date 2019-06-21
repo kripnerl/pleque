@@ -265,6 +265,31 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
+    def intersection(self, coords2, dim=None):
+        """
+        input: 2 sets of coordinates
+        crossection of two lines (2 sets of coordinates)
+
+        :param dim: reduce number of dimension in which is the intersection searched
+        :return:
+        """
+        from shapely import geometry
+
+        dim_ = np.max((dim, self.dim, coords2.dim))
+
+        if self.grid:
+            raise ValueError("grid ")
+        coor1 = geometry.linestring.LineString(self.as_array(dim=dim_))
+        coor2 = geometry.linestring.LineString(coords2.as_array(dim=dim_))
+        intersec = coor1.intersection(coor2)
+        if isinstance(intersec, geometry.MultiLineString):
+            return None
+        elif intersec is not None:
+            intersec = np.array(intersec).T
+            return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
+        else:
+            return None
+
     def as_array(self, dim=None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
