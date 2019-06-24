@@ -30,4 +30,15 @@ def test_gfile():
     compare_gfile(g_files[4])
 
 
+def test_from_to_gfile(equilibrium):
+    file_name = '/tmp/g{:d}.{:.0f} {}'.format(equilibrium.shot, equilibrium.time, equilibrium.time_unit)
+
+    equilibrium.to_geqdsk(file_name)
+
+    eq2 = read(file_name)
+    os.remove(file_name)
+
+    assert np.isclose(equilibrium.magnetic_axis.R, eq2.magnetic_axis.R, atol=1e-5, rtol=1e-4)
+    assert np.isclose(equilibrium.magnetic_axis.Z, eq2.magnetic_axis.Z, atol=1e-5, rtol=1e-4)
+
     pass

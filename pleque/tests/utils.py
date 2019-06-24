@@ -22,7 +22,7 @@ def get_test_cases_number():
     return len(equilibria_files)
 
 
-def load_testing_equilibrium(case=0):
+def load_testing_equilibrium(case=0, cocos=None):
     """
     Return testing equilibrium file
     :param case -
@@ -37,13 +37,19 @@ def load_testing_equilibrium(case=0):
     #    equil = read_fiesta_equilibrium(res_file)
     if 'eqdsk' in res_file or 'gfile' in res_file or '/g' in res_file:
         # load as NetCDF
-        equil = readers.read_geqdsk(res_file)
+        if cocos is None:
+            equil = readers.read_geqdsk(res_file)
+        else:
+            equil = readers.read_geqdsk(res_file, cocos=cocos)
     elif '.nc' in res_file:
         # load as gfile
         with xr.open_dataset(res_file) as ds:
             basedata = ds.load()
         fw = np.array([basedata.first_wall_R, basedata.first_wall_Z]).T
-        equil = pleque.Equilibrium(basedata=basedata, first_wall=fw)
+        if cocos is None:
+            equil = pleque.Equilibrium(basedata=basedata, first_wall=fw)
+        else:
+            equil = pleque.Equilibrium(basedata=basedata, first_wall=fw, cocos=cocos)
     else:
         # note recognized:
         return None
