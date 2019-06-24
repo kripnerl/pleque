@@ -2,6 +2,7 @@
 #import itertools
 
 import numpy as np
+import types
 #import xarray
 
 #from pleque.utils.decorators import deprecated
@@ -52,7 +53,8 @@ class FluxFunctions:
         # setattr(type(self), name, new_func)
         # add function to instance, not to Object (!)
         # XXXX WRITE TEST HERE
-        setattr(self, name, new_func)
+        # setattr(self, name, new_func)
+        setattr(self, name, types.MethodType(new_func, self))
 
     def __getitem__(self, item):
         return getattr(self, item)

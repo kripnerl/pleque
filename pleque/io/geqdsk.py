@@ -108,5 +108,10 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
     data['rlim'] = equilibrium.first_wall.R
     data['zlim'] = equilibrium.first_wall.Z
 
+    if equilibrium.time_unit == 's':
+        time = int(equilibrium.time * 1000)
+    else:
+        time = int(equilibrium.time)
+
     with open(file, 'w') as f:
-        write_geqdsk(data, f, label, equilibrium.shot, equilibrium.time)
+        write_geqdsk(data, f, label, equilibrium.shot, time)

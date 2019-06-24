@@ -314,5 +314,5 @@ def read_as_equilibrium(fh, cocos=3):
     data = read(fh)
     ds = data_as_ds(data)  # as dataset
     fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
-    eq = Equilibrium(ds, fw, cocos=cocos)
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
     return eq

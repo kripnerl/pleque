@@ -133,7 +133,8 @@ class Equilibrium(object):
             self.time_unit = "ms"
 
         if 'shot' in basedata:
-            self.shot = basedata['shot']
+            # Shot number will be strictly integer
+            self.shot = int(basedata['shot'])
         else:
             self.shot = 0
 
@@ -220,6 +221,7 @@ class Equilibrium(object):
                 print(">> Limiter plasma found.")
             else:
                 print(">> X-point plasma found.")
+
         self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
         # -----------------------
@@ -602,8 +604,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return - cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -618,8 +620,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        cc_norm = self._cocosdic["rho_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -1021,13 +1023,10 @@ class Equilibrium(object):
         :param Z:
         :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
+        :param stopper: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
+                       automatically chosen based on psi_n coordinate.
         :param coords:
         :return:
-
-        **Note:**
-
-
-        - (TODO) Even for the 3d coordinates toroidal angle is assumed to be zero.
 
         """
         import pleque.utils.field_line_tracers as flt
@@ -1039,7 +1038,9 @@ class Equilibrium(object):
 
         coords_rz = coords.as_array(dim=2)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, direction)
+        sigma_B0 = np.sign(self.F0)
+
+        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, 1)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
         for i in np.arange(len(coords)):
@@ -1055,10 +1056,31 @@ class Equilibrium(object):
 
             if coords.psi_n[i] <= 1:
                 # todo: determine the direction (now -1) !!
-                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
+                if self._verbose:
+                    print('>>> poloidal stopper is used')
+                # XXX Direction (TODO)
+                # XXX add these values to cocos dict!
+                # sign(dtheta/dphi) = sigma_pol * sign(I * B)
+                # dphidtheta = self._cocosdic['sigma_pol'] * np.sign(self.I_plasma) * np.sign(self.F0)
+                # print('dir: {}\nsigma_pol: {}\nsigma_tor: {}\nIp: {}\nF0: {}'.format(
+                #     direction, self._cocosdic['sigma_pol'], self._cocosdic['sigma_cyl'], self.I_plasma, self.F0
+                # ))
+                # print('------------------')
+
+                dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
+                print('direction: {}'.format(direction))
+                print('dphidtheta: {}'.format(dphidtheta))
+
+                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                             dphidtheta * direction)
             else:
+                if self._verbose:
+                    print('>>> z-lim stopper is used')
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
-            sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
+
+            sol = solve_ivp(dphifunc,
+                            (phi0, direction * sigma_B0 * (2 * np.pi * 8 + phi0)),
+                            y0,
                             events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             )

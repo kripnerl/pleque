@@ -5,6 +5,7 @@ from pleque.core import Equilibrium
 from pleque.io.readers import read_geqdsk
 from pleque.io._geqdsk import read as read_geqdsk_as_dict, data_as_ds
 
+import pytest
 
 def test_cocos_dict():
     for i in range(1, 9):
@@ -75,6 +76,51 @@ def test_cocos_dict():
                 assert cocos['sigma_pol'] == +1
                 assert cocos['sign_q'] == +1
                 assert cocos['sign_pprime'] == +1
+
+
+@pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4]])  # , [5], [6], [7], [8]])
+def test_directions(geqdsk_file, cocos):
+    print('g-file: {}'.format(geqdsk_file))
+    print('COCOS: {}'.format(cocos))
+
+    direction = -1
+
+    eq = read_geqdsk(geqdsk_file, cocos=cocos)
+    mgax = eq.magnetic_axis
+    maxx = eq.Z_max
+
+    R0 = mgax.R + 0.5 * (maxx - mgax.R)
+    Z0 = mgax.Z - 0.06
+    p0 = eq.coordinates(R=R0, Z=Z0, phi=0)
+
+    tr = eq.trace_field_line(R=R0, Z=Z0, direction=direction)[0]
+
+    br = eq.B_R(R=R0, Z=Z0)
+    bz = eq.B_Z(R=R0, Z=Z0)
+    btor = eq.B_tor(R=R0, Z=Z0)
+    coef = 0.01
+
+    p1 = eq.coordinates(R=R0 + coef * br, Z=Z0 + coef * bz, phi=coef * btor)
+
+    dphi = tr.phi[1] - tr.phi[0]
+    dtheta = tr.theta[1] - tr.theta[0]
+
+    assert np.sign(dphi) == np.sign(p1.phi - p0.phi) * direction
+    assert np.sign(dtheta) == np.sign(p1.theta - p0.theta) * direction
+
+    assert np.isclose(tr.theta[0], tr.theta[-1], atol=0.1, rtol=0.1)
+
+    dphidtheta = np.sign(dphi * dtheta)
+    my_dir = eq._cocosdic['sigma_pol'] * np.sign(eq.I_plasma) * np.sign(eq.F0)
+    # my_dir = eq._psi_sign * eq._cocosdic['sigma_pol'] * eq._cocosdic['sigma_cyl']* eq._cocosdic['sigma_pol'] * np.sign(eq.I_plasma) * np.sign(eq.F0)
+
+    print('sigma_cyl: {}\nsigma_pol: {}\nIp: {}\nF0: {}'.format(
+        eq._cocosdic['sigma_cyl'], eq._cocosdic['sigma_pol'], eq.I_plasma, eq.F0
+    ))
+    print('sign psi: {}'.format(eq._psi_sign))
+    print('dphi = {}\ndtheta = {}'.format(dphi, dtheta))
+
+    assert my_dir == dphidtheta
 
 
 def test_coordinates_transforms(geqdsk_file):
