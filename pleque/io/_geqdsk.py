@@ -28,7 +28,7 @@ from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
 
 import numpy as np
 import xarray as xa
-from pleque.core import Equilibrium
+import pleque
 
 def write(data, fh, label=None, shot=None, time=None):
     """

@@ -955,7 +955,8 @@ class Equilibrium(object):
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
-    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None,
+                         direction=1, **coords):
         """
         Return traced field lines starting from the given set of at least 2d coordinates.
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
@@ -965,6 +966,7 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param direction: (-1, 1) - trace opposite/in the direction of mg. field lines.
         :param coords:
         :return:
 
@@ -980,7 +982,7 @@ class Equilibrium(object):
 
         sigma_B0 = np.sign(self.F0)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, 1)
+        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
         for i in np.arange(len(coords)):
