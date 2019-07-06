@@ -41,17 +41,19 @@ def intersection(line1, line2):
     :param line2: array(N, 2)
     :return: array(N_intersect, 2) or None
     """
+    # TODO: move this method to some utilities (!)
+
     l1 = geo.LineString(line1)
     l2 = geo.LineString(line2)
 
-    intersection = l1.intersection(l2)
+    intersec = l1.intersection(l2)
 
-    if hasattr(intersection, "array_interface"):
-        intersection = np.atleast_2d(intersection)
+    if hasattr(intersec, "array_interface"):
+        intersec = np.atleast_2d(intersec)
     else:
-        intersection = None
+        intersec = None
 
-    return intersection
+    return intersec
 
 
 def fluxsurf_error(psi_spl, points, psi_target):
