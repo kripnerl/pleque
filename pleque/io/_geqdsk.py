@@ -30,6 +30,7 @@ import numpy as np
 import xarray as xa
 import pleque
 
+
 def write(data, fh, label=None, shot=None, time=None):
     """
     Write a GEQDSK equilibrium file, given a dictionary of data

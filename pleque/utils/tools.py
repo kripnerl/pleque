@@ -1,6 +1,7 @@
 from scipy.interpolate import BivariateSpline
 import numpy as np
 
+
 def arglis(seq):
     """Returns arguments of the Longest Increasing Subsequence in the Given List/Array"""
     n = len(seq)
@@ -32,9 +33,11 @@ def arglis(seq):
         k = p[k]
     return s[::-1]
 
+
 def lis(seq):
     """Returns the Longest Increasing Subsequence in the Given List/Array"""
     return [seq[i] for i in arglis(seq)]
+
 
 def hessian(spln : BivariateSpline, R, Z, grid=False):
     """
@@ -53,6 +56,7 @@ def hessian(spln : BivariateSpline, R, Z, grid=False):
                      [spl_rz, spl_zz]])
 
     return hess
+
 
 def xp_vecs(spln : BivariateSpline, R, Z):
     """
