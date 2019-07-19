@@ -70,7 +70,7 @@ def fluxsurf_error(psi_spl, points, psi_target):
     abs_err = 1 / len(psi) * np.sqrt(np.sum((psi - psi_target) ** 2))
     rel_err = abs_err / psi_target
 
-    return rel_err
+    return np.abs(rel_err)
 
 
 def add_xpoint(xp, lcfs, center):
@@ -85,9 +85,13 @@ def add_xpoint(xp, lcfs, center):
 
     xp_theta = np.arctan2(xp[1] - center[1], xp[0] - center[0])
     thetas = np.arctan2(lcfs[:, 1] - center[1], lcfs[:, 0] - center[0])
+    if thetas[2] - thetas[1] < 0:
+        thetas = -thetas
+        xp_theta = -xp_theta
+
     idx = np.argmin(np.mod(thetas - xp_theta, np.pi * 2))
 
-    new_lcfs = np.roll(lcfs[:, :], -idx, axis=0)
+    new_lcfs = np.roll(lcfs[:-1, :], -idx, axis=0)
     new_lcfs = np.insert(new_lcfs, 0, xp, axis=0)
 
     return new_lcfs
@@ -200,7 +204,8 @@ def point_in_first_wall(equilibrium, points):
 
     return isinside
 
-def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no = 0, direction = 1):
+
+def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
     """
     Tracing one of two separatrix branches (switched by `vect_no`) which are goes around magnetic axis
     for `direction = 1` or in the opposite direction for `direction = -1`.
@@ -209,7 +214,6 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no = 0, direction
     :type equilibrium: pleque.Equilibrium
     :param xp: x-point position
     :param vect_no: (0, 1) Choose one of the eigen vectors of matrix of field line differential equation.
-    :param direction: (1, -1) whether the traced fieldl line goes around magnetic axis or in opposite direction.
     :return:
     """
     from pleque.utils.tools import xp_vecs
@@ -231,18 +235,27 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no = 0, direction
     br = equilibrium.B_R(*(xp + evec))[0]
     bz = equilibrium.B_Z(*(xp + evec))[0]
 
-    bpol = np.square(np.array([br, bz]))
+    # bpol = np.square(np.array([br, bz]))
+    bpol = np.asarray([br, bz])
 
-    direction = evec.dot(bpol)
-    trace = equilibrium.trace_field_line(*(xp + evec), direction=direction)
+    direction = np.sign(evec.dot(bpol))
+
+    if xp_shift > 0:
+        stopper = 'poloidal'
+    elif xp_shift < 0:
+        stopper = 'z-stopper'
+    else:
+        raise ValueError('xp_shift should be != 0')
+
+    coord = equilibrium.coordinates(R=xp[0] + evec[0], Z=xp[1] + evec[1], phi=phi_0)
+
+    trace = equilibrium.trace_field_line(coord, stopper_method=stopper, in_first_wall=True, direction=direction)
     t = trace[0]
     rs = t.R
     zs = t.Z
-    rs = np.hstack((rs[-1], rs))
-    zs = np.hstack((zs[-1], zs))
-    fs = equilibrium._as_fluxsurface(rs, zs)
-    return fs
 
-
-
-
+    return t
+    # rs = np.hstack((rs[-1], rs))
+    # zs = np.hstack((zs[-1], zs))
+    # fs = equilibrium._as_fluxsurface(rs, zs)
+    # return fs
