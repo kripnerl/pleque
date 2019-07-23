@@ -1075,7 +1075,7 @@ class Equilibrium(object):
     @property
     def fluxfuncs(self):
         if not hasattr(self, '_fluxfunc'):
-            self._fluxfunc = FluxFunction(self)  # filters out methods from self
+            self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
 
     def __map_midplane2psi__(self):
