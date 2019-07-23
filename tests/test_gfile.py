@@ -29,5 +29,3 @@ def test_gfile():
 
     compare_gfile(g_files[4])
 
-
-    pass

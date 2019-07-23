@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pleque import Equilibrium
+import pleque
 
 def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
     if ax is None:
@@ -11,7 +11,7 @@ def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
     ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
 
 
-def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
+def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None):
     if ax is None:
         ax = plt.gca()
 
@@ -70,14 +70,15 @@ def _plot_debug(eq: Equilibrium, ax: plt.Axes = None):
 
     ax.set_aspect("equal")
 
-def plot_extremes(eq: Equilibrium, ax: plt.Axes = None, **kwargs):
+
+def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
     if ax is None:
         ax = plt.gca()
 
     _plot_extremes(eq._o_points, eq._x_points, ax=ax, **kwargs)
 
 
-def plot_equilibrium(eq: Equilibrium, ax: plt.Axes = None):
+def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None):
     if ax is None:
         ax = plt.gca()
 

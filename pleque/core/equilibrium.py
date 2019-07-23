@@ -8,7 +8,7 @@ from pleque.utils.decorators import deprecated
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
-from pleque.core import FluxFunction, Surface  # , FluxSurface
+from pleque.core import FluxFunctions, Surface  # , FluxSurface
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 
@@ -130,7 +130,8 @@ class Equilibrium(object):
             self.time_unit = "ms"
 
         if 'shot' in basedata:
-            self.shot = basedata['shot']
+            # Shot number will be strictly integer
+            self.shot = int(basedata['shot'])
         else:
             self.shot = 0
 
@@ -158,16 +159,22 @@ class Equilibrium(object):
         self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
         self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
 
+        # ---------------------------
+        # --- Generate psi spline ---
+        # ---------------------------
         if verbose:
             print('--- Generate 2D spline ---')
-        # generate spline:
+
         spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
                                   s=spline_smooth)
         self._spl_psi = spl
 
+        # -------------------------------
+        # ---- Find critical points -----
+        # -------------------------------
         if verbose:
-            print('--- Looking for extremes ---')
-        # find extremes:
+            print('--- Looking for critical points ---')
+
         rs = np.linspace(self.R_min, self.R_max, 300)
         zs = np.linspace(self.Z_min, self.Z_max, 400)
 
@@ -180,12 +187,18 @@ class Equilibrium(object):
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
         self._o_points = o_points[sortidx]
 
+        # ------------------------------------------
+        # Recognize x-point plasma vs limiter plasma
+        # ------------------------------------------
+        if verbose:
+            print('--- Recognizing equilibrium type ---')
+
         # todo: use these two x-points in the future
         (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
                                                           r_lim, z_lim, self._psi_lcfs, self._x_points)
 
         self._x_point = xp1
-        self._x_point2 = xp1
+        self._x_point2 = xp2
 
         if xp1 is None:
             self._psi_xp = None
@@ -207,7 +220,10 @@ class Equilibrium(object):
                 print(">> X-point plasma found.")
         self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
-        # Boundary:
+        # -----------------------
+        # --- Plasma boundary ---
+        # -----------------------
+
         rs = np.linspace(self.R_min, self.R_max, 700)
         zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
@@ -263,7 +279,7 @@ class Equilibrium(object):
 
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""
-        Return the value of :math:`|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
+        Return the value of :math:`\nabla \psi`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
         :param coordinates:
         :param R:
@@ -277,6 +293,7 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         ret = np.sqrt(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1) ** 2 +
                       self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1) ** 2)
+        ret *= np.sign(self._psi_lcfs - self._psi_axis)
         if coord.grid:
             ret = ret.T
         return ret
@@ -629,9 +646,23 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.F(coord) / coord.R
 
+    def abs_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Absolute value of q.
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+        return np.abs(self.q(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords))
+
     def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_spl(coord.psi_n)
 
@@ -649,7 +680,7 @@ class Equilibrium(object):
         :return: Derivative of q with respect to psi.
         """
         if not hasattr(self, '_dq_dpsin_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
@@ -670,7 +701,7 @@ class Equilibrium(object):
         """
 
         if not hasattr(self, '_q_anideriv_spl'):
-            self.__init_q__()
+            self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
@@ -688,7 +719,7 @@ class Equilibrium(object):
         Calculated as
 
         .. math::
-          \frac{f'|\nabla \psi |}{R \mu_0}
+          \frac{f' \nabla \psi }{R \mu_0}
 
         [Wesson: Tokamaks, p. 105]
 
@@ -792,10 +823,11 @@ class Equilibrium(object):
         :return:
         """
         if self._strike_points is None:
-            return None
+            return None  # This should not happen if the wall consists of enough points
         else:
             return self.coordinates(self._strike_points[:, 0], self._strike_points[:, 1])
 
+    @property
     def limiter_point(self):
         """
         The point which "limits" the LCFS of plasma. I.e. contact point in case of limiter plasma and x-point
@@ -805,6 +837,7 @@ class Equilibrium(object):
         """
         return self.coordinates(self._limiter_point[0], self._limiter_point[1])
 
+    @property
     def x_point(self):
         """
         Return x-point closest in psi to mg-axis if presented on grid. None otherwise.
@@ -1064,13 +1097,16 @@ class Equilibrium(object):
         r_mid = r_mid[idxs]
         self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
 
-    def __init_q__(self):
+    def _init_q(self):
         psi_n = np.arange(0.01, 1, 0.005)
         qs = []
 
         for pn in psi_n:
-            if self._verbose:
-                print("{:.2f}%\r".format(pn / np.max(psi_n) * 100))
+        if self._verbose:
+            print("--- Generating q-splines ---")
+        for i, pn in enumerate(psi_n):
+            if self._verbose and np.mod(i, 20) == 0:
+                print("{:.0f}%\r".format(pn / np.max(psi_n) * 100))
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)

@@ -114,6 +114,7 @@ class Surface(Coordinates):
             self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dl
 
+
 class FluxSurface(Surface):
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
         """
@@ -210,7 +211,7 @@ class FluxSurface(Surface):
 
     def _eval_tor_current(self):
         """
-        to be tested (!)
+        Evalute magnitude of toroidal current through
 
         :return:
         """
