@@ -15,9 +15,9 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     if ax is None:
         ax = plt.gca()
 
-    rs = np.linspace(eq.R_min, eq.R_max, 200)
-    zs = np.linspace(eq.Z_min, eq.Z_max, 250)
-
+    rs = np.linspace(eq.R_min, eq.R_max, 400)
+    zs = np.linspace(eq.Z_min, eq.Z_max, 600)
+    
     try:
         if levels is None:
             levels = 60
