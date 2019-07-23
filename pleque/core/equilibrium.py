@@ -1101,7 +1101,6 @@ class Equilibrium(object):
         psi_n = np.arange(0.01, 1, 0.005)
         qs = []
 
-        for pn in psi_n:
         if self._verbose:
             print("--- Generating q-splines ---")
         for i, pn in enumerate(psi_n):
