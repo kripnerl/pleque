@@ -190,6 +190,7 @@ class Equilibrium(object):
         self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
         self._o_points = o_points[sortidx]
+        self._o_points[0] = self._mg_axis
 
         # ------------------------------------------
         # Recognize x-point plasma vs limiter plasma
@@ -210,6 +211,10 @@ class Equilibrium(object):
             self._psi_xp = self._spl_psi(*xp1, grid=False)
 
         self._x_points = x_points[sortidx]
+        if xp1 is not None:
+            self._x_points[0] = xp1
+        if xp2 is not None:
+            self._x_points[1] = xp2
 
         limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
                                                                        self._mg_axis, self._psi_axis, self._spl_psi)
@@ -1061,9 +1066,11 @@ class Equilibrium(object):
             else:
                 phi0 = coords.phi[i]
 
-            xp = self._x_point
-            xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
-            atol = np.minimum(xp_dist * 1e-3, 1e-6)
+            atol = 1e-6
+            if self.is_xpoint_plasma:
+                xp = self._x_point
+                xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
+                atol = np.minimum(xp_dist * 1e-3, atol)
 
             if self._verbose:
                 print('>>> tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
