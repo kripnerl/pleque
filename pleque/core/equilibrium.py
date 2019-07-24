@@ -12,6 +12,7 @@ from pleque.core import FluxFunctions, Surface  # , FluxSurface
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 
+
 class Equilibrium(object):
     """
     Equilibrium class ...
@@ -794,12 +795,12 @@ class Equilibrium(object):
         while not found and cnt < 101:
             psi_n = 1+1e-6*cnt
             cnt += 1
-            separatrix = self._flux_surface(inlcfs=False,closed = False, psi_n = psi_n)
+            separatrix = self._flux_surface(inlcfs=False, closed=False, psi_n=psi_n)
             selstrikepoints = []
             for j in separatrix:
                 # todo: this is not separatrix... for example in limiter plasma
                 intersection = np.array(self.first_wall._string.intersection(j._string))
-                if len(intersection)> 0:
+                if len(intersection) > 0:
                     self._separatrix = j.as_array(("R", "Z"))
                     found = True
 
@@ -871,7 +872,6 @@ class Equilibrium(object):
     @property
     def magnetic_axis(self):
         return self.coordinates(self._mg_axis[0], self._mg_axis[1])
-
 
     @property
     def I_plasma(self):
@@ -1078,12 +1078,24 @@ class Equilibrium(object):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
 
+    def to_geqdsk(self, file, nx=64, ny=128):
+        """
+        Write a GEQDSK equilibrium file.
+
+        :param file: str, file name
+        :param nx: int
+        :param ny: int
+        """
+        import pleque.io.geqdsk as geqdsk
+
+        geqdsk.write(self, file, nx=nx, ny=ny)
+
+
     def __map_midplane2psi__(self):
         from scipy.interpolate import UnivariateSpline
 
         r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
         psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
-
 
         if self._psi_axis < self._psi_lcfs:
             # psi increasing:

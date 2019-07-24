@@ -302,9 +302,9 @@ def data_as_ds(data):
     return eq_xarray
 
 
-def read_as_equilibrium(fh, cocos=1):
+def read_as_equilibrium(fh, cocos=3):
     """
-    Read the eqdsk file and open it as `Equilibrium`.
+    Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
     :param cocos:
@@ -313,6 +313,6 @@ def read_as_equilibrium(fh, cocos=1):
 
     data = read(fh)
     ds = data_as_ds(data)  # as dataset
-    fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
-    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
+    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T  # first wall
+    eq = pleque.Equilibrium(ds, fw)
     return eq
