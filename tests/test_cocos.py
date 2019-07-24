@@ -1,11 +1,11 @@
 import numpy as np
+import pytest
 
 import pleque.core.cocos as coc
 from pleque.core import Equilibrium
-from pleque.io.readers import read_geqdsk
 from pleque.io._geqdsk import read as read_geqdsk_as_dict, data_as_ds
+from pleque.io.readers import read_geqdsk
 
-import pytest
 
 def test_cocos_dict():
     for i in range(1, 9):
@@ -261,45 +261,44 @@ def test_coordinates_transforms(geqdsk_file, cocos):
 
 @pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4], [5], [6], [7], [8]])
 def test_cocos_consistency(geqdsk_file, cocos):
-    for cocos in range(1, 9):
-        print('COCOS: {}'.format(cocos))
+    print('COCOS: {}'.format(cocos))
 
-        equilibrium = read_geqdsk(geqdsk_file, cocos=cocos)
-        with open(geqdsk_file, 'r') as f:
-            eq_dict = read_geqdsk_as_dict(f)
-            eq_xr = data_as_ds(eq_dict)
-            eq_xr.psi.values = eq_xr.psi * (2 * np.pi)
-            fw = np.stack((eq_xr['r_lim'].values, eq_xr['z_lim'].values)).T  # first wall
-            equilibrium2 = Equilibrium(eq_xr, fw, cocos=cocos + 10)
+    equilibrium = read_geqdsk(geqdsk_file, cocos=cocos)
+    with open(geqdsk_file, 'r') as f:
+        eq_dict = read_geqdsk_as_dict(f)
+        eq_xr = data_as_ds(eq_dict)
+        eq_xr.psi.values = eq_xr.psi * (2 * np.pi)
+        fw = np.stack((eq_xr['r_lim'].values, eq_xr['z_lim'].values)).T  # first wall
+        equilibrium2 = Equilibrium(eq_xr, fw, cocos=cocos + 10)
 
-        sigma_Ip = np.sign(equilibrium.I_plasma)
-        sigma_B0 = np.sign(equilibrium.F0)
-        cocos_dict = equilibrium._cocosdic
+    sigma_Ip = np.sign(equilibrium.I_plasma)
+    sigma_B0 = np.sign(equilibrium.F0)
+    cocos_dict = equilibrium._cocosdic
 
-        Rax = equilibrium.magnetic_axis.R[0]
-        Zax = equilibrium.magnetic_axis.Z[0]
+    Rax = equilibrium.magnetic_axis.R[0]
+    Zax = equilibrium.magnetic_axis.Z[0]
 
-        assert sigma_B0 * sigma_Ip == np.sign(equilibrium.q(psi_n=0.5)) * cocos_dict['sigma_pol']
-        assert sigma_Ip == cocos_dict['sigma_Bp'] * equilibrium._psi_sign
+    assert sigma_B0 * sigma_Ip == np.sign(equilibrium.q(psi_n=0.5)) * cocos_dict['sigma_pol']
+    assert sigma_Ip == cocos_dict['sigma_Bp'] * equilibrium._psi_sign
 
-        assert np.sign(equilibrium.F(R=Rax, Z=Zax)) == sigma_B0
-        assert np.sign(equilibrium.B_tor(R=Rax, Z=Zax)) == sigma_B0
+    assert np.sign(equilibrium.F(R=Rax, Z=Zax)) == sigma_B0
+    assert np.sign(equilibrium.B_tor(R=Rax, Z=Zax)) == sigma_B0
 
-        assert np.sign(equilibrium.j_tor(r=0.1, theta=0)) == sigma_Ip
-        assert np.sign(equilibrium.psi(psi_n=1) - equilibrium.psi(psi_n=0)) == sigma_Ip * cocos_dict['sigma_Bp']
-        assert np.sign(equilibrium.tor_flux(r=0.1, theta=0)) == sigma_B0
+    assert np.sign(equilibrium.j_tor(r=0.1, theta=0)) == sigma_Ip
+    assert np.sign(equilibrium.psi(psi_n=1) - equilibrium.psi(psi_n=0)) == sigma_Ip * cocos_dict['sigma_Bp']
+    assert np.sign(equilibrium.tor_flux(r=0.1, theta=0)) == sigma_B0
 
-        assert np.sign(equilibrium.pprime(psi_n=0.5)) == - sigma_Ip * cocos_dict['sigma_Bp']
-        assert np.sign(equilibrium.q(psi_n=0.5)) == sigma_Ip * sigma_B0 * cocos_dict['sigma_pol']
+    assert np.sign(equilibrium.pprime(psi_n=0.5)) == - sigma_Ip * cocos_dict['sigma_Bp']
+    assert np.sign(equilibrium.q(psi_n=0.5)) == sigma_Ip * sigma_B0 * cocos_dict['sigma_pol']
 
-        assert np.isclose(
-            equilibrium.j_tor(R=equilibrium.magnetic_axis.R + 0.5, Z=equilibrium.magnetic_axis.Z),
-            equilibrium2.j_tor(R=equilibrium2.magnetic_axis.R + 0.5, Z=equilibrium2.magnetic_axis.Z))
+    assert np.isclose(
+        equilibrium.j_tor(R=equilibrium.magnetic_axis.R + 0.5, Z=equilibrium.magnetic_axis.Z),
+        equilibrium2.j_tor(R=equilibrium2.magnetic_axis.R + 0.5, Z=equilibrium2.magnetic_axis.Z))
 
-        assert np.isclose(equilibrium.q(psi_n=0.5), equilibrium2.q(psi_n=0.5))
-        assert np.isclose(
-            equilibrium.I_plasma, equilibrium2.I_plasma,
-            atol=100
-        )
+    assert np.isclose(equilibrium.q(psi_n=0.5), equilibrium2.q(psi_n=0.5))
+    assert np.isclose(
+        equilibrium.I_plasma, equilibrium2.I_plasma,
+        atol=100
+    )
 
-        # todo test poloidal current direction (!!!)
+    # todo test poloidal current direction (!!!)
