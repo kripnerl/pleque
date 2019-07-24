@@ -28,7 +28,7 @@ from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
 
 import numpy as np
 import xarray as xa
-from pleque.core import Equilibrium
+import pleque
 
 def write(data, fh, label=None, shot=None, time=None):
     """
@@ -154,7 +154,9 @@ def read(fh, cocos=1):
     Format is specified here:
     https://fusion.gat.com/theory/Efitgeqdsk
 
-    cocos   - COordinate COnventions. Not fully handled yet,
+    cocos   - *Leave one if used with PLEQUE - pleque handle
+              COCOS internally.*
+              COordinate COnventions. Not fully handled yet,
               only whether psi is divided by 2pi or not.
               if < 10 then psi is divided by 2pi, otherwise not.
 
@@ -177,7 +179,7 @@ def read(fh, cocos=1):
       pres          1D array of p(psi) [Pascals]
       q          1D array of q(psi)
       
-      psi           2D array (nx,ny) of poloidal flux
+      psi        2D array (nx,ny) of poloidal flux
     
     """
 
@@ -309,8 +311,8 @@ def read_as_equilibrium(fh, cocos=1):
     :return: instance of `Equilibrium`
     """
 
-    data = read(fh, cocos)
+    data = read(fh)
     ds = data_as_ds(data)  # as dataset
     fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
-    eq = Equilibrium(ds, fw)
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
     return eq
