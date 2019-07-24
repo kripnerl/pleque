@@ -52,7 +52,7 @@ def test_gfile():
 
 def test_from_to_gfile(equilibrium):
 
-    file_name = '/tmp/g{:d}.{:d}'.format(equilibrium.shot, equilibrium.time)
+    file_name = '/tmp/g{:d}.{:d}'.format(equilibrium.shot, int(equilibrium.time))
 
     equilibrium.to_geqdsk(file_name)
 
@@ -61,8 +61,6 @@ def test_from_to_gfile(equilibrium):
 
     assert np.isclose(equilibrium.magnetic_axis.R, eq2.magnetic_axis.R, atol=1e-5, rtol=1e-4)
     assert np.isclose(equilibrium.magnetic_axis.Z, eq2.magnetic_axis.Z, atol=1e-5, rtol=1e-4)
-
-    pass
 
 
 
