@@ -4,6 +4,7 @@ from mpl_toolkits.mplot3d import axes3d
 
 from pleque.tests.utils import load_testing_equilibrium
 
+
 def default_tracer():
     #choose the tokamak out of the too options
 
@@ -12,18 +13,18 @@ def default_tracer():
 
     if tokamak == 'COMPASS-U':
         eq = load_testing_equilibrium()
-        N = 3
+        N = 3  # Number of field line for tracing
         rs = np.linspace(1.16, 1.17, N, endpoint=False)
         zs = np.zeros_like(rs)
     elif tokamak == 'JET':
         from pleque.io.jet import reader_jet
         eq = reader_jet.sal_jet(92400,timex=43.0)
-        N = 1
+        N = 3  # Number of field line for tracing
         rs = np.linspace(3.66, 3.67, N, endpoint=False)
         zs = np.zeros_like(rs)
     else:
         eq = load_testing_equilibrium()
-        N = 1
+        N = 3  # Number of field line for tracing
         rs = np.linspace(1.16, 1.17, N, endpoint=False)
         zs = np.zeros_like(rs)
 
