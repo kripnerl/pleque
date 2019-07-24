@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 from pleque.io.geqdsk import read
 
 
@@ -51,7 +53,7 @@ def test_gfile():
 
 
 def test_from_to_gfile(equilibrium):
-    file_name = '/tmp/g{:d}.{:.0f} {}'.format(equilibrium.shot, equilibrium.time, equilibrium.time_unit)
+    file_name = '/tmp/g{:d}.{:.0f}{}'.format(equilibrium.shot, int(equilibrium.time), equilibrium.time_unit)
 
     equilibrium.to_geqdsk(file_name)
 

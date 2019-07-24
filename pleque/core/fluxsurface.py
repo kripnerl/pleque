@@ -104,15 +104,9 @@ class Surface(Coordinates):
         Rs = (self.R[1:] + self.R[:-1]) / 2
         Zs = (self.Z[1:] + self.Z[:-1]) / 2
         dpsi = self._eq.diff_psi(Rs, Zs)
-        dl = self.dl
+        dl = self.dists
 
         return 2 * np.pi * np.sum(Rs * dl / dpsi)
-
-    @property
-    def dl(self):
-        if not hasattr(self, '_dl'):
-            self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
-        return self._dl
 
 
 class FluxSurface(Surface):
@@ -264,7 +258,7 @@ class FluxSurface(Surface):
         else:
             func_val = (func[1:] + func[:-1]) / 2
 
-        val = self.dl * Rs / diff_psi * func_val
+        val = self.dists * Rs / diff_psi * func_val
 
         val = np.roll(val, -roll)
         ret = np.cumsum(val)
@@ -308,10 +302,10 @@ class FluxSurface(Surface):
             else:
                 func_val = func
 
-        l = np.hstack((0, np.cumsum(self.dl)))
+        l = np.hstack((0, np.cumsum(self.dists)))
 
         if method == 'sum':
-            ret = np.sum(self.dl * Rs / diff_psi * func_val)
+            ret = np.sum(self.dists * Rs / diff_psi * func_val)
         elif method == 'trapz':
             ret = trapz(Rs / diff_psi * func_val, l)
         elif method == 'simps':

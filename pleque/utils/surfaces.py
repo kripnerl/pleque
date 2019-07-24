@@ -41,17 +41,19 @@ def intersection(line1, line2):
     :param line2: array(N, 2)
     :return: array(N_intersect, 2) or None
     """
+    # TODO: move this method to some utilities (!)
+
     l1 = geo.LineString(line1)
     l2 = geo.LineString(line2)
 
-    intersection = l1.intersection(l2)
+    intersec = l1.intersection(l2)
 
-    if hasattr(intersection, "array_interface"):
-        intersection = np.atleast_2d(intersection)
+    if hasattr(intersec, "array_interface"):
+        intersec = np.atleast_2d(intersec)
     else:
-        intersection = None
+        intersec = None
 
-    return intersection
+    return intersec
 
 
 def fluxsurf_error(psi_spl, points, psi_target):
@@ -65,7 +67,34 @@ def fluxsurf_error(psi_spl, points, psi_target):
     """
     psi = psi_spl(points[:, 0], points[:, 1], grid=False)
 
-    return 1 / len(psi) * np.sum((psi - psi_target) ** 2)
+    abs_err = 1 / len(psi) * np.sqrt(np.sum((psi - psi_target) ** 2))
+    rel_err = abs_err / psi_target
+
+    return np.abs(rel_err)
+
+
+def add_xpoint(xp, lcfs, center):
+    """
+    Add x-point to boundary and roll it to be x-point first.
+
+    :param xp: [x, y]
+    :param lcfs: array(n, 2)
+    :param center: [x, y]
+    :return: array(n+1, 2)
+    """
+
+    xp_theta = np.arctan2(xp[1] - center[1], xp[0] - center[0])
+    thetas = np.arctan2(lcfs[:, 1] - center[1], lcfs[:, 0] - center[0])
+    if thetas[2] - thetas[1] < 0:
+        thetas = -thetas
+        xp_theta = -xp_theta
+
+    idx = np.argmin(np.mod(thetas - xp_theta, np.pi * 2))
+
+    new_lcfs = np.roll(lcfs[:-1, :], -idx, axis=0)
+    new_lcfs = np.insert(new_lcfs, 0, xp, axis=0)
+
+    return new_lcfs
 
 
 def points_inside_curve(points, contour):
@@ -174,3 +203,59 @@ def point_in_first_wall(equilibrium, points):
     isinside = points_inside_curve(points, equilibrium._first_wall)
 
     return isinside
+
+
+def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
+    """
+    Tracing one of two separatrix branches (switched by `vect_no`) which are goes around magnetic axis
+    for `direction = 1` or in the opposite direction for `direction = -1`.
+
+    :param equilibrium:
+    :type equilibrium: pleque.Equilibrium
+    :param xp: x-point position
+    :param vect_no: (0, 1) Choose one of the eigen vectors of matrix of field line differential equation.
+    :return:
+    """
+    from pleque.utils.tools import xp_vecs
+    import numpy.linalg as la
+
+    evecs, _ = xp_vecs(equilibrium._spl_psi, *xp)
+    mg_axis = equilibrium._mg_axis
+
+    evec = evecs[vect_no]
+
+    # if there is obtuse angle between line connecting x-point and mg axis and
+    # the separatrix branch multiply t
+    vec_dir = np.sign(evec.dot(mg_axis - xp))
+    if evec.dot(mg_axis - xp) < 0:
+        evec *= -1
+
+    evec /= la.norm(evec) / xp_shift
+
+    br = equilibrium.B_R(*(xp + evec))[0]
+    bz = equilibrium.B_Z(*(xp + evec))[0]
+
+    # bpol = np.square(np.array([br, bz]))
+    bpol = np.asarray([br, bz])
+
+    direction = np.sign(evec.dot(bpol))
+
+    if xp_shift > 0:
+        stopper = 'poloidal'
+    elif xp_shift < 0:
+        stopper = 'z-stopper'
+    else:
+        raise ValueError('xp_shift should be != 0')
+
+    coord = equilibrium.coordinates(R=xp[0] + evec[0], Z=xp[1] + evec[1], phi=phi_0)
+
+    trace = equilibrium.trace_field_line(coord, stopper_method=stopper, in_first_wall=True, direction=direction)
+    t = trace[0]
+    rs = t.R
+    zs = t.Z
+
+    return t
+    # rs = np.hstack((rs[-1], rs))
+    # zs = np.hstack((zs[-1], zs))
+    # fs = equilibrium._as_fluxsurface(rs, zs)
+    # return fs

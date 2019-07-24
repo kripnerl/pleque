@@ -83,7 +83,7 @@ class Coordinates(object):
 
         self.cocos_dict = cocos_coefs(self.cocos)
 
-        self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
+        self._evaluate_input(*coordinates, coord_type=coord_type, **coords)
 
     def __iter__(self):
         if self.grid:
@@ -203,6 +203,50 @@ class Coordinates(object):
     #
     #     return
 
+    def resample(self, multiple=None):
+        """
+        Return new, resampled instance of `pleque.Coordinates`
+
+        :param multiple: int, use multiple to multiply number of points.
+        :return: pleque.Coordinates
+        """
+        # TODO: TEST ME (!!!!!!)
+
+        grid = self.grid
+        eq = self._eq
+        if self.dim == 1:
+            psi_n = self.psi_n
+            len_psi_n = len(psi_n)
+            psi_n = np.interp(np.arange(len_psi_n*multiple), multiple*np.arange(len_psi_n), psi_n)
+
+            return Coordinates(eq, psi_n, grid=grid)
+
+        elif self.dim == 2:
+            rs = self.R
+            zs = self.Z
+            len_rs = len(rs)
+            len_zs = len(zs)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+
+            return Coordinates(eq, rs, zs, grid=grid)
+
+        elif self.dim == 3:
+            rs = self.R
+            zs = self.Z
+            phi = self.phi
+
+            len_rs = len(rs)
+            len_zs = len(zs)
+            len_phi = len(phi)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+            phi = np.interp(np.arange(phi * multiple), multiple * np.arange(len_phi), phi)
+
+            return Coordinates(eq, rs, zs, phi, grid=grid)
+        else:
+            return Coordinates(eq)
+
     def plot(self, ax=None, **kwargs):
         """
 
@@ -221,6 +265,31 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
+    def intersection(self, coords2, dim=None):
+        """
+        input: 2 sets of coordinates
+        crossection of two lines (2 sets of coordinates)
+
+        :param dim: reduce number of dimension in which is the intersection searched
+        :return:
+        """
+        from shapely import geometry
+
+        dim_ = np.max((dim, self.dim, coords2.dim))
+
+        if self.grid:
+            raise ValueError("grid ")
+        coor1 = geometry.linestring.LineString(self.as_array(dim=dim_))
+        coor2 = geometry.linestring.LineString(coords2.as_array(dim=dim_))
+        intersec = coor1.intersection(coor2)
+        if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
+            return None
+        elif intersec is not None:
+            intersec = np.array(intersec).T
+            return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
+        else:
+            return None
+
     def as_array(self, dim=None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
@@ -229,11 +298,13 @@ class Coordinates(object):
         :param coord_type: not effected at the moment (TODO)
         :return:
         """
+        # TODO integrate with numpy _as_array
+
         if self.dim == 0:
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
         elif dim == 1 or self.dim == 1:
-            return self.x1
+            return np.asanyarray(self.x1)
         elif dim == 2 or self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
@@ -242,12 +313,53 @@ class Coordinates(object):
                 # x2 = x2.ravel()
                 # return np.array([x1, x2]).T
             else:
-                return np.array([self.x1, self.x2]).T
+                return np.atleast_2d([self.x1, self.x2]).T
         elif dim == 3 or self.dim == 3:
             # todo: replace this by split method
-            return np.array([self.x1, self.x2, self.x3]).T
+            return np.asarray([self.x1, self.x2, self.x3]).T
 
-    def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
+    @property
+    def dists(self):
+        """
+        distances between spatial steps along the tracked field line
+        :return:
+        self._dists
+        """
+        if self.grid:
+            raise TypeError('The grid is used - no distances between spatial steps will be calculated')
+        if not hasattr(self, '_dists'):
+            if self.dim == 1:
+                self._dists = (self.x1[1:] - self.x1[:-1])
+            elif self.dim == 2:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+            elif self.dim == 3:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
+                                      (self.x3[1:] - self.x3[:-1]) ** 2)
+        return self._dists
+
+    @property
+    def cum_length(self):
+        """
+        Cumulative length along the coordinate points.
+
+        :return: array(N)
+        """
+        if not hasattr(self, '_cum_length'):
+            self._cum_length = np.hstack((0, np.cumsum(self.dists)))
+        return self._cum_length
+
+    @property
+    def length(self):
+        """
+        Total length along the coordinate points.
+
+        :return: length in meters
+        """
+        if not hasattr(self, '_cum_length'):
+            self._cum_length = np.hstack((0, np.cumsum(self.dists)))
+        return self._cum_length[-1]
+
+    def _evaluate_input(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
 
         if len(coordinates) == 0:
@@ -362,9 +474,9 @@ class Coordinates(object):
                 self._x2_input = x2
             elif len(coordinates) == 3:
                 self.dim = 3
-                x1 = coordinates[0]
-                x2 = coordinates[1]
-                x3 = coordinates[2]
+                x1 = np.atleast_1d(coordinates[0])
+                x2 = np.atleast_1d(coordinates[1])
+                x3 = np.atleast_1d(coordinates[2])
 
                 # assume _x1_input and _x2_input to be arrays of size (N)
                 if not isinstance(x1, np.ndarray):
@@ -457,24 +569,29 @@ class Coordinates(object):
                 self.x1 = self._x1_input ** 2
             else:
                 raise ValueError('This should not happen.')
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
             if self._coord_type_input == ('R', 'Z'):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
             elif self._coord_type_input == ('r', 'theta'):
-                # todo: COCOS
+                # todo COCOS
                 r_mgax, z_mgax = self._eq._mg_axis
                 cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
             # if self._coord_type_input == ('R', 'Z', 'phi'):
             if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
-                self.x1 = self._x1_input
-                self.x2 = self._x2_input
-                self.x3 = self._x3_input
+                self.x1 = np.asanyarray(self._x1_input)
+                self.x2 = np.asanyarray(self._x2_input)
+                self.x3 = np.asanyarray(self._x3_input)
             # elif self._coord_type_input == ('X', 'Y', 'Z'):
             elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
@@ -485,3 +602,7 @@ class Coordinates(object):
                 self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
+
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+            self.x3 = np.array(self.x3, copy=False, ndmin=1)

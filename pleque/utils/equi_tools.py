@@ -23,12 +23,15 @@ def is_monotonic(f, x0, x1, n_test=10):
 
 def minimize_in_vicinity(point, func, r_lims, z_lims):
     # minimize in the vicinity:
+
+    # Study different methods and find the most propriate and fastest!
     bounds = ((np.max((r_lims[0], point[0] - 0.1)),
                np.min((r_lims[-1], point[0] + 0.1))),
               (np.max((z_lims[0], point[1] - 0.1)),
                np.min((z_lims[-1], point[1] + 0.1))))
 
-    res = minimize(func, point, bounds=bounds)
+    res = minimize(func, point, method='Powell', options={'xtol': 1e-7})
+    # res = minimize(func, point, bounds=bounds)
     res_point = np.array((res['x'][0], res['x'][1]))
     return res_point
 
