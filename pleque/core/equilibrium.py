@@ -9,6 +9,7 @@ from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunctions, Surface  # , FluxSurface
+from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 
@@ -79,6 +80,7 @@ class Equilibrium(object):
         # TODO TODO TODO
         self._init_method = init_method
         self._cocos = cocos
+        self._cocosdic = cc.cocos_coefs(cocos)
 
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
@@ -219,6 +221,7 @@ class Equilibrium(object):
                 print(">> Limiter plasma found.")
             else:
                 print(">> X-point plasma found.")
+
         self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
         # -----------------------
@@ -597,7 +600,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return -self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -612,7 +616,8 @@ class Equilibrium(object):
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -703,8 +708,9 @@ class Equilibrium(object):
 
         if not hasattr(self, '_q_anideriv_spl'):
             self._init_q()
+        cc = self._cocosdic['sigma_Bp'] * self._cocosdic['sigma_pol'] / ((2 * np.pi) ** (1 - self._cocosdic['exp_Bp']))
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
+        return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         raise NotImplementedError("This method hasn't been implemented yet. "
@@ -756,7 +762,8 @@ class Equilibrium(object):
         """
         from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        return coord.R * self.pressure(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord)
+        cc_norm = - self._cocosdic["sigma_Bp"] * (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * (coord.R * self.pprime(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord))
 
     @property
     def lcfs(self):
@@ -947,7 +954,8 @@ class Equilibrium(object):
             mask_in = mask_in.reshape(len(points.x2), len(points.x1))
         return mask_in
 
-    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, **coords):
+    def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None,
+                         direction=1, **coords):
         """
         Return traced field lines starting from the given set of at least 2d coordinates.
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
@@ -957,13 +965,9 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
+        :param direction: (-1, 1) - trace opposite/in the direction of mg. field lines.
         :param coords:
         :return:
-
-        **Note:**
-
-
-        - (TODO) Even for the 3d coordinates toroidal angle is assumed to be zero.
 
         """
         import pleque.utils.field_line_tracers as flt
@@ -974,6 +978,8 @@ class Equilibrium(object):
         res = []
 
         coords_rz = coords.as_array(dim=2)
+
+        sigma_B0 = np.sign(self.F0)
 
         dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
@@ -991,10 +997,31 @@ class Equilibrium(object):
 
             if coords.psi_n[i] < 1:
                 # todo: determine the direction (now -1) !!
-                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0], -1)
+                if self._verbose:
+                    print('>>> poloidal stopper is used')
+                # XXX Direction (TODO)
+                # XXX add these values to cocos dict!
+                # sign(dtheta/dphi) = sigma_pol * sign(I * B)
+                # dphidtheta = self._cocosdic['sigma_pol'] * np.sign(self.I_plasma) * np.sign(self.F0)
+                # print('dir: {}\nsigma_pol: {}\nsigma_tor: {}\nIp: {}\nF0: {}'.format(
+                #     direction, self._cocosdic['sigma_pol'], self._cocosdic['sigma_cyl'], self.I_plasma, self.F0
+                # ))
+                # print('------------------')
+
+                dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
+                print('direction: {}'.format(direction))
+                print('dphidtheta: {}'.format(dphidtheta))
+
+                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                             dphidtheta * direction)
             else:
+                if self._verbose:
+                    print('>>> z-lim stopper is used')
                 stopper = flt.z_coordinate_stopper_factory(z_lims)
-            sol = solve_ivp(dphifunc, (phi0, 2 * np.pi * 8 + phi0), y0,
+
+            sol = solve_ivp(dphifunc,
+                            (phi0, direction * sigma_B0 * (2 * np.pi * 8 + phi0)),
+                            y0,
                             events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             )
@@ -1009,68 +1036,32 @@ class Equilibrium(object):
 
         return res
 
-    def __find_extremes__(self):
-        from scipy.signal import argrelmin
+    @property
+    def cocos(self):
+        """
+        Number of internal COCOS representation.
 
-        rs = np.linspace(self.R_min, self.R_max, 300)
-        zs = np.linspace(self.Z_min, self.Z_max, 400)
+        :return: int
+        """
+        return self._cocos
 
-        x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
+    @property
+    def is_xpoint_plasma(self):
+        """
+        Return true for x-point plasma.
 
-        r_lim = (self.R_min, self.R_max)
-        z_lim = (self.Z_min, self.Z_max)
+        :return: bool
+        """
+        return not self._limiter_plasma
 
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
-        self._o_points = o_points[sortidx]
+    @property
+    def is_limter_plasma(self):
+        """
+        Return true if the plasma is limited by point or some limiter point.
 
-        # todo: use these two x-points in the future
-        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
-                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
-
-        self._x_point = xp1
-        self._x_point2 = xp1
-
-        if xp1 is None:
-            self._psi_xp = None
-        else:
-            self._psi_xp = self._spl_psi(*xp1, grid=False)
-
-        self._x_points = x_points[sortidx]
-
-        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                       self._mg_axis, self._psi_axis, self._spl_psi)
-
-        self._limiter_plasma = limiter_plasma
-        self._limiter_point = limiter_point
-
-        if self._verbose:
-            if limiter_plasma:
-                print(">> Limiter plasma found.")
-            else:
-                print(">> X-point plasma found.")
-        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
-
-        # Boundary:
-        rs = np.linspace(self.R_min, self.R_max, 700)
-        zs = np.linspace(self.Z_min, self.Z_max, 1200)
-
-        if limiter_plasma:
-            self._strike_points = np.array([self._limiter_point[np.newaxis, :]])
-            self._contact_point = self._limiter_point
-        else:
-            self._contact_point = None
-            self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs, self._first_wall)
-
-        if self._verbose:
-            print("--- Looking for LCFS: ---")
-
-        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                              self._mg_axis, self._psi_axis)
-        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-5:
-            close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
-
-        self._lcfs = close_lcfs
+        :return: bool
+        """
+        return self._limiter_plasma
 
     @property
     def fluxfuncs(self):

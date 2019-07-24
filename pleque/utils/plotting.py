@@ -142,3 +142,29 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None):
     ax.set_aspect('equal')
 
     return ax
+
+
+def plot_cocos_geometry(eq: pleque.Equilibrium):
+    # TODO STUB
+
+    fig, axs = plt.subplots(1, 2, projection='polar')
+
+    # Top view:
+    ax = axs[0]
+
+    # Plot borders:
+    phi = np.linspace(0, 2 * np.pi)
+    r1 = 0.25 * np.ones_like(phi)
+    r2 = 0.75 * np.ones_like(phi)
+
+    phi_direction = np.linspace(0, np.pi / 4)
+    # TODO
+
+    ax.plot(phi, r1, 'k-')
+    ax.plot(phi, r2, 'k-')
+
+    # Polar cut:
+    theta = np.linspace((0, 2 * np.pi))
+    r = np.ones_like(theta)
+
+    ax.plot(theta, r, 'k-')

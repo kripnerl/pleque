@@ -5,16 +5,19 @@ import numpy as np
 import xarray
 
 from pleque.utils.decorators import deprecated
+from .cocos import cocos_coefs
 
 class Coordinates(object):
 
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         """
 
         :param equilibrium:
         :param coordinates:
         :param coord_type:
         :param grid:
+        :param cocos: Define coordinate system cocos. Id `None` equilibrium default cocos is used.
+                        If `equilibrium is None` cocos = 3  (both systems cnt-clockwise) is used.
         :param coords:
 
         Default coordinate systems
@@ -69,6 +72,16 @@ class Coordinates(object):
         self._valid_coordinates_3d = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
         self.dim = -1  # init only
         self.grid = grid
+
+        if cocos is None:
+            if equilibrium is None:
+                self.cocos = 3
+            else:
+                self.cocos = equilibrium.cocos
+        else:
+            self.cocos = cocos
+
+        self.cocos_dict = cocos_coefs(self.cocos)
 
         self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
 
@@ -152,7 +165,8 @@ class Coordinates(object):
     @property
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
-        return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+        cc_coef = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
+        return np.arctan2(cc_coef * (self.x2 - z_mgax), (self.x1 - r_mgax))
 
     @property
     def r_mid(self):
@@ -170,7 +184,8 @@ class Coordinates(object):
     @property
     def Y(self):
         if self.dim >= 2:
-            return self.R * np.sin(self.phi)
+            cocos_coef = self.cocos_dict['sigma_cyl']
+            return cocos_coef * self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
@@ -450,21 +465,23 @@ class Coordinates(object):
             elif self._coord_type_input == ('r', 'theta'):
                 # todo: COCOS
                 r_mgax, z_mgax = self._eq._mg_axis
+                cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
-                self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
+                self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
-            #if self._coord_type_input == ('R', 'Z', 'phi'):
+            # if self._coord_type_input == ('R', 'Z', 'phi'):
             if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
                 self.x3 = self._x3_input
-            #elif self._coord_type_input == ('X', 'Y', 'Z'):
+            # elif self._coord_type_input == ('X', 'Y', 'Z'):
             elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
                 # R(1)**2 = X(1)**2 + Y(2)**2
                 # Z(2) = Z(3)
                 # phi(3) = atan2(Y(2), X(1)]
+                cc = self.cocos_dict['sigma_cyl']
                 self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
-                self.x3 = np.arctan2(self._x2_input, self._x1_input)
+                self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
