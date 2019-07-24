@@ -965,7 +965,9 @@ class Equilibrium(object):
         :param R:
         :param Z:
         :param coord_type:
-        :param direction: (-1, 1) - trace opposite/in the direction of mg. field lines.
+        :param direction: if positive trace field line in/cons the direction of magnetic field.
+        :param stopper: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
+                       automatically chosen based on psi_n coordinate.
         :param coords:
         :return:
 
@@ -981,7 +983,7 @@ class Equilibrium(object):
 
         sigma_B0 = np.sign(self.F0)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor, 1)
 
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
         for i in np.arange(len(coords)):
