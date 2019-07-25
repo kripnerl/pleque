@@ -1,7 +1,8 @@
+import numpy as np
+
+import pleque
 from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
-import numpy as np
-import pleque
 
 
 def read(file, cocos_in=3, cocos=None):
@@ -82,7 +83,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
     # Boundary:
     bnd_r = equilibrium.lcfs.R[:-1]
     bnd_z = equilibrium.lcfs.Z[:-1]
-    ind = np.argmin(bnd_z)
+    ind = np.argmin(bnd_z).item()
 
     bnd_r = np.roll(bnd_r, -ind)
     bnd_r = np.append(bnd_r, bnd_r[0])
