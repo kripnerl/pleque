@@ -20,7 +20,7 @@ def read(file, cocos_in=3, cocos=None):
     return eq
 
 
-def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, cocos_out=3):
+def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label=None, cocos_out=3):
     """
     Write a GEQDSK equilibrium file.
 
@@ -28,6 +28,9 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
     :param file: str, file name
     :param nx: int, R-dimension
     :param ny: int, Z-dimension
+    :param nbdry: int, None - Maximal number of points used to describe boundary (LCFS).
+                 If None, default number obtained by FluxFunc will be used.
+                 Note: Actual number number of points can be in (nbdry/2, n-bry)
     :param label: str, max 11 characters long text added on the beginning of g-file (default is PLEQUE)
     :param cocos_out: not used at the moment
     :return:
@@ -65,7 +68,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
 
     data['nx'] = nx
     data['ny'] = ny
-    # XXX
+
     data['rdim'] = equilibrium.R_max - equilibrium.R_min
     data['zdim'] = equilibrium.Z_max - equilibrium.Z_min
     data['rcentr'] = r0
@@ -90,10 +93,13 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, label=None, coco
     bnd_z = np.roll(bnd_z, -ind)
     bnd_z = np.append(bnd_z, bnd_z[0])
 
-    # TODO Something more clever...
-    # XXX force downsample:
-    data["rbdry"] = bnd_r[::12]
-    data["zbdry"] = bnd_z[::12]
+    # Downsample plasma boundary
+    if nbdry:
+        bdry_down_sample = (len(bnd_r) // nbdry) + 1
+    else:
+        bdry_down_sample = 1
+    data["rbdry"] = bnd_r[::bdry_down_sample]
+    data["zbdry"] = bnd_z[::bdry_down_sample]
 
     # 1d profiles:
     data['F'] = equilibrium.F(grid_1d, grid=False)
