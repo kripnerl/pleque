@@ -308,7 +308,7 @@ def read_as_equilibrium(fh, cocos=3):
     Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
-    :param cocos:
+    :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
     :return: instance of `Equilibrium`
     """
 
