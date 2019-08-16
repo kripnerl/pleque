@@ -9,6 +9,7 @@ def test_cdb():
 
     eq = cdb(17636, 1125)
     eq = cdb(17854, 1000)
+    eq = cdb(11399, variant='v4_std_O', revision=1)
     #eq = read_efithdf5(expanduser("~/EFIT/17636.1.h5"), time=1125)
 
     print(eq)
