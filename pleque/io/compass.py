@@ -8,7 +8,7 @@ from pleque.io._geqdsk import read, data_as_ds
 from pleque.io.tools import EquilibriaTimeSlices
 
 
-def cdb(shot=None, time=1060, revision=1):
+def cdb(shot=None, time=1060, revision=1, variant=''):
     """
 
 
@@ -16,6 +16,7 @@ def cdb(shot=None, time=1060, revision=1):
     :param time: closest time [ms] of target equilibrium, defaults to 10 ms after shaping
                  if None then an EFITSlices instance is returned
     :param revision: EFIT revision, defaults to first (post-shot standard)
+    :param variant: EFIT run variant, default '' is the post-shot standard
     :return: Equilibrium
     """
 
@@ -25,9 +26,15 @@ def cdb(shot=None, time=1060, revision=1):
     if shot is None:
         shot = cdb.last_shot_number()
     # psi_RZ generic ID
-    sig_ref = cdb.get_signal_references(record_number=shot,
+    sig_refs = cdb.get_signal_references(record_number=shot,
                                         generic_signal_id=2860,
-                                        revision=revision)[0]
+                                        revision=revision,
+                                        variant=variant)
+    if len(sig_refs) > 1:
+        raise ValueError('multiple signal references found for given database specification')
+    elif len(sig_refs) == 0:
+        raise ValueError('no signal references found for given database specification')
+    sig_ref = sig_refs[0]
     data_ref = cdb.get_data_file_reference(**sig_ref)
     eq = read_efithdf5(data_ref.full_path, time=time)
 
