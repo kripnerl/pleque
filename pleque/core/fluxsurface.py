@@ -104,15 +104,9 @@ class Surface(Coordinates):
         Rs = (self.R[1:] + self.R[:-1]) / 2
         Zs = (self.Z[1:] + self.Z[:-1]) / 2
         dpsi = self._eq.diff_psi(Rs, Zs)
-        dl = self.dl
+        dl = self.dists
 
         return 2 * np.pi * np.sum(Rs * dl / dpsi)
-
-    @property
-    def dl(self):
-        if not hasattr(self, '_dl'):
-            self._dl = np.sqrt((self.R[1:] - self.R[:-1]) ** 2 + (self.Z[1:] - self.Z[:-1]) ** 2)
-        return self._dl
 
 
 class FluxSurface(Surface):
@@ -125,24 +119,27 @@ class FluxSurface(Surface):
         :param coords: Instance of coordinate class
         """
 
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+        # FluxSurface can use only equilibrium default inner cocos (!).
+        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
 
     @property
     def eval_q(self):
         if not hasattr(self, '_q'):
-            self._q = self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
-                      * self.surface_average(1 / self.R ** 2)
-            # self._q = self._eq.BvacR * self.diff_volume/\
-            #           (2*np.pi)**2 * self.surface_average(1/self.R**2)
+            self._q = self.get_eval_q('sum')
         return self._q
 
     def get_eval_q(self, method):
         """
+        Evaluete q usiong formula (5.35) from [Jardin, 2010: Computational methods in Plasma Physics]
+
         :param method: str, ['sum', 'trapz', 'simps']
         :return:
         """
-        return self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / (2 * np.pi) \
-               * self.surface_average(1 / self.R ** 2, method=method)
+        # psi_sign = self._eq._psi_sign
+        cc = self.cocos_dict['sigma_Bp'] * self.cocos_dict['sigma_pol']
+        return cc * self._eq.F(psi_n=np.mean(self.psi_n), grid=False) / \
+               (2 * np.pi) ** (1 - self.cocos_dict['exp_Bp']) * \
+               self.surface_average(1 / self.R ** 2, method=method)
 
     @property
     def straight_fieldline_theta(self):
@@ -217,9 +214,15 @@ class FluxSurface(Surface):
         """
         from scipy.constants import mu_0
 
+        # TODO: Precision of this method is quite poor. rel_err ~ 10e-5
+        # * Try improve precision by different integration techniques.
+        # * Increase fluxsurface position
+        # * Is it numeric error?
+
         diff_psi = self._eq.diff_psi(self.R, self.Z)
 
-        return 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
+        cc_coef = self.cocos_dict['sigma_Bp'] / (2 * np.pi) ** self.cocos_dict['exp_Bp']
+        return cc_coef * 1 / mu_0 * self.surface_average(diff_psi ** 2 / self.R ** 2)
 
     @property
     @deprecated('Useless, will be removed. Use `abc` instead of `abc.contour`.')
@@ -255,7 +258,7 @@ class FluxSurface(Surface):
         else:
             func_val = (func[1:] + func[:-1]) / 2
 
-        val = self.dl * Rs / diff_psi * func_val
+        val = self.dists * Rs / diff_psi * func_val
 
         val = np.roll(val, -roll)
         ret = np.cumsum(val)
@@ -299,10 +302,10 @@ class FluxSurface(Surface):
             else:
                 func_val = func
 
-        l = np.hstack((0, np.cumsum(self.dl)))
+        l = np.hstack((0, np.cumsum(self.dists)))
 
         if method == 'sum':
-            ret = np.sum(self.dl * Rs / diff_psi * func_val)
+            ret = np.sum(self.dists * Rs / diff_psi * func_val)
         elif method == 'trapz':
             ret = trapz(Rs / diff_psi * func_val, l)
         elif method == 'simps':

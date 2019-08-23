@@ -30,6 +30,7 @@ import numpy as np
 import xarray as xa
 import pleque
 
+
 def write(data, fh, label=None, shot=None, time=None):
     """
     Write a GEQDSK equilibrium file, given a dictionary of data
@@ -307,12 +308,12 @@ def read_as_equilibrium(fh, cocos=3):
     Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
-    :param cocos:
+    :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
     :return: instance of `Equilibrium`
     """
 
     data = read(fh)
     ds = data_as_ds(data)  # as dataset
-    fw = np.stack((ds['r_lim'].data, ds['z_lim'].data)).T  # first wall
-    eq = pleque.Equilibrium(ds, fw)
+    fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
     return eq

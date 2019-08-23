@@ -5,17 +5,16 @@ from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
 
 
-def read(file, cocos_in=3, cocos=None):
+def read(file, cocos=3):
     """
     Read the eqdsk file and open it as `Equilibrium`.
 
     :param file: str, name of file with equilibrium.
-    :param cocos_in: not used yet, default is EFIT COCOS (3)
-    :param cocos: not used yet
+    :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
     :return:
     """
     with open(file, 'r') as f:
-        eq = read_as_equilibrium(f, cocos_in)
+        eq = read_as_equilibrium(f, cocos)
 
     return eq
 
