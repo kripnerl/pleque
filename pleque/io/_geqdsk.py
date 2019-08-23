@@ -22,13 +22,13 @@ along with FreeGS.  If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import date
 
-from numpy import zeros, pi
-
-from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
-
 import numpy as np
 import xarray as xa
+from numpy import zeros
+
 import pleque
+from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
+
 
 
 def write(data, fh, label=None, shot=None, time=None):
@@ -148,18 +148,12 @@ def write(data, fh, label=None, shot=None, time=None):
         co.newline()
 
 
-def read(fh, cocos=1):
+def read(fh):
     """
     Read a G-EQDSK formatted equilibrium file
     
     Format is specified here:
     https://fusion.gat.com/theory/Efitgeqdsk
-
-    cocos   - *Leave one if used with PLEQUE - pleque handle
-              COCOS internally.*
-              COordinate COnventions. Not fully handled yet,
-              only whether psi is divided by 2pi or not.
-              if < 10 then psi is divided by 2pi, otherwise not.
 
     Returns
     -------
@@ -241,11 +235,6 @@ def read(fh, cocos=1):
     data["psi"] = read_2d(nx, ny)
 
     data["q"] = read_1d(nx)
-
-    # Ensure that psi is divided by 2pi
-    if cocos > 10:
-        for var in ["psi", "simagx", "sibdry"]:
-            data[var] /= 2 * pi
 
     nbdry = next(values)
     nlim = next(values)
