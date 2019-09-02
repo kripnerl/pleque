@@ -1,4 +1,5 @@
 import xarray as xr
+import numpy as np
 from collections import OrderedDict
 from typing import Union
 from pleque import Equilibrium
@@ -21,8 +22,15 @@ class EquilibriaTimeSlices:
 
     def get_time_slice(self, time: float):
         """Creates an Equilibrium from the slice nearest to the specified time"""
-        ds = self.eqs_dataset.sel(time=time, method='nearest').rename(
-            {'Rt': 'R', 'Zt': 'Z'})
+        ds = self.eqs_dataset.dropna(dim='time', how='all') \
+            .sel(time=time, method='nearest') \
+            .rename({'Rt': 'R', 'Zt': 'Z'})
+        if np.abs(ds.time - time) > 10:
+            print('!!!!!!!!!!!')
+            print('WARNING: Insufficient time slice found! Delta time: {:.1f} ms\n'
+                  '         Required time: {:.1f} ms, selected time {:.1f} ms. '
+                  .format(ds.time.item() - time, time, ds.time.item()))
+            print('!!!!!!!!!!!')
         eq = Equilibrium(ds, self.limiter)
         return eq
 
