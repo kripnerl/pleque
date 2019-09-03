@@ -1118,7 +1118,7 @@ class Equilibrium(object):
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
-                            (phi0, direction * sigma_B0 * (2 * np.pi * 8 + phi0)),
+                            (phi0, direction * sigma_B0 * (2 * np.pi * 50 + phi0)),
                             y0,
                             #                            method='RK45',
                             method='LSODA',
@@ -1143,20 +1143,26 @@ class Equilibrium(object):
                 imask = mask.astype(int)
                 in_idxs = np.where(imask[:-1] - imask[1:] == 1)[0]
 
-                if len(in_idxs) > 1:
+                last_idx = False
+                if len(in_idxs) >= 1:
                     # Last point is still in (+1)
-                    last_idx = in_idxs[0] + 1
-                    mask[last_idx:] = False
+                    last_idx = in_idxs[0]
+                    mask[last_idx + 1:] = False
 
                 Rs = fl.R[mask]
                 Zs = fl.Z[mask]
                 phis = fl.phi[mask]
 
                 intersec = self.first_wall.intersection(fl, dim=2)
-                if intersec is not None:
-                    Rx = intersec.R[0]
-                    Zx = intersec.Z[0]
-                    last_idx = len(phis) - 1
+                if intersec is not None and len(in_idxs) >= 1:
+                    R_last = Rs[-1]
+                    Z_last = Zs[-1]
+
+                    inter_idx = np.argmin((intersec.R - R_last) ** 2 + (intersec.Z - Z_last) ** 2)
+
+                    Rx = intersec.R[inter_idx]
+                    Zx = intersec.Z[inter_idx]
+                    # last_idx = len(phis) - 1
 
                     coef = np.sqrt((Rx - fl.R[last_idx]) ** 2 + (Zx - fl.Z[last_idx]) ** 2 /
                                    (fl.R[last_idx + 1] - fl.R[last_idx]) ** 2 +
