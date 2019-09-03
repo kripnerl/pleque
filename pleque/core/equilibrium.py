@@ -1139,8 +1139,14 @@ class Equilibrium(object):
             # XXX add condirtion to stopper
             if in_first_wall:
                 mask = self.in_first_wall(fl)
-                # idxs = arglis(np.where(mask))
-                # print(mask)
+
+                imask = mask.astype(int)
+                in_idxs = np.where(imask[:-1] - imask[1:] == 1)[0]
+
+                if len(in_idxs) > 1:
+                    # Last point is still in (+1)
+                    last_idx = in_idxs[0] + 1
+                    mask[last_idx:] = False
 
                 Rs = fl.R[mask]
                 Zs = fl.Z[mask]
@@ -1155,12 +1161,9 @@ class Equilibrium(object):
                     coef = np.sqrt((Rx - fl.R[last_idx]) ** 2 + (Zx - fl.Z[last_idx]) ** 2 /
                                    (fl.R[last_idx + 1] - fl.R[last_idx]) ** 2 +
                                    (fl.Z[last_idx + 1] - fl.Z[last_idx]) ** 2)
-                    # print('debug: ')
-                    # print(coef)
+
                     phix = fl.phi[last_idx] + coef * (fl.phi[last_idx + 1] - fl.phi[last_idx])
 
-                    # print('phi0: {}\nphi1: {}\nphix: {}'.format(fl.phi[last_idx], fl.phi[last_idx+1], phix))
-                    # print('phis[-1]: {}'.format(phis[-1]))
                     Rs = np.append(Rs, Rx)
                     Zs = np.append(Zs, Zx)
                     phis = np.append(phis, phix)
