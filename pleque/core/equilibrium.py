@@ -1180,6 +1180,53 @@ class Equilibrium(object):
 
         return res
 
+
+    def trace_flux_surface(self, *coordinates, s_resolution=1e-3, R=None,
+                           Z=None, psi_n=None, coord_type=None, **coords):
+        """
+        Find a closed flux surface inside LCFS with requested values of psi or psi-normalized.
+
+
+        TODO support open and/or flux surfaces outise LCFS, needs different stopper
+
+        :param R:
+        :param Z:
+        :param psi_n:
+        :param coord_type:
+        :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
+                            If coordinates is spatial point (dim=2) then the trace starts at the midplane.
+                            Coordinates.grid must be False.
+        :param s_resolution: max_step in the distance along the flux surface contour
+        :return: FluxSurface
+        """
+        import pleque.utils.field_line_tracers as flt
+        from scipy.integrate import solve_ivp
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        if coords.dim == 1:
+            coords = self.coordinates(R=self.magnetic_axis.R+coords.r_mid, Z=0)
+        y0 = np.reshape([coords.R, coords.Z], (2,))
+
+        ds_func = flt.ds_grad_psi_tracer_factory(self._spl_psi)
+        # atol is square of s_resolution to offset the square distance
+        stopper = flt.rz_target_s_min_stopper_factory(y0, coords.r_mid,
+                                                      atol=s_resolution**2)
+
+        sol = solve_ivp(ds_func,
+                        (0, coords.r_mid*2*np.pi*4),
+                        y0,
+                        method='LSODA',
+                        events=stopper,
+                        max_step=s_resolution,
+                        vectorized=True,
+                        # rtol=1e-8,
+                        )
+        fs = self._as_fluxsurface(R=np.hstack([sol.y[0], sol.y[0,0]]),
+                                  Z=np.hstack([sol.y[1], sol.y[1,0]]))
+        fs._cum_length = np.hstack([sol.t, sol.t[-1]+s_resolution])  # TODO use some setter
+        return fs
+
+
     @property
     def fluxfuncs(self):
         if not hasattr(self, '_fluxfunc'):
