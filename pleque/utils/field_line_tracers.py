@@ -71,7 +71,7 @@ def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=No
     return ret
 
 
-def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
+def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator

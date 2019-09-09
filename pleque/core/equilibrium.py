@@ -1056,7 +1056,7 @@ class Equilibrium(object):
 
         sigma_B0 = np.sign(self.F0)
 
-        dphifunc = flt.dhpi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+        dphifunc = flt.dphi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
 
         r_lims = [np.min(self.first_wall.R), np.max(self.first_wall.R)]
         z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
