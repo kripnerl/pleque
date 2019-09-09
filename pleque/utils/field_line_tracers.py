@@ -132,8 +132,8 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         BZ = BZ_func(R, Z)
         Bphi = Bphi_func(R, Z)
         B = np.sqrt(np.sum(np.square([BR, BZ, Bphi])))
-        dRds = R * BR / B
-        dZds = R * BZ / B
+        dRds = BR / B
+        dZds = BZ / B
         return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return ds_func
