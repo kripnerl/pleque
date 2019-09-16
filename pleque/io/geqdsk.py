@@ -19,7 +19,7 @@ def read(file, cocos=3):
     return eq
 
 
-def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label=None, cocos_out=3):
+def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label=None, cocos_out=3, q_positive=True):
     """
     Write a GEQDSK equilibrium file.
 
@@ -106,7 +106,10 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     data['pres'] = equilibrium.pressure(grid_1d, grid=False)
     data['pprime'] = equilibrium.pprime(grid_1d, grid=False)
     # Check values on axis (!)
-    data['q'] = equilibrium.q(grid_1d, grid=False)
+    if q_positive:
+        data['q'] = equilibrium.abs_q(grid_1d, grid=False)
+    else:
+        data['q'] = equilibrium.q(grid_1d, grid=False)
 
     data['psi'] = grid_2d.psi.T
 
