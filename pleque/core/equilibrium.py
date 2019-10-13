@@ -506,12 +506,124 @@ class Equilibrium(object):
 
         return contour
 
+    def plot_geometry(self, axs=None, **kwargs):
+        """
+        Plots the the directions of angles, current and magnetic field.
+
+        :axs = None or tuple of axes.
+        :param kwargs: parameters passed to the `plot` routine.
+        :return: tuple of axis (ax1, ax2)
+        """
+        import matplotlib.pyplot as plt
+
+        if axs is None:
+            fig, axs = plt.subplots(1, 2)
+
+        fw = self.first_wall
+
+        if len(fw) < 4:
+            print('Warning: first wall is not sufficient. LCFS is used instead.')
+            fw = self.lcfs
+
+        R_min = np.min(fw.R)
+        R_max = np.max(fw.R)
+        R_mid = (R_min + R_max) / 2
+
+        sig_ip = np.sign(self.I_plasma)
+        sig_bt = np.sign(self.F0)
+
+        #############
+        # Top view: #
+        #############
+
+        ax1 = axs[0]
+        ax1.set_title('Top view')
+        phis = np.linspace(0, 2 * np.pi, endpoint=True)
+
+        ax1.plot(R_min * np.cos(phis), R_min * (np.sin(phis)), 'k-')
+        ax1.plot(R_max * np.cos(phis), R_max * (np.sin(phis)), 'k-')
+
+        phi_dir = self.coordinates(R=R_mid, Z=0, phi=np.pi / 8)
+        phi_dir_mg = self.coordinates(R=R_mid, Z=0, phi=np.pi + sig_bt * np.pi / 8)
+        phi_dir_ip = self.coordinates(R=R_mid, Z=0, phi=3 * np.pi / 2 + sig_ip * np.pi / 8)
+
+        ax1.arrow(R_mid, 0, phi_dir.X[0] - R_mid, phi_dir.Y[0],
+                  width=0.005, length_includes_head=True, head_width=0.05)
+        ax1.text(R_mid + R_mid / 14, 0, r'$\phi$',
+                 ha='left', va='center')
+
+        ax1.arrow(-R_mid, 0, phi_dir_mg.X[0] + R_mid, phi_dir_mg.Y[0],
+                  width=0.005, length_includes_head=True, head_width=0.05)
+        ax1.text(- (R_mid + R_mid / 14), 0, r'$B_\phi$',
+                 ha='right', va='center')
+
+        ax1.arrow(0, -R_mid, phi_dir_ip.X[0], phi_dir_ip.Y[0] + R_mid,
+                  width=0.005, length_includes_head=True, head_width=0.05)
+        ax1.text(0, - (R_mid + R_mid / 14), r'$j_\phi$',
+                 ha='center', va='top')
+
+        ax1.set_aspect('equal')
+        ax1.set_xlabel('X [m]')
+        ax1.set_ylabel('Y [m]')
+
+        ###########################
+        # Poloidal cross section: #
+        ###########################
+        r0 = (R_max - self.magnetic_axis.R[0]) * 0.6
+        pos0 = self.coordinates(r=r0, theta=0)
+        theta0 = 0
+        theta_dir = self.coordinates(r=r0, theta=theta0 + np.pi / 8)
+
+        r1 = (self.magnetic_axis.R[0] - R_min) * 0.7
+        r2 = (self.magnetic_axis.R[0] - R_min) * 0.45
+        theta1 = theta2 = np.pi
+        pos1 = self.coordinates(r=r1, theta=theta1)
+        pos2 = self.coordinates(r=r2, theta=theta2)
+
+        sig_theta = self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
+        sig_bpol = sig_theta * np.sign(self.B_Z(pos1))
+        sig_jpol = sig_theta * np.sign(self.j_Z(pos2))
+
+        theta_dir_bpol = self.coordinates(r=pos1.r[0], theta=pos1.theta[0] + sig_bpol * np.pi / 8)
+        theta_dir_jpol = self.coordinates(r=pos2.r[0], theta=pos2.theta[0] + sig_jpol * np.pi / 8)
+
+
+        ax2 = axs[1]
+        ax2.set_title("Poloidal cross section")
+        ax2.plot(fw.R, fw.Z, 'k-')
+        if fw is not self.lcfs:
+            ax2.plot(self.lcfs.R, self.lcfs.Z, 'C0--')
+        ax2.plot(self.magnetic_axis.R, self.magnetic_axis.Z, 'C0o')
+
+        ax2.arrow(pos0.R[0], pos0.Z[0], theta_dir.R[0] - pos0.R[0], theta_dir.Z[0] - pos0.Z[0],
+                  width=0.005, head_width=0.03)
+        ax2.text(pos0.R[0] + r0 / 14, pos0.Z[0], r'$\theta$',
+                 ha='left', va='center')
+
+        ax2.arrow(pos1.R[0], pos1.Z[0], theta_dir_bpol.R[0] - pos1.R[0], theta_dir_bpol.Z[0] - pos1.Z[0],
+                  width=0.005, head_width=0.03)
+        ax2.text(pos1.R[0] - r0 / 14, pos1.Z[0], r'$B_\theta$',
+                 ha='right', va='center')
+
+        ax2.arrow(pos2.R[0], pos2.Z[0], theta_dir_jpol.R[0] - pos2.R[0], theta_dir_jpol.Z[0] - pos2.Z[0],
+                  width=0.005, head_width=0.03)
+        ax2.text(pos2.R[0] + r0 / 14, pos2.Z[0], r'$j_\theta$',
+                 ha='left', va='center')
+
+        ax2.set_aspect('equal')
+
+        ax2.set_xlabel('R [m]')
+        ax2.yaxis.set_label_position("right")
+        ax2.set_ylabel('Z [m]')
+
+        return fig
+
     def plot_overview(self, ax=None, **kwargs):
         """
         Simple routine for plot of plasma overview
         :return:
         """
-        self._plot_overview(ax, **kwargs)
+        return self._plot_overview(ax, **kwargs)
 
     def _plot_overview(self, ax=None, **kwargs):
         """
