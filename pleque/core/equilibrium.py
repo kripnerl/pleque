@@ -728,12 +728,31 @@ class Equilibrium(object):
         return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+        # todo test cocos here!
+        # todo: test grid
+        # todo: test test test
+        from scipy.constants import mu_0
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        cc = self._cocosdic['sigma_cyl']
+
+        dpsi_dZ = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1)
+        if coord.grid:
+            dpsi_dZ = dpsi_dZ.T
+
+        return - cc *self.Fprime(coord) / (coord.R * mu_0) * dpsi_dZ
 
     def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        raise NotImplementedError("This method hasn't been implemented yet. "
-                                  "Use monkey patching in the specific cases.")
+        from scipy.constants import mu_0
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        cc = self._cocosdic['sigma_cyl']
+
+        dpsi_dR = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1)
+        if coord.grid:
+            dpsi_dR = dpsi_dR.T
+
+        return cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dR
 
     def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         r"""
