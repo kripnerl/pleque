@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import os
 import pkg_resources
 import xarray as xr
 
@@ -39,6 +40,64 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
     eq = read_efithdf5(data_ref.full_path, time=time)
 
     return eq
+
+def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
+                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+    """
+    Load data from CUDB Fiesta signal.
+    
+    Note: for the convenience CUDB environment is hard set. 
+    
+    :param shot: 
+    :param time: 
+    :param revision: 
+    :param variant: 
+    :param time_unit: 
+    :return: 
+    """
+    cdb_host_def = os.getenv('CDB_HOST')
+    cdb_data_root_def = os.getenv('CDB_DATA_ROOT')
+
+    os.environ['CDB_HOST'] = cdb_host
+    os.environ['CDB_DATA_ROOT'] = cdb_data_root
+
+    import pyCDB.client
+    cdb = pyCDB.client.CDBClient()
+
+    if time_unit == 'ms':
+        time *= 1000
+
+    strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
+
+    # debug
+    print('strid_postfix = {}'.format(strid_postfix))
+
+    psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
+    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
+    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix) # 1D
+    # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
+    FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
+
+    dst = xr.Dataset({
+        'psi': (['time', 'R', 'Z'], psi.data),
+        'pressure': (['time', 'R', 'Z'], pressure.data),
+        'pprime': (['time', 'psi_n'], pprime.data),
+        # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
+        'FFprime': (['time', 'psi_n'], FFprime.data),
+    }, coords={
+        'time' : psi.time_axis.data,
+        'R': psi.axis1.data,
+        'Z': psi.axis2.data,
+    })
+
+    if first_wall is None:
+        resource_package = 'pleque'
+        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
+        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
+
+    os.environ['CDB_HOST'] = cdb_host_def
+    os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
 
 def read_efithdf5(file_path, time=None):
@@ -118,3 +177,5 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq._Ip = ds.attrs['cpasma']
 
     return eq
+
+
