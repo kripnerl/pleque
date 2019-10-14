@@ -2,7 +2,7 @@
 from ._geqdsk import read_as_equilibrium
 
 
-def read_geqdsk(filename, cocos=1):
+def read_geqdsk(filename, cocos=3):
     """
     Read a G-EQDSK formatted equilibrium file
 
@@ -22,3 +22,5 @@ def read_geqdsk(filename, cocos=1):
         eq = read_as_equilibrium(f, cocos)
 
     return eq
+
+

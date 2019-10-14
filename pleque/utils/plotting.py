@@ -82,7 +82,7 @@ def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
     _plot_extremes(eq._o_points, eq._x_points, ax=ax, **kwargs)
 
 
-def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
+def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -108,7 +108,8 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
 
     contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 11), theta=np.zeros(10), grid=False)
 
-    ax.contour(coords.R, coords.Z, psi_in, 20, **kwargs)
+    cl = ax.contour(coords.R, coords.Z, psi_in, 20, **kwargs)
+    plt.colorbar(cl, ax=ax)
 
     # todo: psi should be 1-d (!) resolve this
     ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
