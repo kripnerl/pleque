@@ -1,8 +1,10 @@
 from scipy.signal import argrelmin
 from scipy.optimize import minimize
+from scipy.integrate import trapz, cumtrapz
 import pleque.utils.surfaces as surf
 from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
+import xarray as xa
 
 
 def is_monotonic(f, x0, x1, n_test=10):
@@ -333,3 +335,22 @@ def find_surface_step(psi_spl, psi_target, flux_surf):
     flux_surf[:, 1] -= 0.99 * psiy * (psi - psi_target)
 
     return flux_surf
+
+
+def pprime2p(pprime, psi_ax, psi_bnd):
+
+    coef = (psi_bnd - psi_ax)
+
+    if isinstance(pprime, xa.DataArray):
+        psi_n = pprime.psi_n
+    else:
+        psi_n = np.linspace(0, 1, len(pprime), endpoint=True)
+
+    p = coef * cumtrapz(pprime, psi_n, initial=0)
+
+    p = p - p[-1]
+
+    if isinstance(pprime, xa.DataArray):
+        return xa.DataArray(p, [psi_n], ['psi_n'])
+    else:
+        return p
