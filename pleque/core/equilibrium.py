@@ -162,6 +162,8 @@ class Equilibrium(object):
         # Try to find F0 in basedata:
         if 'F0' in basedata:
             self.F0 = basedata['F0']
+            if isinstance(self.F0, xarray.DataArray):
+                self.F0 = np.asscalar(self.F0.values)
         elif 'F0' in basedata.attrs:
             self.F0 = basedata.attrs['F0']
 
@@ -298,14 +300,14 @@ class Equilibrium(object):
             Fprime = FFprime / F
 
         if pprime is not None:
-            p = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
+            pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
 
         self.BvacR = self.F0
 
         # if p and F are not define, run vacuum-like discharge:
         self._vacuum = False
-        if p is None or F is None:
-            p = np.zeros_like(psi_n)
+        if pressure is None or F is None:
+            pressure = np.zeros_like(psi_n)
             F = np.zeros_like(psi_n)
             self._vacuum = True
 
