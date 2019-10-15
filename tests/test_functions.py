@@ -9,18 +9,18 @@ def test_profiles_integration(geqdsk_file):
     with open(geqdsk_file, 'r') as f:
         eq_in = _geqdsk.read(f)
 
-        psi_ax = eq_in['simagx']
-        psi_bnd = eq_in['sibdry']
+    psi_ax = eq_in['simagx']
+    psi_bnd = eq_in['sibdry']
 
-        p = eq_in['pres']
+    p = eq_in['pres']
 
-        if np.isclose(p[-1], 0):
-            psi_n = np.linspace(0, 1, len(p), endpoint=True)
-        else:
-            psi_n = np.linspace(0, 1, len(p), endpoint=False)
+    if np.isclose(p[-1], 0):
+        psi_n = np.linspace(0, 1, len(p), endpoint=True)
+    else:
+        psi_n = np.linspace(0, 1, len(p), endpoint=False)
 
-        pprime = eq_in['pprime']
-        pprime = xa.DataArray(pprime, [psi_n], ['psi_n'])
+    pprime = eq_in['pprime']
+    pprime = xa.DataArray(pprime, [psi_n], ['psi_n'])
 
         ffprime = eq_in['FFprime']
         f = eq_in['F']

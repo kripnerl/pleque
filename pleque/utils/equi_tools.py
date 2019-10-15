@@ -368,7 +368,7 @@ def ffprime2f(ffprime, psi_ax, psi_bnd, f0):
 
     f = np.sign(f0) * np.sqrt(f_sq - f_sq[-1] + f0**2)
 
-    if isinstance(f, xa.DataArray):
+    if isinstance(ffprime, xa.DataArray):
         return xa.DataArray(f, [psi_n], ['psi_n'])
     else:
         return f
