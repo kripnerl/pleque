@@ -41,6 +41,36 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
 
     return eq
 
+def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
+                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+    """
+
+    :param shot:
+    :param time:
+    :param revision:
+    :param variant:
+    :param time_unit:
+    :param first_wall:
+    :param cdb_host:
+    :param cdb_data_root:
+    :return:
+    """
+
+    eq_time = time
+    if time_unit == 'ms' and time is not None:
+        eq_time /= 1000 # convert time to seconds as they are used by cudb
+
+    dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
+                     cdb_host, cdb_data_root)
+
+    eqts = EquilibriaTimeSlices(dst)
+
+    if eq_time is not None:
+        eq = eqts.get_time_slice(eq_time)
+        return eq
+    else:
+        return eqts
+
 
 def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
                      cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
