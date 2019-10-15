@@ -267,7 +267,10 @@ def test_cocos_consistency(geqdsk_file, cocos):
     with open(geqdsk_file, 'r') as f:
         eq_dict = read_geqdsk_as_dict(f)
         eq_xr = data_as_ds(eq_dict)
-        eq_xr.psi.values = eq_xr.psi * (2 * np.pi)
+        eq_xr.psi.values = eq_xr.psi.values * (2 * np.pi)
+        eq_xr.pprime.values /= (2 * np.pi)
+        eq_xr.FFprime.values /= (2 * np.pi)
+
         fw = np.stack((eq_xr['r_lim'].values, eq_xr['z_lim'].values)).T  # first wall
         equilibrium2 = Equilibrium(eq_xr, fw, cocos=cocos + 10)
 
