@@ -22,14 +22,14 @@ def test_profiles_integration(geqdsk_file):
     pprime = eq_in['pprime']
     pprime = xa.DataArray(pprime, [psi_n], ['psi_n'])
 
-        ffprime = eq_in['FFprime']
-        f = eq_in['F']
+    ffprime = eq_in['FFprime']
+    f = eq_in['F']
 
-        f0 = f[-1]
+    f0 = f[-1]
 
-        p_calc = pprime2p(pprime, psi_ax, psi_bnd)
-        f_calc = ffprime2f(ffprime, psi_ax, psi_bnd, f0)
+    p_calc = pprime2p(pprime, psi_ax, psi_bnd)
+    f_calc = ffprime2f(ffprime, psi_ax, psi_bnd, f0)
 
-        assert np.allclose(p, p_calc)
-        assert np.allclose(f, f_calc)
+    assert np.allclose(p, p_calc)
+    assert np.allclose(f, f_calc)
 

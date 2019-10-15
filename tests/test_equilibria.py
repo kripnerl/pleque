@@ -73,8 +73,6 @@ def test_equilibria(case):
         assert np.allclose(eq._strike_points[0], st_points[case])
 
 
-
-
 def test_eq_properties(equilibrium):
     print(equilibrium.first_wall.R[0])
     assert np.isclose(equilibrium.magnetic_axis.psi_n, 0)
