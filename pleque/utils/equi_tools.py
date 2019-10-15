@@ -355,7 +355,8 @@ def pprime2p(pprime, psi_ax, psi_bnd):
     else:
         return p
 
-def ffprime2f(ffprime, f0, psi_ax, psi_bnd):
+
+def ffprime2f(ffprime, psi_ax, psi_bnd, f0):
     coef = (psi_bnd - psi_ax)
 
     if isinstance(ffprime, xa.DataArray):
