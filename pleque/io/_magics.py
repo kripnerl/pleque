@@ -42,6 +42,7 @@ def read_write_geqsk_flip_direction(file_in, file_out, flip=True, plot=False):
     with open(file_in, 'r') as f:
         eq_in = _geqdsk.read(f)
 
+
     if flip:
         # Change of current -> change of psi
         eq_in['psi'] = - eq_in['psi']
@@ -51,16 +52,18 @@ def read_write_geqsk_flip_direction(file_in, file_out, flip=True, plot=False):
         eq_in['pprime'] = - eq_in['pprime']
         eq_in['FFprime'] = - eq_in['FFprime']
 
+        eq_in['cpasma'] = - eq_in['cpasma']
+
         # Change of toroidal magnetic field
         eq_in['F'] = - eq_in['F']
+        eq_in['bcentr'] = - eq_in['bcentr']
 
     with open(file_out, 'w') as f:
         _geqdsk.write(eq_in, f)
 
     if plot:
 
-        eq = readers.read_geqdsk(file_out)
-
-        eq.plot_geometry()
+        eq_new = readers.read_geqdsk(file_out)
+        eq_new.plot_geometry()
         plt.show()
 
