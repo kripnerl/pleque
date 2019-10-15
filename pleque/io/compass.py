@@ -75,6 +75,8 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix) # 1D
     # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
     FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
+    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
+
 
     try:
         dst = xr.Dataset({
@@ -83,6 +85,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'pprime': (['psi_n', 'time'], pprime.data), # these dimensions are flipped in the database
             # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
             'FFprime': (['psi_n', 'time'], FFprime.data),
+            'Bvac': (['time', 'R', 'Z'], Bvac.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
@@ -96,12 +99,15 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'pprime': (['time', 'psi_n'], pprime.data), # these dimensions are flipped in the database
             # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
             'FFprime': (['time', 'psi_n'], FFprime.data),
+            'Bvac': (['time', 'R', 'Z'], Bvac.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
             'Z': psi.axis2.data,
             'psi_n': pprime.axis1.data,
         })
+
+    dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
 
     if first_wall is None:
         resource_package = 'pleque'
@@ -111,7 +117,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         first_wall = np.loadtxt(first_wall)
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
-    dst['Z_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
+    dst['Z_first_wall'] = xr.DataArray(first_wall[:, 1], coords=[first_wall[:, 0]], dims=['R_first_wall'])
 
     if cdb_host_def:
         os.environ['CDB_HOST'] = cdb_host_def
