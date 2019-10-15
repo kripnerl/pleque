@@ -21,7 +21,6 @@ def test_cocos_dict():
             else:
                 assert cocos["exp_Bp"] == 0
 
-
             if cocos_idx in [1, 11]:
                 assert cocos['sigma_Bp'] == +1
                 assert cocos['sigma_cyl'] == +1
