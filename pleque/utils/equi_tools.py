@@ -354,3 +354,20 @@ def pprime2p(pprime, psi_ax, psi_bnd):
         return xa.DataArray(p, [psi_n], ['psi_n'])
     else:
         return p
+
+def ffprime2f(ffprime, f0, psi_ax, psi_bnd):
+    coef = (psi_bnd - psi_ax)
+
+    if isinstance(ffprime, xa.DataArray):
+        psi_n = ffprime.psi_n
+    else:
+        psi_n = np.linspace(0, 1, len(ffprime), endpoint=True)
+
+    f_sq = 2 * coef * cumtrapz(ffprime, psi_n, initial=0)
+
+    f = np.sign(f0) * np.sqrt(f_sq - f_sq[-1] + f0**2)
+
+    if isinstance(f, xa.DataArray):
+        return xa.DataArray(f, [psi_n], ['psi_n'])
+    else:
+        return f

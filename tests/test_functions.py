@@ -2,7 +2,7 @@ from pleque.io import _geqdsk
 import numpy as np
 import xarray as xa
 
-from pleque.utils.equi_tools import pprime2p
+from pleque.utils.equi_tools import pprime2p, ffprime2f
 
 
 def test_profiles_integration(geqdsk_file):
@@ -27,8 +27,12 @@ def test_profiles_integration(geqdsk_file):
         f = eq_in['F']
 
         f0 = f[-1]
+        f0_ = eq_in['rcentr'] * eq_in['bcentr']
+        # assert np.isclose(f0, eq_in['rcentr'] * eq_in['bcentr'])
 
         p_calc = pprime2p(pprime, psi_ax, psi_bnd)
+        f_calc = ffprime2f(ffprime, psi_ax, psi_bnd, f0_)
 
         assert np.allclose(p, p_calc)
+        assert np.allclose(f, f_calc)
 
