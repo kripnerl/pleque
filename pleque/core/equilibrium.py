@@ -90,38 +90,39 @@ class Equilibrium(object):
         z = basedata.Z.values
         psi = basedata.psi.transpose('R', 'Z').values
 
-        if first_wall is None and 'first_wall' in basedata:
-            self._first_wall = basedata["first_wall"]
+        if first_wall is None:
+            if 'first_wall' in basedata:
+                self._first_wall = basedata["first_wall"]
+            elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
+                self._first_wall = np.array([basedata.R_first_wall.values, basedata.Z_first_wall.values]).T
+            else:
+                rwall_min = np.min(r)
+                rwall_max = np.max(r)
+                zwall_min = np.min(z)
+                zwall_max = np.max(z)
+
+                dr = rwall_max - rwall_min
+                dz = zwall_max - zwall_min
+
+                # todo: remove this if possible
+                # lets reduce the wall a bit to be have some plasma behind the wall
+                rwall_min += dr / 100
+                rwall_max -= dr / 100
+                zwall_min += dz / 100
+                zwall_max -= dz / 100
+
+                corners = np.array(
+                    [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
+                newwall_r = []
+                newwall_z = []
+                for i in range(-1, 3):
+                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
+                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
+                    newwall_r += list(rs)
+                    newwall_z += list(zs)
+                self._first_wall = np.stack((newwall_r, newwall_z)).T
         else:
             self._first_wall = first_wall
-
-        # If there is no first_wall build one
-        if self._first_wall is None:
-            rwall_min = np.min(r)
-            rwall_max = np.max(r)
-            zwall_min = np.min(z)
-            zwall_max = np.max(z)
-
-            dr = rwall_max - rwall_min
-            dz = zwall_max - zwall_min
-
-            # todo: remove this if possible
-            # lets reduce the wall a bit to be have some plasma behind the wall
-            rwall_min += dr / 100
-            rwall_max -= dr / 100
-            zwall_min += dz / 100
-            zwall_max -= dz / 100
-
-            corners = np.array(
-                [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
-            newwall_r = []
-            newwall_z = []
-            for i in range(-1, 3):
-                rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
-                newwall_r += list(rs)
-                newwall_z += list(zs)
-            self._first_wall = np.stack((newwall_r, newwall_z)).T
 
         if 'time' in basedata:
             self.time = basedata['time'].values
