@@ -27,7 +27,7 @@ def test_calculated_profiles(geqdsk_file):
 
     psi_n = np.linspace(0, 1, len(pressure))
 
-    assert np.allclose(pressure, eq.pressure(psi_n=psi_n))
+    assert np.allclose(pressure, eq.pressure(psi_n=psi_n), atol=1)
     assert np.allclose(pprime, eq.pprime(psi_n=psi_n), atol=100)
 
     assert np.allclose(F, eq.F(psi_n=psi_n), atol=1e-2)
