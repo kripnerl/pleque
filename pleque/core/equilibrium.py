@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 import numpy as np
+import warnings
 import xarray
 
 from pleque.utils.decorators import deprecated
@@ -31,10 +32,10 @@ class Equilibrium(object):
     def __init__(self,
                  basedata: xarray.Dataset,
                  first_wall=None,
-                 mg_axis=None,
-                 psi_lcfs=None,
-                 x_points=None,
-                 strike_points=None,
+                 mg_axis=None,#
+                 psi_lcfs=None,#
+                 x_points=None,#
+                 strike_points=None,#?
                  init_method="hints",
                  spline_order=3,
                  spline_smooth=0,
@@ -54,7 +55,7 @@ class Equilibrium(object):
         :param psi_lcfs:
         :param x_points:
         :param strike_points:
-        :param init_method: str On of ("full", "hints", "fast_forward").
+        :param init_method: str One of ("full", "hints", "fast_forward").
                             If "full" no hints are taken and module tries to recognize all critical points itself.
                             If "hints" module use given optional arguments as a help with initialization.
                             If "fast-forward" module use given optional arguments as final and doesn't try to correct.
@@ -72,16 +73,42 @@ class Equilibrium(object):
             print('---------------------------------')
 
         self._basedata = basedata
-        self._verbose = verbose
-        self._mg_axis = mg_axis
-        self._psi_lcfs = psi_lcfs
-        self._x_points = x_points
-        self._strike_points = strike_points
+        try:
+            self._mg_axis = basedata['mg_axis']
+        except KeyError:
+            self._mg_axis = None
+        if mg_axis is not None:
+            self._mg_axis = mg_axis
+            warnings.warn('mg_axis specified both in basedata and parameters. Using values from parameters')
+        try:
+            self._psi_lcfs = basedata['psi_lcfs']
+        except KeyError:
+            self._psi_lcfs = None
+        if psi_lcfs is not None:
+            self._psi_lcfs = psi_lcfs
+            warnings.warn('psi_lcfs specified both in basedata and parameters. Using values from parameters')
+#        self._psi_lcfs = psi_lcfs
+        try:
+            self._x_points = basedata['x_points']
+        except KeyError:
+            self._x_points = None
+        if x_points is not None:
+            self._x_points = x_points
+            warnings.warn('x_points specified both in basedata and parameters. Using values from parameters')
+#        self._x_points = x_points
+        try:
+            self._strike_points = basedata['strike_points']
+        except KeyError:
+            self._strike_points = None
+        if strike_points is not None:
+            self._strike_points = strike_points
+            warnings.warn('strike_points specified both in basedata and parameters. Using values from parameters')
+#        self._strike_points = strike_points
         self._spline_order = spline_order
-        # TODO TODO TODO
         self._init_method = init_method
         self._cocos = cocos
         self._cocosdic = cc.cocos_coefs(cocos)
+        self._verbose = verbose
 
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
@@ -201,7 +228,7 @@ class Equilibrium(object):
         # -------------------------------
         if verbose:
             print('--- Looking for critical points ---')
-
+        
         rs = np.linspace(self.R_min, self.R_max, 300)
         zs = np.linspace(self.Z_min, self.Z_max, 400)
 
