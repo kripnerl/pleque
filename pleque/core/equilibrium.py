@@ -58,7 +58,7 @@ class Equilibrium(object):
         :param init_method: str One of ("full", "hints", "fast_forward").
                             If "full" no hints are taken and module tries to recognize all critical points itself.
                             If "hints" module use given optional arguments as a help with initialization.
-                            If "fast-forward" module use given optional arguments as final and doesn't try to correct.
+                            If "fast" module use given optional arguments as final and doesn't try to correct.
                             *Note:* Only "hints" method is currently tested.
         :param spline_order:
         :param spline_smooth:
@@ -228,19 +228,23 @@ class Equilibrium(object):
         # -------------------------------
         if verbose:
             print('--- Looking for critical points ---')
-        
-        rs = np.linspace(self.R_min, self.R_max, 300)
-        zs = np.linspace(self.Z_min, self.Z_max, 400)
-
-        x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
-
-        r_lim = (self.R_min, self.R_max)
-        z_lim = (self.Z_min, self.Z_max)
-
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
+        if self._init_method == 'full' or self._x_points is None or self._mg_axis is None:
+            rs = np.linspace(self.R_min, self.R_max, 300)
+            zs = np.linspace(self.Z_min, self.Z_max, 400)
+            x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
+        else:
+            x_points = self._x_points
+            o_points = [self._mg_axis]        
+            
+        if self._init_method == 'fast' and self._mg_axis is not None:
+            self._o_points = o_points
+        else:
+            z_lim = (self.Z_min, self.Z_max)
+            r_lim = (self.R_min, self.R_max)
+            self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
+            self._o_points = o_points[sortidx]
+            self._o_points[0] = self._mg_axis
         self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
-        self._o_points = o_points[sortidx]
-        self._o_points[0] = self._mg_axis
 
         # ------------------------------------------
         # Recognize x-point plasma vs limiter plasma
@@ -249,7 +253,14 @@ class Equilibrium(object):
             print('--- Recognizing equilibrium type ---')
 
         # todo: use these two x-points in the future
-        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
+        if self._init_method == 'fast':
+            xp1 = self._xpoints[0]
+            try:
+                xp2 = self._xpoints[1]
+            except IndexError:
+                xp2 = None
+        else:
+            (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
                                                           r_lim, z_lim, self._psi_lcfs, self._x_points)
 
         self._x_point = xp1
@@ -339,7 +350,7 @@ class Equilibrium(object):
             self._vacuum = True
 
         if verbose:
-            print('--- Generate 1D splines ---')
+            print('--- Mapping pressure and flux func to psi_n ---')
         self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
 
         if FFprime is None:
@@ -365,9 +376,6 @@ class Equilibrium(object):
         if verbose:
             print('--- Mapping midplane to psi_n ---')
         self.__map_midplane2psi__()
-
-        if verbose:
-            print('--- Mapping pressure and f func to psi_n ---')
 
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
