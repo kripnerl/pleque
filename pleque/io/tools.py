@@ -11,7 +11,7 @@ class EquilibriaTimeSlices:
     *Note:* This is temporary solution before implementation of support of time-evolving equilibrium.
     """
 
-    def __init__(self, eqs_dataset, limiter):
+    def __init__(self, eqs_dataset, limiter=None):
         """Create instance for generating equilibria at given times
 
         :param eqs_dataset: Dataset containing time-dependent equilibira inputs
@@ -29,8 +29,9 @@ class EquilibriaTimeSlices:
                           If None the warning is shown if the time difference is more then 10 ms.
         """
         ds = self.eqs_dataset.dropna(dim='time', how='all') \
-            .sel(time=time, method='nearest') \
-            .rename({'Rt': 'R', 'Zt': 'Z'})
+            .sel(time=time, method='nearest')
+        if 'Rt' in ds:
+            ds = ds.rename({'Rt': 'R', 'Zt': 'Z'})
         if tolerance is not None and np.abs(ds.time - time) > tolerance:
             raise ValueError('Insufficient time slice found! Delta time: {:.1f} ms\n'
                              '         Required time: {:.1f} ms, selected time {:.1f} ms. '
@@ -42,6 +43,7 @@ class EquilibriaTimeSlices:
                   '         Required time: {:.1f} ms, selected time {:.1f} ms. '
                   .format(ds.time.item() - time, time, ds.time.item()))
             print('!!!!!!!!!!!')
+
         eq = Equilibrium(ds, self.limiter)
         return eq
 

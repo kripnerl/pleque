@@ -56,6 +56,8 @@ class FluxFunctions:
         # setattr(self, name, new_func)
         setattr(self, name, types.MethodType(new_func, self))
 
+        return interp
+
     def __getitem__(self, item):
         return getattr(self, item)
 

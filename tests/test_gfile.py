@@ -2,54 +2,37 @@ import os
 
 import numpy as np
 
+from pleque.io import _geqdsk
 from pleque.io.geqdsk import read
+from pleque.io.readers import read_geqdsk
 
 
-def compare_gfile(gfile_name):
-    from pleque.io._geqdsk import read_as_equilibrium, read, data_as_ds
-    import numpy as np
+def test_calculated_profiles(geqdsk_file):
+    """
+    Octants: https://en.wikipedia.org/wiki/Octant_(solid_geometry)#/media/File:Octant_numbers.svg
 
-    print('Tested g-file: {}'.format(gfile_name))
+    :param geqdsk_file:
+    :return:
+    """
 
-    with open(gfile_name, 'r') as f:
-        data = read(f)
-        eq_ds = data_as_ds(data)
-    with open(gfile_name, 'r') as f:
-        eq = read_as_equilibrium(f)
+    eq = read_geqdsk(geqdsk_file, cocos=3)
+    with open(geqdsk_file, 'r') as f:
+        eq_dict = _geqdsk.read(f)
 
-    file_name = '/tmp/g_test'
+    pressure = eq_dict['pres']
+    pprime = eq_dict['pprime']
 
-    nx = data['nx']
-    ny = data['ny']
+    F = eq_dict['F']
+    FFprime = eq_dict['FFprime']
 
-    eq.to_geqdsk(file_name, nx, ny)
+    psi_n = np.linspace(0, 1, len(pressure))
 
-    with open(file_name, 'r') as f:
-        eq2 = read_as_equilibrium(f)
+    assert np.allclose(pressure, eq.pressure(psi_n=psi_n), atol=1)
+    assert np.allclose(pprime, eq.pprime(psi_n=psi_n), atol=100)
 
-    os.remove(file_name)
+    assert np.allclose(F, eq.F(psi_n=psi_n), atol=1e-2)
+    assert np.allclose(FFprime, eq.FFprime(psi_n=psi_n), atol=1e-3)
 
-    assert np.isclose(eq.magnetic_axis.R, eq2.magnetic_axis.R)
-    print(eq_ds.keys())
-
-    # import matplotlib.pyplot as plt
-    #
-    # eq._plot_overview()
-    #
-    # plt.figure()
-    # psi_n = np.linspace(0, 1, 20, endpoint=False)
-    # plt.plot(psi_n, eq.q(psi_n=psi_n))
-    #
-    # plt.show()
-
-
-def test_gfile():
-    from pleque.tests.utils import get_test_equilibria_filenames, get_test_cases_number
-
-    g_files = get_test_equilibria_filenames()
-    n_files = get_test_cases_number()
-
-    compare_gfile(g_files[3])
 
 
 def test_from_to_gfile(equilibrium):
@@ -62,6 +45,7 @@ def test_from_to_gfile(equilibrium):
 
     assert np.isclose(equilibrium.magnetic_axis.R, eq2.magnetic_axis.R, atol=1e-5, rtol=1e-4)
     assert np.isclose(equilibrium.magnetic_axis.Z, eq2.magnetic_axis.Z, atol=1e-5, rtol=1e-4)
+
 
 
 

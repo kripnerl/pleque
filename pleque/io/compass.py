@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import os
 import pkg_resources
 import xarray as xr
 
@@ -27,9 +28,9 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
         shot = cdb.last_shot_number()
     # psi_RZ generic ID
     sig_refs = cdb.get_signal_references(record_number=shot,
-                                        generic_signal_id=2860,
-                                        revision=revision,
-                                        variant=variant)
+                                         generic_signal_id=2860,
+                                         revision=revision,
+                                         variant=variant)
     if len(sig_refs) > 1:
         raise ValueError('multiple signal references found for given database specification')
     elif len(sig_refs) == 0:
@@ -39,6 +40,122 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
     eq = read_efithdf5(data_ref.full_path, time=time)
 
     return eq
+
+def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
+                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+    """
+
+    :param shot:
+    :param time:
+    :param revision:
+    :param variant:
+    :param time_unit:
+    :param first_wall:
+    :param cdb_host:
+    :param cdb_data_root:
+    :return:
+    """
+
+    eq_time = time
+    if time_unit == 'ms' and time is not None:
+        eq_time /= 1000 # convert time to seconds as they are used by cudb
+
+    dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
+                     cdb_host, cdb_data_root)
+
+    eqts = EquilibriaTimeSlices(dst)
+
+    if eq_time is not None:
+        eq = eqts.get_time_slice(eq_time)
+        return eq
+    else:
+        return eqts
+
+
+def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
+                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+    """
+    Load data from CUDB Fiesta signal.
+    
+    Note: for the convenience CUDB environment is hard set. 
+    
+    :param shot: 
+    :param time: 
+    :param revision: 
+    :param variant: 
+    :param time_unit: 
+    :return: 
+    """
+    cdb_host_def = os.getenv('CDB_HOST')
+    cdb_data_root_def = os.getenv('CDB_DATA_ROOT')
+
+    os.environ['CDB_HOST'] = cdb_host
+    os.environ['CDB_DATA_ROOT'] = cdb_data_root
+
+    import pyCDB.client
+    cdb = pyCDB.client.CDBClient()
+
+    if time_unit == 'ms':
+        time *= 1000
+
+    strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
+
+    psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
+    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
+    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix) # 1D
+    # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
+    FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
+    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
+
+
+    try:
+        dst = xr.Dataset({
+            'psi': (['time', 'R', 'Z'], psi.data),
+            'pressure': (['time', 'R', 'Z'], pressure.data),
+            'pprime': (['psi_n', 'time'], pprime.data), # these dimensions are flipped in the database
+            # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
+            'FFprime': (['psi_n', 'time'], FFprime.data),
+            'Bvac': (['time', 'R', 'Z'], Bvac.data),
+        }, coords={
+            'time' : psi.time_axis.data,
+            'R': psi.axis1.data,
+            'Z': psi.axis2.data,
+            'psi_n': pprime.axis1.data,
+        })
+    except ValueError:
+        dst = xr.Dataset({
+            'psi': (['time', 'R', 'Z'], psi.data),
+            'pressure': (['time', 'R', 'Z'], pressure.data),
+            'pprime': (['time', 'psi_n'], pprime.data), # these dimensions are flipped in the database
+            # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
+            'FFprime': (['time', 'psi_n'], FFprime.data),
+            'Bvac': (['time', 'R', 'Z'], Bvac.data),
+        }, coords={
+            'time' : psi.time_axis.data,
+            'R': psi.axis1.data,
+            'Z': psi.axis2.data,
+            'psi_n': pprime.axis1.data,
+        })
+
+    dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
+
+    if first_wall is None:
+        resource_package = 'pleque'
+        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
+        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
+        first_wall = np.loadtxt(first_wall)
+
+    dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
+    dst['Z_first_wall'] = xr.DataArray(first_wall[:, 1], coords=[first_wall[:, 0]], dims=['R_first_wall'])
+
+    if cdb_host_def:
+        os.environ['CDB_HOST'] = cdb_host_def
+        print('baf')
+    if cdb_data_root_def:
+        os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
+
+    return dst
 
 
 def read_efithdf5(file_path, time=None):
@@ -118,3 +235,5 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     eq._Ip = ds.attrs['cpasma']
 
     return eq
+
+

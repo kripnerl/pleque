@@ -90,38 +90,39 @@ class Equilibrium(object):
         z = basedata.Z.values
         psi = basedata.psi.transpose('R', 'Z').values
 
-        if first_wall is None and 'first_wall' in basedata:
-            self._first_wall = basedata["first_wall"]
+        if first_wall is None:
+            if 'first_wall' in basedata:
+                self._first_wall = basedata["first_wall"]
+            elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
+                self._first_wall = np.array([basedata.R_first_wall.values, basedata.Z_first_wall.values]).T
+            else:
+                rwall_min = np.min(r)
+                rwall_max = np.max(r)
+                zwall_min = np.min(z)
+                zwall_max = np.max(z)
+
+                dr = rwall_max - rwall_min
+                dz = zwall_max - zwall_min
+
+                # todo: remove this if possible
+                # lets reduce the wall a bit to be have some plasma behind the wall
+                rwall_min += dr / 100
+                rwall_max -= dr / 100
+                zwall_min += dz / 100
+                zwall_max -= dz / 100
+
+                corners = np.array(
+                    [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
+                newwall_r = []
+                newwall_z = []
+                for i in range(-1, 3):
+                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
+                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
+                    newwall_r += list(rs)
+                    newwall_z += list(zs)
+                self._first_wall = np.stack((newwall_r, newwall_z)).T
         else:
             self._first_wall = first_wall
-
-        # If there is no first_wall build one
-        if self._first_wall is None:
-            rwall_min = np.min(r)
-            rwall_max = np.max(r)
-            zwall_min = np.min(z)
-            zwall_max = np.max(z)
-
-            dr = rwall_max - rwall_min
-            dz = zwall_max - zwall_min
-
-            # todo: remove this if possible
-            # lets reduce the wall a bit to be have some plasma behind the wall
-            rwall_min += dr / 100
-            rwall_max -= dr / 100
-            zwall_min += dz / 100
-            zwall_max -= dz / 100
-
-            corners = np.array(
-                [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
-            newwall_r = []
-            newwall_z = []
-            for i in range(-1, 3):
-                rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
-                newwall_r += list(rs)
-                newwall_z += list(zs)
-            self._first_wall = np.stack((newwall_r, newwall_z)).T
 
         if 'time' in basedata:
             self.time = basedata['time'].values
@@ -148,20 +149,42 @@ class Equilibrium(object):
 
         # TODO: allow FFprime, ffprime, pprime and other on the input
         psi_n = basedata.psi_n.values
-        pressure = basedata.pressure.values
-        F = basedata.F.values
-        self.BvacR = F[-1]
-        self.F0 = F[-1]
 
-        if verbose:
-            print('--- Generate 1D splines ---')
-        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
-        self._df_dpsin_spl = self._fpol_spl.derivative()
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
-        self._dp_dpsin_spl = self._pressure_spl.derivative()
+        pressure = None
+        pprime = None
 
-        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
-        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
+        if 'pprime' in basedata:
+            pprime = basedata.pprime.values
+        if 'pressure' in basedata:
+            pressure = basedata.pressure.values
+
+        self.F0 = None
+        # Try to find F0 in basedata:
+        if 'F0' in basedata:
+            self.F0 = basedata['F0']
+            if isinstance(self.F0, xarray.DataArray):
+                self.F0 = np.asscalar(self.F0.values)
+        elif 'F0' in basedata.attrs:
+            self.F0 = basedata.attrs['F0']
+
+        F = None
+        FFprime = None
+
+        if 'FFprime' in basedata:
+            FFprime = basedata.FFprime.values
+        if 'F' in basedata:
+            F = basedata.F.values
+
+        # Other attempts to identify F0:
+        if self.F0 is None:
+            if F is not None:
+                self.F0 = F[-1]
+
+            elif 'B0' in basedata and 'R0' in basedata:
+                self.F0 = basedata['B0'] * basedata['R0']
+            elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
+                self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+
 
         # ---------------------------
         # --- Generate psi spline ---
@@ -271,6 +294,47 @@ class Equilibrium(object):
         else:
             self._psi_sign = -1
 
+        Fprime = None
+        if FFprime is not None:
+            F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
+            Fprime = FFprime / F
+
+        if pprime is not None:
+            pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
+
+        self.BvacR = self.F0
+
+        # if p and F are not define, run vacuum-like discharge:
+        self._vacuum = False
+        if pressure is None or F is None:
+            pressure = np.zeros_like(psi_n)
+            F = np.zeros_like(psi_n)
+            self._vacuum = True
+
+        if verbose:
+            print('--- Generate 1D splines ---')
+        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
+
+        if FFprime is None:
+            self._df_dpsin_spl = self._fpol_spl.derivative()
+            Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+            FFprime = F * Fprime
+
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
+
+        if pprime is None:
+            self._dp_dpsin_spl = self._pressure_spl.derivative()
+            pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+
+        self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
+        self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
+
+        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
+
+        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('pprime', pprime, psi_n=psi_n)
+
         if verbose:
             print('--- Mapping midplane to psi_n ---')
         self.__map_midplane2psi__()
@@ -337,7 +401,7 @@ class Equilibrium(object):
 
     def pprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        return self._dp_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        return self._pprime_spl(coord.psi_n)
 
     def F(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -361,14 +425,14 @@ class Equilibrium(object):
         '''
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        Fprime = self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        Fprime = self._Fprime_spl(coord.psi_n)
         Fprime[mask_out] = 0
         return Fprime
 
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
-        FFprime = self._fpol_spl(coord.psi_n) * self._df_dpsin_spl(coord.psi_n) * self._diff_psi_n
+        FFprime = self._fpol_spl(coord.psi_n) * self._Fprime_spl(coord.psi_n)
         FFprime[mask_out] = 0
         return FFprime
 
