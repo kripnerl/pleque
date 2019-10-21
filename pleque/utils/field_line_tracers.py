@@ -71,7 +71,7 @@ def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=No
     return ret
 
 
-def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
+def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -132,8 +132,8 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         BZ = BZ_func(R, Z)
         Bphi = Bphi_func(R, Z)
         B = np.sqrt(np.sum(np.square([BR, BZ, Bphi])))
-        dRds = R * BR / B
-        dZds = R * BZ / B
+        dRds = BR / B
+        dZds = BZ / B
         return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return ds_func
@@ -215,6 +215,47 @@ def rz_coordinate_stopper_factory(r_0, z_0):
         min = np.min(dist)
 
         return min
+
+    stopper.terminal = True
+
+    return stopper
+
+
+def ds_grad_psi_tracer_factory(psi_spl):
+    """Trace perpendicular to the gradient vector of the psi function
+
+    equivalent to tracing along the poloidal mag. field,
+    but the needless 1/R (cancels) and other factors are neglected,
+    hopefully making this faster
+    """
+    def ds_func(s, x):
+        R, Z = x
+        dpsi_dx = psi_spl(R, Z, dx=1, grid=False)
+        dpsi_dy = psi_spl(R, Z, dy=1, grid=False)
+        dpsi_ds = (dpsi_dx**2 + dpsi_dy**2)**0.5
+        dy_ds = - dpsi_dx / dpsi_ds  # negative to be perp to gradient
+        dx_ds = dpsi_dy / dpsi_ds
+        return [dx_ds, dy_ds]
+
+    return ds_func
+
+
+def rz_target_s_min_stopper_factory(y0, s_min, atol=1e-6):
+    """Stopper which returns the (squared) distance after a minimum traced length
+
+    atol is subtracted from the distance to guarantee 0-crossing
+
+
+    This should prevent early stopping by having the initial distance 0
+
+    A good estimate for s_min could be r_mid of y0=[Rt, Zt],
+    because the total flux surface length will be at least pi times larger
+    """
+    def stopper(s, y):
+        if s < s_min:           # only started tracing
+            return 42
+        else:
+            return np.sum((y-y0)**2) - atol
 
     stopper.terminal = True
 
