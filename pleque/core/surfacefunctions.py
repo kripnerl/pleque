@@ -24,11 +24,16 @@ class SurfaceFunctions:
         from scipy.interpolate import RectBivariateSpline
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
-        r, z = self.evalcoord(coord)
-        data = data(r, z)
+        indr, indz = self.evalcoord(coord)
+        print(coord.R[indr].shape)
+        print(coord.Z[indz].shape)
+        data_= data[indr, :]
+        data = data[:, indz]
+        print(data.shape)
         self._func_names.append(name)
 
-        interp2d = RectBivariateSpline(r, z, data, kx=spline_order, ky=spline_order, s=spline_smooth)
+        interp2d = RectBivariateSpline(coord.R[indr], coord.Z[indz], data, kx=spline_order, ky=spline_order,
+                                       s=spline_smooth)
         setattr(self, '_interp2D_' + name, interp2d)
 
         def new_func(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, **coords):
@@ -42,36 +47,26 @@ class SurfaceFunctions:
     @staticmethod
     def evalcoord(coord):
         """
-        evaluate if R, Z are increasing and have the same dimension
-        :return: R, Z with the same size
+        evaluate if R, Z are increasing and unique and have the same size
+        :return: indexes of R, Z
         """
-        import warnings
         indr = np.where(np.diff(coord.R) > 0)[0]
         indz = np.where(np.diff(coord.Z) > 0)[0]
-        if len(indr) > 1 and len(indz) > 1:
-            r = coord.R[indr]
-            z = coord.Z[indz]
         if len(indz) < 1:
-            # z = np.flip(coord.Z)
-            warnings.warn('Z coordinates should not decrease.')
-            # raise Exception('Z coordinates should not decrease., Z values were flipped')
+            raise Exception('Z coordinates should not decrease. Flip Z coordinate')
         if len(indr) < 1:
-            # r = np.flip(coord.R)
-            warnings.warn('R coordinates should not decrease.')
-            # raise Exception('R coordinates should not decrease., R values were flipped')
-        if len(indr) > len(indz):
-            z = np.linspace(min(coord.Z), max(coord.Z), len(indr))
-            warnings.warn('size of R coordinates is not equal to the size of Z coordinates. Now they have same size')
-            # raise Exception(
-            #    'size of R coordinates is not equal to the size of Z coordinates. \
-            #    Z coordinates now has the same size as R (which was larger)')
-        elif len(indr) < len(indz):
-            r = np.linspace(min(coord.R), max(coord.R), len(indz))
-            warnings.warn('size of R coordinates is not equal to the size of Z coordinates. Now they have same size')
-            # raise Exception(
-            #    'size of Z coordinates is not equal to the size of R coordinates. \
-            #    R coordinates now has the same size as Z (which was larger)')
-        return r, z
+            raise Exception('R coordinates should not decrease., Flip the R coordinate')
+        if len(indr) != len(indz):
+            raise Exception('selected R, Z do not have the same dimensions!')
+        else:
+            indr = np.concatenate((indr, [len(coord.R) - 1]), axis=0)
+            indz = np.concatenate((indz, [len(coord.Z) - 1]), axis=0)
+        return indr, indz
+
+    # R = np.linspace(0.3, 0.4, 10)
+    # Z = np.linspace(0, 0.2, 10)
+    # coord = eq.coordinates(R, Z)
+    # r, z = evalcoord(coord)
 
     def keys(self):
         return self._func_names
