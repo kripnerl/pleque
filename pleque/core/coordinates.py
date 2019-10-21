@@ -5,6 +5,7 @@ import numpy as np
 import xarray
 
 from pleque.utils.decorators import deprecated
+import pleque.utils.transformations as trans
 from .cocos import cocos_coefs
 
 class Coordinates(object):
@@ -135,7 +136,8 @@ class Coordinates(object):
     def psi(self):
         if not hasattr(self, '_psi'):
             if self.dim == 1:
-                self._psi = self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
+                self._psi = trans.psi_n2psi(self.x1, self._eq._psi_axis, self._eq._psi_lcfs)
+                #self._psi = self._eq._psi_axis + self.x1 * (self._eq._psi_lcfs - self._eq._psi_axis)
             elif self.dim >= 2:
                 psi = self._eq._spl_psi(self.x1, self.x2, grid=self.grid)
                 if self.grid:
@@ -144,13 +146,15 @@ class Coordinates(object):
                     self._psi = psi
         return self._psi
 
+
     @property
     def psi_n(self):
         if not hasattr(self, '_psi_n'):
             if self.dim == 1:
                 self._psi_n = self.x1
             elif self.dim >= 2:
-                self._psi_n = (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
+                self._psi_n = trans.psi_2psi_n(self.psi, self._eq._psi_axis, self._eq._psi_lcfs)
+                #self._psi_n = (self.psi - self._eq._psi_axis) / (self._eq._psi_lcfs - self._eq._psi_axis)
         return self._psi_n
 
     @property
@@ -160,13 +164,15 @@ class Coordinates(object):
     @property
     def r(self):
         r_mgax, z_mgax = self._eq._mg_axis
-        return np.sqrt((self.x1 - r_mgax) ** 2 + (self.x2 - z_mgax) ** 2)
+        return trans.distance_2d(self.x1, self.x2, r_mgax, z_mgax)
+        #return np.sqrt((self.x1 - r_mgax) ** 2 + (self.x2 - z_mgax) ** 2)
 
     @property
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
-        cc_coef = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
-        return np.arctan2(cc_coef * (self.x2 - z_mgax), (self.x1 - r_mgax))
+        #cc_coef = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
+        return trans.angle_coef(self.x1, self.x2, r_mgax, z_mgax, - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl'])
+        #return np.arctan2(cc_coef * (self.x2 - z_mgax), (self.x1 - r_mgax))
 
     @property
     def r_mid(self):
@@ -179,13 +185,15 @@ class Coordinates(object):
     @property
     def X(self):
         if self.dim >= 2:
-            return self.R * np.cos(self.phi)
+            return trans.fmultiply(self.R, np.cos(self.phi))
+            #return self.R * np.cos(self.phi)
 
     @property
     def Y(self):
         if self.dim >= 2:
-            cocos_coef = self.cocos_dict['sigma_cyl']
-            return cocos_coef * self.R * np.sin(self.phi)
+            return trans.fmultiply(self.cocos_dict['sigma_cyl'], trans.fmultiply(self.R, np.sin(self.phi)))
+            #cocos_coef = self.cocos_dict['sigma_cyl']
+            #return cocos_coef * self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
@@ -329,12 +337,14 @@ class Coordinates(object):
             raise TypeError('The grid is used - no distances between spatial steps will be calculated')
         if not hasattr(self, '_dists'):
             if self.dim == 1:
-                self._dists = (self.x1[1:] - self.x1[:-1])
+                self._dists = trans.distance_1d(self.x1[1:], self.x1[:-1])
             elif self.dim == 2:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+                #self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+                self._dists = trans.distance_2d(self.x1[1:], self.x2[1:], self.x1[:-1], self.x2[:-1])
             elif self.dim == 3:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
-                                      (self.x3[1:] - self.x3[:-1]) ** 2)
+                self._dists = trans.distance_3d(self.x1[1:], self.x2[1:], self.x3[1:], self.x1[:-1], self.x2[:-1], self.x3[:-1])
+                #self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
+                                      #(self.x3[1:] - self.x3[:-1]) ** 2)
         return self._dists
 
     @property
@@ -562,8 +572,9 @@ class Coordinates(object):
                 self.x1 = self._x1_input
             elif self._coord_type_input == ('psi',):
                 psi = self._x1_input
-                self.x1 = (psi - self._eq._psi_axis) / \
-                          (self._eq._psi_lcfs - self._eq._psi_axis)
+                self.x1 = trans.psi_2psi_n(psi, self._eq._psi_axis, self._eq._psi_lcfs)
+                #self.x1 = (psi - self._eq._psi_axis) / \
+                 #         (self._eq._psi_lcfs - self._eq._psi_axis)
 
             elif self._coord_type_input == ('rho',):
                 self.x1 = self._x1_input ** 2
@@ -579,9 +590,12 @@ class Coordinates(object):
             elif self._coord_type_input == ('r', 'theta'):
                 # todo COCOS
                 r_mgax, z_mgax = self._eq._mg_axis
-                cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
-                self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
-                self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
+                self.x1 = trans.lcos(r_mgax, self._x1_input, self._x2_input)
+                self.x2 = trans.lsin(z_mgax, - self.cocos_dict['sigma_pol'] * \
+                                    self.cocos_dict['sigma_cyl'] * self._x1_input, self._x2_input)
+                # cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
+                #self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
+                #self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
             self.x1 = np.array(self.x1, copy=False, ndmin=1)
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
 
@@ -599,9 +613,11 @@ class Coordinates(object):
                 # Z(2) = Z(3)
                 # phi(3) = atan2(Y(2), X(1)]
                 cc = self.cocos_dict['sigma_cyl']
-                self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
+                #self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
-                self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
+                #self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
+                self.x1 = trans.distance_2d(self._x1_input, 0, self._x2_input, 0)
+                self.x3 = trans.angle_coef(self._x1_input, self._x2_input, 0, 0, self.cocos_dict['sigma_cyl'])
 
             self.x1 = np.array(self.x1, copy=False, ndmin=1)
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
