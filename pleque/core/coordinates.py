@@ -359,8 +359,14 @@ class Coordinates(object):
             self._cum_length = np.hstack((0, np.cumsum(self.dists)))
         return self._cum_length[-1]
 
+    @property
+    def as_xarray(self):
+        return self._xds
+
     def _evaluate_input(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
+
+        self._xds = xarray.Dataset()
 
         if len(coordinates) == 0:
             # todo:
@@ -376,8 +382,10 @@ class Coordinates(object):
                             val = val.reshape((len(val), 1))
                     else:
                         val = np.array(val, ndmin=1)
+
                     xy.append(val)
                     xy_name.append(key)
+                    self._xds = self._xds.assign_coords(**{key: val})
                     self.dim += 1
 
             coord_type_ = ()
@@ -436,7 +444,11 @@ class Coordinates(object):
                           'Turning grid = False.')
                 self.grid = False
 
-                if isinstance(xy, Iterable):
+                from xarray.core.common import DataWithCoords
+                if isinstance(xy, DataWithCoords):
+                    self._xds = xy
+
+                elif isinstance(xy, Iterable):
                     # input as array of size (N, dim),
                     # if (N) add dimension
                     if not isinstance(xy, np.ndarray):
@@ -460,6 +472,7 @@ class Coordinates(object):
                     # 1d, one number
                     self.dim = 1
                     self._x1_input = np.array([xy])
+
             elif len(coordinates) == 2:
                 self.dim = 2
                 x1 = coordinates[0]
@@ -472,6 +485,7 @@ class Coordinates(object):
                     x2 = np.array(x2, ndmin=1)
                 self._x1_input = x1
                 self._x2_input = x2
+
             elif len(coordinates) == 3:
                 self.dim = 3
                 x1 = np.atleast_1d(coordinates[0])
@@ -492,7 +506,17 @@ class Coordinates(object):
             else:
                 self._incompatible_dimension_error(len(coordinates))
 
+            coors_list = []
+            if self.dim == 1:
+                coors_list = [self._x1_input]
+            elif self.dim == 2:
+                coors_list = [self._x1_input, self._x2_input]
+            elif self.dim == 3:
+                coors_list = [self._x1_input, self._x2_input, self._x3_input]
             self._coord_type_input = self._verify_coord_type(coord_type)
+
+            for key, val in zip(self._coord_type_input, coors_list):
+                self._xds = self._xds.assign_coords(**{key: val})
 
         self._convert_to_default_coord_type()
 
