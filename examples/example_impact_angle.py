@@ -18,12 +18,14 @@ eq = load_testing_equilibrium(4)
 
 surf_lcfs = eq._flux_surface(psi_n=1 - 1e-6)[0]
 first_wall=eq.first_wall
-print(dir(lim))
+
 
 npoints=500
 
-plt.plot(lim.R,lim.Z)
-plt.show()
+fign,axn=plt.subplots()
+
+axn.plot(first_wall.R,first_wall.Z)
+
 
 point = eq.coordinates(R=0.83, Z=-0.3)
 surf_frompoint = eq._flux_surface(point)
@@ -34,20 +36,21 @@ grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
 
 def interpolate_lim(first_wall,npoints):
     """
-    Implicit spline curve interpolation fir the limiter, number of points, should specify
+    Implicit spline curve interpolation for the limiter, number of points to be specified
+    should specify
     """
     dR=-np.diff(first_wall.R)
     dZ=-np.diff(first_wall.Z)
     
     dists=np.cumsum(np.sqrt(dR**2+dZ**2))
-    print(np.shape(lim.R[:-1]),np.shape(dists))
-    print(dists)
-    tck, u = splprep([lim.R[:-1], lim.Z[:-1]],u=dists,k=1,s=0)
+    #print(np.shape(first_wall.R[:-1]),np.shape(dists))
+    #print(dists)
+    tck, u = splprep([first_wall.R[:-1], first_wall.Z[:-1]],u=dists,k=1,s=0)
     t=np.linspace(np.amin(u),np.amax(u),npoints)
     newpoints = splev(t, tck)
     return newpoints[0],newpoints[1]
 
-newpoints=interpolate_lim(first_wall,npoints)
+
 
 def limiter_norm_vec_splined(first_wall):
     """Calculate limiter fw input as list of R and Z cooridnate arrays
@@ -144,7 +147,8 @@ def impact_angle(eq, first_wall):
 
 
 # test area
-    
+
+newpoints=interpolate_lim(first_wall,npoints)
 
 normal_vecs=limiter_norm_vec_splined(newpoints)
 
@@ -154,12 +158,12 @@ vec=np.linspace(0,0.1,2)
 
 impang=impact_angle(eq,newpoints)
 
-fign,axn=plt.subplots()
+
     
 for i in range(0,npoints-1):
     axn.plot(newpoints[0][i]+normal_vecs[0][i]*vec,newpoints[1][i]+normal_vecs[1][i]*vec,color='k')
     
-figb,axb=plt.subplots()
+#figb,axb=plt.subplots()
     
 for i in range(0,npoints-1):
     axn.plot(newpoints[0][i]+bvec[0][i]*vec,newpoints[1][i]+bvec[1][i]*vec,color='r')
@@ -172,5 +176,5 @@ cmap=plt.get_cmap('jet')
 for i in range(0,npoints-1):
     ax.scatter(newpoints[0][i], newpoints[1][i], c = cmap((impang[i]-np.amin(impang))/(np.amax(impang)-np.amin(impang))))
     
-fig2,ax2=plt.subplots()
-ax2.plot()
+#fig2,ax2=plt.subplots()
+#ax2.plot()
