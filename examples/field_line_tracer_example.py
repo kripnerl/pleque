@@ -1,104 +1,47 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import axes3d
 
-from pleque.utils.field_line_tracers import _trace_field_line_first_attempt
-from pleque.utils.plotting import plot_equilibrium
 from pleque.tests.utils import load_testing_equilibrium
-from pleque.io.jet import reader_jet
-
-def first_attempt():
-    # plt.show()
-
-    # N = 20
-    N = 5
-
-    rs = np.linspace(1.16, 1.17, N)
-    zs = np.zeros_like(rs)
-    traces = _trace_field_line_first_attempt(eq, R=rs, Z=zs, step=1e-2)
-
-    # traces = eq._trace_field_line(R=1.17, Z=0)
-
-    def convert_to_cart(r, z, phi):
-        x = r * np.sin(phi)
-        y = r * np.cos(phi)
-        z = z
-        return x, y, z
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    for trace in traces:
-        p = trace[0]
-        trace_array = np.array(trace[1]).squeeze()
-        r = trace_array[:, 0]
-        z = trace_array[:, 1]
-        phi = trace_array[:, 2]
-        x, y, z = convert_to_cart(r, z, phi)
-        # ax.plot(x, y, z)
-        ax.scatter(x, y, z, c=p, s=0.3, marker='.')
-
-    ax.set_aspect('equal')
-    ax.set_xlabel('x [m]')
-    ax.set_ylabel('y [m]')
-    ax.set_zlabel('z [m]')
-    # plt.savefig('/compass/home/kripner/Desktop/tracinkg/trace_1.png')
-
-    fig = plt.figure()
-    ax = fig.gca()
-
-    sc = None
-    for trace in traces:
-        p = trace[0]
-        trace_array = np.array(trace[1]).squeeze()
-        r = trace_array[:, 0]
-        z = trace_array[:, 1]
-        phi = trace_array[:, 2]
-        x, y, z = convert_to_cart(r, z, phi)
-        # ax.plot(x, y, z)
-        sc = ax.scatter(r, z, c=p, s=0.3, marker='.')
-
-    if sc is not None:
-        plt.colorbar(sc)
-    ax.set_aspect('equal')
-    ax.set_xlabel('R [m]')
-    ax.set_ylabel('Z [m]')
-
-    print('End of tracing')
 
 
 def default_tracer():
     #choose the tokamak out of the too options
 
-    tokamak = 'JET'
+    # tokamak = 'JET'
+    tokamak = 'COMPASS-U'
 
     if tokamak == 'COMPASS-U':
         eq = load_testing_equilibrium()
-        N = 1
+        N = 3  # Number of field line for tracing
         rs = np.linspace(1.16, 1.17, N, endpoint=False)
         zs = np.zeros_like(rs)
     elif tokamak == 'JET':
+        from pleque.io.jet import reader_jet
         eq = reader_jet.sal_jet(92400,timex=43.0)
-        N = 1
+        N = 3  # Number of field line for tracing
         rs = np.linspace(3.66, 3.67, N, endpoint=False)
         zs = np.zeros_like(rs)
     else:
         eq = load_testing_equilibrium()
-        N = 1
+        N = 3  # Number of field line for tracing
         rs = np.linspace(1.16, 1.17, N, endpoint=False)
         zs = np.zeros_like(rs)
 
-    from mpl_toolkits.mplot3d import axes3d
-    
-    # Ugly trick to prevent axes3d to be automaticaly deleted by PyCharm. 
+    # Ugly trick to prevent axes3d to be automaticaly deleted by PyCharm.
     axes3d.__doc__
     
     traces = eq.trace_field_line(R=rs, Z=zs)
+
+    dists, lines = eq.connection_length(R=(0.62, 0.622, 1.165, 1.17, 1.175, 1.18), Z=(0, 0, 0, 0, 0, 0))
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
     for fl in traces:
         ax.scatter(fl.X, fl.Y, fl.Z, s=0.3, marker='.')
+    for fl in lines:
+        ax.scatter(fl.X, fl.Y, fl.Z, s=0.6, marker='.')
 
     ax.set_aspect('equal')
     ax.set_xlabel('x [m]')
@@ -110,6 +53,14 @@ def default_tracer():
 
     for fl in traces:
         ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+    for fl in lines:
+        #ax.scatter(fl.R, fl.Z, s=0.3, marker='.')
+        ax.plot(fl.R, fl.Z)
+
+    print(dists)
+
+    eq.first_wall.plot(color='k')
+    eq.lcfs.plot(color='y', lw=0.5)
 
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
@@ -119,6 +70,8 @@ def default_tracer():
     ax = fig.gca()
 
     for fl in traces:
+        ax.plot(fl.X, fl.Y)
+    for fl in lines:
         ax.plot(fl.X, fl.Y)
 
     ax.set_xlabel('X [m]')
