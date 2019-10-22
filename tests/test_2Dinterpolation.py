@@ -36,10 +36,12 @@ pos[:, :, 0] = R
 pos[:, :, 1] = Z
 
 # The distribution on the variables X, Y packed into pos.
-F = multivariate_gaussian(pos, mu, Sigma)
+F1 = multivariate_gaussian(pos, mu, Sigma)
+# random function
+F2 = np.exp(-R/10.) * np.exp(-((Z-2)/1.5)**3)
 
 eq = load_testing_equilibrium()
-@pytest.mark.parametrize("data, coord1, coord2, spline_order, spline_smooth", [(F, r, z, 3, 1)])
+@pytest.mark.parametrize("data, coord1, coord2, spline_order, spline_smooth", [(F1, r, z, 3, 1), (F2, r, z, 3, 0)])
 def test_surfacefunction(equilibrium, data, coord1, coord2, spline_order, spline_smooth):
     """
     :param eq:
@@ -48,11 +50,12 @@ def test_surfacefunction(equilibrium, data, coord1, coord2, spline_order, spline
     :param data: function value for fiven coordinates
     :return: 2D spline
     """
-    vysledok2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
+    results2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
                                                           spline_smooth=spline_smooth)
-    return vysledok2
+    delta = results2(coord1, coord2) - data
+    print('average error between original values and 2D spline is {}:'.format(float(np.mean(delta))))
 
 
 
-spline2d = test_surfacefunction(eq, F, r, z, spline_order=3, spline_smooth=1)
-delta = spline2d(r, z) - F
+
+
