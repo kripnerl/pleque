@@ -6,6 +6,7 @@ import xarray
 
 from pleque.utils.decorators import deprecated
 from .cocos import cocos_coefs
+from scipy.interpolate import splprep, splev
 
 class Coordinates(object):
 
@@ -246,6 +247,33 @@ class Coordinates(object):
             return Coordinates(eq, rs, zs, phi, grid=grid)
         else:
             return Coordinates(eq)
+        
+    def resample2(self, npoints):
+        """
+        Implicit spline curve interpolation for the limiter, number of points must be specified
+    
+        :param coords: instance of coordinates object
+        :param npoints: int - number of points of the result
+        
+        """
+        
+        ### TODO: deal with different coordinate systems and dimensions
+        
+        grid = self.grid
+        eq = self._eq
+        
+        dists=self.cum_length
+        
+        #dists=np.cumsum(np.sqrt(dR**2+dZ**2))
+        #print(np.shape(first_wall.R[:-1]),np.shape(dists))
+        #print(dists)
+        
+        tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
+        t=np.linspace(np.amin(u),np.amax(u),npoints)
+        rs,zs = splev(t, tck)
+        new_coords=Coordinates(eq, rs, zs, grid=grid)
+        
+        return new_coords
 
     def plot(self, ax=None, **kwargs):
         """
@@ -317,6 +345,73 @@ class Coordinates(object):
         elif dim == 3 or self.dim == 3:
             # todo: replace this by split method
             return np.asarray([self.x1, self.x2, self.x3]).T
+        
+    def normal_vector(self):
+        """
+        Calculate limiter normal vector with fw input directly from eq class
+        
+        :param first_wall: interpolated first wall
+        :return: array of limiter elements normals
+        """
+        
+        ### TODO: deal with different coordinate systems and dimensions
+        
+        dR=-np.diff(self.R)
+        dZ=-np.diff(self.Z)
+        lim_vec=np.vstack((dR,dZ,np.zeros(np.shape(dR))))
+        #print(np.shape(lim_vec))
+        
+        pol=lim_vec/np.linalg.norm(lim_vec,axis=0)
+    
+        tor=[0,0,1]
+        
+        normal=np.cross(pol,tor,axis=0)/np.linalg.norm(np.cross(pol,tor,axis=0))
+        
+        return normal.T
+    
+    def bvec_at_limiter(self):
+        """ Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        
+        :param eq: object equilibrium
+        :param first_wall: interpolated first wall
+        :return: array of mag filed directions at limiter
+        """
+        
+        eq=self._eq
+        
+        fwr=self.R
+        fwz=self.Z
+        
+        fwphi=np.zeros(np.shape(fwr))
+        
+        first_wall_transp=np.vstack([fwr,fwz,fwphi]).T
+        
+        
+        bR=eq.B_R(first_wall_transp)
+        bz=eq.B_Z(first_wall_transp)
+        btor=eq.B_tor(first_wall_transp)
+        
+        bvec=np.vstack((bR,bz,btor))
+        bvec=bvec/np.linalg.norm(bvec,axis=0)
+        
+        return bvec
+   
+    def impact_angle_cos(self):
+        """Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        :param eq: object equilibrium
+        :param first_wall: interpolated first wall
+        :return: array of impact angles
+        """
+        
+        normal_vecs=self.normal_vector()
+        
+        bvec=self.bvec_at_limiter()
+        #print(np.shape(Bvec[:,:-1]),np.shape(normal_vecs))
+        
+        impcos=np.einsum('ij,ij->j', bvec[:,:-1], normal_vecs.T)
+        
+        return impcos
+    
 
     @property
     def dists(self):
