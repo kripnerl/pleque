@@ -382,6 +382,11 @@ class Equilibrium(object):
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
+    
+    def r_mid(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        # todo: map the r_mid to psi_n
+        return self._rmid_spl(coord.psi)
 
     @property
     def _diff_psi_n(self):
@@ -549,7 +554,20 @@ class Equilibrium(object):
             fluxsurface.append(tmp2)
 
         return fluxsurface
+    
+    def outter_parallel_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
+        midplane. 
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        
+        B_midplane = self.B_abs(r=coord.r_mid, theta=0)
+        B_coord = self.B_abs(coord)
 
+        return B_midplane / B_coord
+
+    
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
