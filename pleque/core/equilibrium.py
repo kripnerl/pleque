@@ -612,6 +612,18 @@ class Equilibrium(object):
 
         return B_coord / B_midplane
 
+    def outter_poloidal_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
+        midplane.
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        #print(coord.r_mid)
+        B_midplane = self.B_pol(r=coord.r_mid, theta=0, grid=False)
+        B_coord = self.B_pol(coord)
+
+        return B_coord / B_midplane
+
     
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
