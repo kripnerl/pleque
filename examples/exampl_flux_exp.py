@@ -20,13 +20,18 @@ first_wall=eq.first_wall
 
 
 fign,axn=plt.subplots()
-
-axn.plot(first_wall.R,first_wall.Z)
-
-coords=Coordinates(eq,np.vstack((first_wall.R,first_wall.Z)).T)
+axn.set_aspect('equal')
+cmap=plt.get_cmap('jet')
 
 
+fw = eq.first_wall
 
-ratio=eq.outter_parallel_fl_expansion_coef(coords)
 
-axn.plot(ratio)
+ratio=eq.outter_parallel_fl_expansion_coef(fw)
+
+
+for i in range(0,npoints-1):
+    s=ax.scatter(fw.R, newpoints[1][i], c = cmap((impcos[i]-np.amin(impcos))/(np.amax(impcos)-np.amin(impcos))))
+
+
+plt.show()

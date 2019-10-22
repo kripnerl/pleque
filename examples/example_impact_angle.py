@@ -109,8 +109,10 @@ def bvec_at_limiter(eq, first_wall):
     btor=eq.B_tor(first_wall_transp)
     
     bvec=np.vstack((bR,bz,btor))
+
     bvec=bvec/np.linalg.norm(bvec,axis=0)
-    
+    #print(np.linalg.norm(bvec, axis=0))
+
     return bvec
    
 

@@ -44,7 +44,7 @@ newpoints=np.vstack((coords2.R,coords2.Z))
 normal_vecs=coords2.normal_vector().T
 
 # get normalised bvec
-bvec=coords2.bvec_at_limiter()
+bvec=eq.Bvec_norm(coords2)
 
 vec=np.linspace(0,0.2,2)
 
