@@ -55,7 +55,7 @@ class Equilibrium(object):
         :param psi_lcfs:
         :param x_points:
         :param strike_points:
-        :param init_method: str One of ("full", "hints", "fast_forward").
+        :param init_method: str One of ("full", "hints", "fast").
                             If "full" no hints are taken and module tries to recognize all critical points itself.
                             If "hints" module use given optional arguments as a help with initialization.
                             If "fast" module use given optional arguments as final and doesn't try to correct.
@@ -232,50 +232,38 @@ class Equilibrium(object):
             rs = np.linspace(self.R_min, self.R_max, 300)
             zs = np.linspace(self.Z_min, self.Z_max, 400)
             x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
-        else:
-            x_points = self._x_points
-            o_points = [self._mg_axis]        
-            
-        if self._init_method == 'fast' and self._mg_axis is not None:
-            self._o_points = o_points
-        else:
             z_lim = (self.Z_min, self.Z_max)
             r_lim = (self.R_min, self.R_max)
             self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
             self._o_points = o_points[sortidx]
             self._o_points[0] = self._mg_axis
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
+            self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
+            (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
+                                                              r_lim, z_lim, self._psi_lcfs, self._x_points)
+            self._x_points = x_points[sortidx]
+            self._x_point = xp1
+            self._x_point2 = xp2
+        else:
+            o_points = [self._mg_axis]
+            self._o_points = o_points
+            self._x_point = self._x_points[0]
+            try:
+                xp2 = self._x_points[1]
+                self._x_points[1] = xp2
+            except IndexError:
+                xp2 = None
+            self._x_point2 = xp2
+            self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
 
+        if self._x_point is None:
+            self._psi_xp = None
+        else:
+            self._psi_xp = self._spl_psi(*self._x_point, grid=False)
         # ------------------------------------------
         # Recognize x-point plasma vs limiter plasma
         # ------------------------------------------
         if verbose:
             print('--- Recognizing equilibrium type ---')
-
-        # todo: use these two x-points in the future
-        if self._init_method == 'fast':
-            xp1 = self._xpoints[0]
-            try:
-                xp2 = self._xpoints[1]
-            except IndexError:
-                xp2 = None
-        else:
-            (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
-                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
-
-        self._x_point = xp1
-        self._x_point2 = xp2
-
-        if xp1 is None:
-            self._psi_xp = None
-        else:
-            self._psi_xp = self._spl_psi(*xp1, grid=False)
-
-        self._x_points = x_points[sortidx]
-        if xp1 is not None:
-            self._x_points[0] = xp1
-        if xp2 is not None:
-            self._x_points[1] = xp2
 
         limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
                                                                        self._mg_axis, self._psi_axis, self._spl_psi)
@@ -289,14 +277,19 @@ class Equilibrium(object):
             else:
                 print(">> X-point plasma found.")
 
-        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
+        if self._init_method != 'fast' or self._psi_lcfs is None:
+            self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
         # -----------------------
         # --- Plasma boundary ---
         # -----------------------
-
+        #if self._init_method == 'full':
         rs = np.linspace(self.R_min, self.R_max, 700)
         zs = np.linspace(self.Z_min, self.Z_max, 1200)
+        # elif self._init_method == 'hint':
+        #     #TODO consider where to initialize rs and zs
+        #     rs = np.linspace(self.R_min, self.R_max, 700)
+        #     zs = np.linspace(self.Z_min, self.Z_max, 1200)
 
         if limiter_plasma:
             self._strike_points = self._limiter_point[np.newaxis, :]
@@ -305,7 +298,11 @@ class Equilibrium(object):
             self._contact_point = None
             if len(self._first_wall) < 4:
                 self._strike_points = None
-            else:
+            elif self._init_method != 'fast':
+                # if self._init_method == 'hint':
+                #     #TODO smaller area rs and zs for hint method
+                #     rs = np.linspace(self.R_min, self.R_max, 700)
+                #     zs = np.linspace(self.Z_min, self.Z_max, 1200)
                 self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
                                                                   self._first_wall)
 
@@ -322,6 +319,7 @@ class Equilibrium(object):
             print("Relative LCFS error: {}".format(surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs)))
 
         if not limiter_plasma:
+            xp1 = self._x_point
             close_lcfs = surf.add_xpoint(xp1, close_lcfs, self._mg_axis)
 
         self._lcfs = close_lcfs
