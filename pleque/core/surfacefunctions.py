@@ -25,11 +25,11 @@ class SurfaceFunctions:
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, **coords)
         indr, indz = self.evalcoord(coord)
-        print(coord.R[indr].shape)
-        print(coord.Z[indz].shape)
+        #print(coord.R[indr].shape)
+        #print(coord.Z[indz].shape)
         data_= data[indr, :]
         data = data[:, indz]
-        print(data.shape)
+        #print(data.shape)
         self._func_names.append(name)
 
         interp2d = RectBivariateSpline(coord.R[indr], coord.Z[indz], data, kx=spline_order, ky=spline_order,
@@ -63,10 +63,6 @@ class SurfaceFunctions:
             indz = np.concatenate((indz, [len(coord.Z) - 1]), axis=0)
         return indr, indz
 
-    # R = np.linspace(0.3, 0.4, 10)
-    # Z = np.linspace(0, 0.2, 10)
-    # coord = eq.coordinates(R, Z)
-    # r, z = evalcoord(coord)
 
     def keys(self):
         return self._func_names
