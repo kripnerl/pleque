@@ -36,15 +36,15 @@ class Equilibrium(object):
         Equilibrium class instance should be obtained generally by functions in pleque.io
         package.
 
-        Optional arguments may help the initialization.
+        Optional arguments can be used to speed up the initialization and make it more accurate.
 
         :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
                          f = B_tor * R
         :param first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration.
-        :param mg_axis: suspected position of the o-point
-        :param psi_lcfs:
-        :param x_points:
-        :param strike_points:
+        :param mg_axis: array-like (2) suspected RZ coordinates of the o-point
+        :param psi_lcfs: float magnetic flux value on lcfs
+        :param x_points: array-like (n, 2) RZ coordinates of x points
+        :param strike_points: array-like (n, 2) RZ coordinates of strike points
         :param init_method: str One of ("full", "hints", "fast").
                             If "full" no hints are taken and module tries to recognize all critical points itself.
                             If "hints" module use given optional arguments as a help with initialization.
