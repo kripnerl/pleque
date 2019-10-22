@@ -27,9 +27,6 @@ fign,axn=plt.subplots()
 
 axn.plot(first_wall.R,first_wall.Z)
 
-
-grid = eq.grid(resolution=[1e-3, 2e-3], dim="step")
-
 coords=Coordinates(eq,np.vstack((first_wall.R,first_wall.Z)).T)
 
 
@@ -37,11 +34,10 @@ def interpolate_lim(coords, npoints):
     """
     Implicit spline curve interpolation for the limiter, number of points must be specified
 
+    :param coords: instance of coordinates object
+    :param npoints: int - number of points of the result
+    
     """
-    
-    dR=-np.diff(first_wall.R)
-    dZ=-np.diff(first_wall.Z)
-    
     
     dists=coords.cum_length
     
@@ -57,9 +53,12 @@ def interpolate_lim(coords, npoints):
 
 
 def limiter_norm_vec_splined(first_wall):
-    """Calculate limiter fw input as list of R and Z cooridnate arrays
+    """Calculate limiter fw input as list of R and Z coordinate arrays
     
+    :param first_wall: interpolated first wall
+    :return: array of limiter elements normals
     """
+    
     dR=-np.diff(first_wall[0])
     dZ=-np.diff(first_wall[1])
     lim_vec=np.vstack((dR,dZ,np.zeros(np.shape(dR))))
@@ -73,8 +72,11 @@ def limiter_norm_vec_splined(first_wall):
     return normal
 
 def limimiter_norm_vec(first_wall):
-    """Calculate limiter nomrmal vector with fw input directly from eq class
+    """
+    Calculate limiter nomrmal vector with fw input directly from eq class
     
+    :param first_wall: interpolated first wall
+    :return: array of limiter elements normals
     """
     dR=-np.diff(first_wall.R)
     dZ=-np.diff(first_wall.Z)
@@ -89,22 +91,12 @@ def limimiter_norm_vec(first_wall):
     return normal
     
 def bvec_at_limiter(eq, first_wall):
-    """Impact angle calculation - dot product of PFC norm and local magnetic field direction
-    
-    Parameters
-    ----------
-    eq: object equilibrium
-    firstwall: interpolated first wall
-        
-    Returns
-    -------
-    Bvec: magnetic field direction at the limiter
-        
-    Note
-    ----
-    
-    
+    """ Impact angle calculation - dot product of PFC norm and local magnetic field direction
+    :param eq: object equilibrium
+    :param first_wall: interpolated first wall
+    :return: array of mag filed directions at limiter
     """
+
     fwr=first_wall[0]
     fwz=first_wall[1]
     fwphi=np.zeros(np.shape(fwr))
@@ -124,20 +116,9 @@ def bvec_at_limiter(eq, first_wall):
 
 def impact_angle(eq, first_wall):
     """Impact angle calculation - dot product of PFC norm and local magnetic field direction
-    
-    Parameters
-    ----------
-    eq: object equilibrium
-    firstwall: interpolated first wall
-        
-    Returns
-    -------
-    impang: impact angle in rad
-        
-    Note
-    ----
-    
-    
+    :param eq: object equilibrium
+    :param first_wall: interpolated first wall
+    :return: array of impact angles
     """
     
     normal_vecs=limiter_norm_vec_splined(first_wall).T
@@ -183,7 +164,8 @@ cl = axn.contour(grid.R, grid.Z, grid.psi_n, 200)
 ax.set_aspect('equal')
 cmap=plt.get_cmap('jet')
 for i in range(0,npoints-1):
-    ax.scatter(newpoints[0][i], newpoints[1][i], c = cmap((impang[i]-np.amin(impang))/(np.amax(impang)-np.amin(impang))))
-    
+    s=ax.scatter(newpoints[0][i], newpoints[1][i], c = cmap((impang[i]-np.amin(impang))/(np.amax(impang)-np.amin(impang))))
+
+plt.show()
 #fig2,ax2=plt.subplots()
 #ax2.plot()

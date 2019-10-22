@@ -86,7 +86,7 @@ ax.set_aspect('equal')
 cmap=plt.get_cmap('jet')
 
 for i in range(0,npoints-1):
-    s=ax.scatter(newpoints[0][i], newpoints[1][i], c = cmap((impang[i]-np.amin(impang))/(np.amax(impang)-np.amin(impang))))
+    s=ax.scatter(newpoints[0][i], newpoints[1][i], c = cmap((impcos[i]-np.amin(impcos))/(np.amax(impcos)-np.amin(impcos))))
 
 plt.show()
 #fig2,ax2=plt.subplots()
