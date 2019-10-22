@@ -73,6 +73,10 @@ class Coordinates(object):
         self.dim = -1  # init only
         self.grid = grid
 
+
+        #for coord in self._valid_coordinates:
+        #    self.__setattr__('_{}'.format(coord), None)
+
         if cocos is None:
             if equilibrium is None:
                 self.cocos = 3
