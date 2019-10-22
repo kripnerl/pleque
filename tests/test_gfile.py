@@ -1,10 +1,12 @@
 import os
+import tempfile
 
 import numpy as np
 
 from pleque.io import _geqdsk
 from pleque.io.geqdsk import read
 from pleque.io.readers import read_geqdsk
+
 
 
 def test_calculated_profiles(geqdsk_file):
@@ -36,7 +38,10 @@ def test_calculated_profiles(geqdsk_file):
 
 
 def test_from_to_gfile(equilibrium):
-    file_name = '/tmp/g{:d}.{:.0f}{}'.format(equilibrium.shot, int(equilibrium.time), equilibrium.time_unit)
+    tmp_dir = tempfile.TemporaryDirectory()
+    file_name = '{}/g{:d}.{:.0f}{}'.format(tmp_dir.name, equilibrium.shot, int(equilibrium.time), equilibrium.time_unit)
+
+    print(file_name)
 
     equilibrium.to_geqdsk(file_name)
 
