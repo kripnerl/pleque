@@ -62,14 +62,14 @@ class Equilibrium(object):
             print('---------------------------------')
         self._basedata = basedata
         try:
-            self._mg_axis = basedata['mg_axis']
+            self._mg_axis = basedata['mg_axis'].values
         except KeyError:
             self._mg_axis = None
         if mg_axis is not None:
             self._mg_axis = mg_axis
             warnings.warn('mg_axis specified both in basedata and parameters. Using values from parameters')
         try:
-            self._psi_lcfs = basedata['psi_lcfs']
+            self._psi_lcfs = basedata['psi_lcfs'].values
         except KeyError:
             self._psi_lcfs = None
         if psi_lcfs is not None:
@@ -77,7 +77,7 @@ class Equilibrium(object):
             warnings.warn('psi_lcfs specified both in basedata and parameters. Using values from parameters')
 #        self._psi_lcfs = psi_lcfs
         try:
-            self._x_points = basedata['x_points']
+            self._x_points = basedata['x_points'].values
         except KeyError:
             self._x_points = None
         if x_points is not None:
@@ -85,7 +85,7 @@ class Equilibrium(object):
             warnings.warn('x_points specified both in basedata and parameters. Using values from parameters')
 #        self._x_points = x_points
         try:
-            self._strike_points = basedata['strike_points']
+            self._strike_points = basedata['strike_points'].values
         except KeyError:
             self._strike_points = None
         if strike_points is not None:
@@ -107,7 +107,7 @@ class Equilibrium(object):
 
         if first_wall is None:
             if 'first_wall' in basedata:
-                self._first_wall = basedata["first_wall"]
+                self._first_wall = basedata["first_wall"].values
             elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
                 self._first_wall = np.array([basedata.R_first_wall.values, basedata.Z_first_wall.values]).T
             else:

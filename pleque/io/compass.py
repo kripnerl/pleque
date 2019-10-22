@@ -173,6 +173,12 @@ def read_efithdf5(file_path, time=None):
         t = f5efit['time'][:]
         if t[0] < 100:  # heuristic, first time should be above 100 if in ms
             t *= 1e3  # put into ms
+        ma = f5efit['output/globalParameters/magneticAxis']
+        ma = np.array((ma['R'], ma['Z']))
+        xp = f5efit['output/separatrixGeometry/xpointCoords']
+        xp = np.array((xp['R'], xp['Z']))
+        sp = f5efit['output/separatrixGeometry/strikepointCoords']
+        sp = np.array((sp['R'], sp['Z']))
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
@@ -181,9 +187,9 @@ def read_efithdf5(file_path, time=None):
             'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'q': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
             'psi_lcfs': (['time'], f5efit['output/globalParameters/psiBoundary']),
-            'mg_axis': (['time'], f5efit['output/globalParameters/magneticAxis']),
-            'x_points': (['time', 'n'], f5efit['output/separatrixGeometry/xpointCoords']),
-            'strike_points': (['time', 'n'], f5efit['output/separatrixGeometry/strikepointCoords']),
+            'mg_axis': (['ndim', 'time'], ma),
+            'x_points': (['ndim', 'time', 'nx'], xp),
+            'strike_points': (['ndim', 'time', 'ns'], sp),
             # 'first_wall': ([], f5efit['output/separatrixGeometry/boundaryCoords']),
         }, coords={
             'time': t,
