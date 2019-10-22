@@ -1,21 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
-import pleque.tests.utils as test_util
-from pleque.core import SurfaceFunctions
-
-
-def test_surfacefunction(equilibrium, coord1, coord2, data, spline_order=3, spline_smooth=1):
-    """
-    :param eq:
-    :param coord1: first coordinate in 2D space
-    :param coord2: second coordinate in 2D space
-    :param data: function value for fiven coordinates
-    :return: 2D spline
-    """
-    vysledok2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
-                                                 spline_smooth=spline_smooth)
-    return vysledok2
+from pleque.tests.utils import load_testing_equilibrium
+import pytest
 
 
 def multivariate_gaussian(pos, mu, Sigma):
@@ -35,34 +20,39 @@ def multivariate_gaussian(pos, mu, Sigma):
     return np.exp(-fac / 2) / N
 
 
+# test of 2D gaussian function
+N = 100
+z = np.linspace(-0.1, 0.4, N)
+r = np.linspace(0.3, 0.8, N)
+R, Z = np.meshgrid(r, z)
 
-if test_util.get_test_cases_number():
-    # test of 2D gaussian function
-    N = 100
-    z = np.linspace(-0.1, 0.4, N)
-    r = np.linspace(0.3, 0.8, N)
-    R, Z = np.meshgrid(r, z)
+# Mean vector and covariance matrix
+mu = np.array([0., 1.])
+Sigma = np.array([[1., -0.5], [-0.5, 1.5]])
 
-    # Mean vector and covariance matrix
-    mu = np.array([0., 1.])
-    Sigma = np.array([[1., -0.5], [-0.5, 1.5]])
+# Pack X and Y into a single 3-dimensional array
+pos = np.empty(R.shape + (2,))
+pos[:, :, 0] = R
+pos[:, :, 1] = Z
 
-    # Pack X and Y into a single 3-dimensional array
-    pos = np.empty(R.shape + (2,))
-    pos[:, :, 0] = R
-    pos[:, :, 1] = Z
+# The distribution on the variables X, Y packed into pos.
+F = multivariate_gaussian(pos, mu, Sigma)
 
-    # The distribution on the variables X, Y packed into pos.
-    F = multivariate_gaussian(pos, mu, Sigma)
-    
-    eq = test_util.load_testing_equilibrium(1)
-    spline2d = test_surfacefunction(eq, r, z, F, spline_order=3, spline_smooth=1)
+eq = load_testing_equilibrium()
+@pytest.mark.parametrize("data, coord1, coord2, spline_order, spline_smooth", [(F, r, z, 3, 1)])
+def test_surfacefunction(equilibrium, data, coord1, coord2, spline_order, spline_smooth):
+    """
+    :param eq:
+    :param coord1: first coordinate in 2D space
+    :param coord2: second coordinate in 2D space
+    :param data: function value for fiven coordinates
+    :return: 2D spline
+    """
+    vysledok2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
+                                                          spline_smooth=spline_smooth)
+    return vysledok2
 
-    fig, ax = plt.subplots()
-    ax.contour(R, Z, F, 30, cmap=cm.viridis)
-    ax.contour(r, z, spline2d(r, z), 30, colors='k', linestyles=':')
-    plt.show()
 
-else:
-    print('testing equilibrium was not found')
 
+spline2d = test_surfacefunction(eq, F, r, z, spline_order=3, spline_smooth=1)
+delta = spline2d(r, z) - F
