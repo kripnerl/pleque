@@ -19,16 +19,6 @@ class Equilibrium(object):
     """
     Equilibrium class ...
     """
-
-    # def __init__(self,
-    #              basedata: xarray.Dataset,
-    #              first_wall=None: Iterable[(float, float)],
-    #              psi_lcfs=None: float,
-    #              X_points=None: Iterable[(float, float)],
-    #              strike_points=None: Iterable[(float, float)],
-    #              spline_order=5: int,
-    #              cocos=3: int,
-    #             ):
     def __init__(self,
                  basedata: xarray.Dataset,
                  first_wall=None,
@@ -40,7 +30,7 @@ class Equilibrium(object):
                  spline_order=3,
                  spline_smooth=0,
                  cocos=3,
-                 verbose=True
+                 verbose=False
                  ):
         """
         Equilibrium class instance should be obtained generally by functions in pleque.io
@@ -66,12 +56,10 @@ class Equilibrium(object):
                       working. Be aware of signs in the module!
         :param verbose:
         """
-
         if verbose:
             print('---------------------------------')
             print('Equilibrium module initialization')
             print('---------------------------------')
-
         self._basedata = basedata
         try:
             self._mg_axis = basedata['mg_axis']
@@ -206,12 +194,10 @@ class Equilibrium(object):
         if self.F0 is None:
             if F is not None:
                 self.F0 = F[-1]
-
             elif 'B0' in basedata and 'R0' in basedata:
                 self.F0 = basedata['B0'] * basedata['R0']
             elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
                 self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
-
 
         # ---------------------------
         # --- Generate psi spline ---
