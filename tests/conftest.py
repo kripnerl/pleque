@@ -7,6 +7,10 @@ import pleque.tests.utils as test_util
 def equilibrium(request):
     yield test_util.load_testing_equilibrium(request.param)
 
+@pytest.fixture(scope="module",
+                params=['full', 'hints', 'fast'])
+def init_method(request):
+    yield request.param
 
 @pytest.fixture(scope="module",
                 #params=[0, 1, 2, 3, 4, 5])

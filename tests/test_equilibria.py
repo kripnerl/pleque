@@ -42,13 +42,13 @@ st_points = [None, None, None, array([0.347, 0.00733336]), None, None]
 
 
 @pytest.mark.parametrize(('case',), [[0], [1], [2], [3], [4], [5]])
-def test_equilibria(case):
+def test_equilibria(init_method, case):
 
     gfiles = get_test_equilibria_filenames()
 
     print("Reading {}".format(gfiles[case]))
 
-    eq = read_geqdsk(gfiles[case])
+    eq = read_geqdsk(gfiles[case], init_method=init_method)
 
     # ## DEBUG plot
     # print(eq.magnetic_axis.psi)
@@ -99,9 +99,19 @@ def test_equilibria_init(case):
     eq_full = read_geqdsk(gfiles[case], init_method='full')
     eq_hints = read_geqdsk(gfiles[case], init_method='hints')
     eq_fast = read_geqdsk(gfiles[case], init_method='fast')
-    for eq in [eq_full, eq_hints, eq_fast]:
-        assert np.allclose(eq._mg_axis, o_points[case])
-        if eq._x_point is not None:
-            assert np.allclose(eq._x_point, x_points[case])
-        if eq._strike_points is not None and st_points[case] is not None:
-            assert np.allclose(eq._strike_points[0], st_points[case])
+    assert np.allclose(eq_full._mg_axis, eq_hints._mg_axis)
+    assert np.allclose(eq_fast._mg_axis, eq_hints._mg_axis)
+    assert np.allclose(eq_full._x_points, eq_hints._x_points)
+    assert np.allclose(eq_fast._x_points, eq_hints._x_points)
+    full_sp = eq_full._strike_points
+    hints_sp = eq_hints._strike_points
+    fast_sp = eq_fast._strike_points
+    if full_sp is not None and hints_sp is not None and fast_sp is not None:
+        assert np.allclose(full_sp, hints_sp)
+        assert np.allclose(fast_sp, hints_sp)
+    assert np.allclose(eq_full._o_points, eq_hints._o_points)
+    assert np.allclose(eq_fast._o_points, eq_hints._o_points)
+    assert np.allclose(eq_full._psi_lcfs, eq_hints._psi_lcfs)
+    assert np.allclose(eq_fast._psi_lcfs, eq_hints._psi_lcfs)
+    assert np.allclose(eq_full._psi_axis, eq_hints._psi_axis)
+    assert np.allclose(eq_fast._psi_axis, eq_hints._psi_axis)
