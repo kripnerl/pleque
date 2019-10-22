@@ -19,8 +19,7 @@ pos[:, :, 0] = R
 pos[:, :, 1] = Z
 
 
-
-def test_surfacefunction(eq, coord1, coord2, data, spline_order=3, spline_smooth=1):
+def test_surfacefunction(equilibrium, coord1, coord2, data, spline_order=3, spline_smooth=1):
     """
     :param eq:
     :param coord1: first coordinate in 2D space
@@ -28,7 +27,7 @@ def test_surfacefunction(eq, coord1, coord2, data, spline_order=3, spline_smooth
     :param data: function value for fiven coordinates
     :return: 2D spline
     """
-    vysledok2 = eq.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
+    vysledok2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
                                                  spline_smooth=spline_smooth)
     return vysledok2
 
@@ -49,15 +48,19 @@ def multivariate_gaussian(pos, mu, Sigma):
 
     return np.exp(-fac / 2) / N
 
+
 # test of 2D gaussian function
 # The distribution on the variables X, Y packed into pos.
 F = multivariate_gaussian(pos, mu, Sigma)
-test_util.get_test_cases_number()
-eq = test_util.load_testing_equilibrium(4)
+
+if test_util.get_test_cases_number():
+    eq = test_util.load_testing_equilibrium(2)
+else:
+    print('testing equilibrium was not found')
 
 spline2d = test_surfacefunction(eq, r, z, F, spline_order=3, spline_smooth=1)
 
 fig, ax = plt.subplots()
-ax.contour(R, Z, F, 30, zdir='z', offset=-0.15, cmap=cm.viridis)
+ax.contour(R, Z, F, 30, cmap=cm.viridis)
 ax.contour(r, z, spline2d(r, z), 30, colors='k', linestyles=':')
 plt.show()
