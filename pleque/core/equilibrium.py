@@ -610,7 +610,7 @@ class Equilibrium(object):
         B_midplane = self.B_abs(r=coord.r_mid, theta=0, grid=False)
         B_coord = self.B_abs(coord)
 
-        return B_midplane / B_coord
+        return B_coord / B_midplane
 
     
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):

@@ -379,7 +379,8 @@ class Coordinates(object):
         normal_vecs=self.normal_vector()
         
         bvec=eq.Bvec_norm(self)
-        
+
+
         impcos=np.einsum('ij,ij->j', bvec[:,:-1], normal_vecs.T)
         
         return impcos
