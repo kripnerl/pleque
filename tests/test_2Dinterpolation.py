@@ -4,20 +4,6 @@ from matplotlib import cm
 import pleque.tests.utils as test_util
 from pleque.core import SurfaceFunctions
 
-N = 60
-z = np.linspace(-0.1, 0.4, N)
-r = np.linspace(0.3, 0.8, N)
-R, Z = np.meshgrid(r, z)
-
-# Mean vector and covariance matrix
-mu = np.array([0., 1.])
-Sigma = np.array([[1., -0.5], [-0.5, 1.5]])
-
-# Pack X and Y into a single 3-dimensional array
-pos = np.empty(R.shape + (2,))
-pos[:, :, 0] = R
-pos[:, :, 1] = Z
-
 
 def test_surfacefunction(equilibrium, coord1, coord2, data, spline_order=3, spline_smooth=1):
     """
@@ -49,12 +35,27 @@ def multivariate_gaussian(pos, mu, Sigma):
     return np.exp(-fac / 2) / N
 
 
-# test of 2D gaussian function
-# The distribution on the variables X, Y packed into pos.
-F = multivariate_gaussian(pos, mu, Sigma)
 
 if test_util.get_test_cases_number():
-    eq = test_util.load_testing_equilibrium(2)
+    # test of 2D gaussian function
+    N = 100
+    z = np.linspace(-0.1, 0.4, N)
+    r = np.linspace(0.3, 0.8, N)
+    R, Z = np.meshgrid(r, z)
+
+    # Mean vector and covariance matrix
+    mu = np.array([0., 1.])
+    Sigma = np.array([[1., -0.5], [-0.5, 1.5]])
+
+    # Pack X and Y into a single 3-dimensional array
+    pos = np.empty(R.shape + (2,))
+    pos[:, :, 0] = R
+    pos[:, :, 1] = Z
+
+    # The distribution on the variables X, Y packed into pos.
+    F = multivariate_gaussian(pos, mu, Sigma)
+    
+    eq = test_util.load_testing_equilibrium(1)
     spline2d = test_surfacefunction(eq, r, z, F, spline_order=3, spline_smooth=1)
 
     fig, ax = plt.subplots()
