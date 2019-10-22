@@ -258,8 +258,7 @@ class Coordinates(object):
         """
         
         ### TODO: deal with different coordinate systems and dimensions
-        
-        grid = self.grid
+
         eq = self._eq
         
         dists=self.cum_length
@@ -271,7 +270,7 @@ class Coordinates(object):
         tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
         t=np.linspace(np.amin(u),np.amax(u),npoints)
         rs,zs = splev(t, tck)
-        new_coords=Coordinates(eq, rs, zs, grid=grid)
+        new_coords=Coordinates(eq, rs, zs)
         
         return new_coords
 
@@ -368,33 +367,6 @@ class Coordinates(object):
         normal=np.cross(pol,tor,axis=0)/np.linalg.norm(np.cross(pol,tor,axis=0))
         
         return normal.T
-    
-    def bvec_at_limiter(self):
-        """ Impact angle calculation - dot product of PFC norm and local magnetic field direction
-        
-        :param eq: object equilibrium
-        :param first_wall: interpolated first wall
-        :return: array of mag filed directions at limiter
-        """
-        
-        eq=self._eq
-        
-        fwr=self.R
-        fwz=self.Z
-        
-        fwphi=np.zeros(np.shape(fwr))
-        
-        first_wall_transp=np.vstack([fwr,fwz,fwphi]).T
-        
-        
-        bR=eq.B_R(first_wall_transp)
-        bz=eq.B_Z(first_wall_transp)
-        btor=eq.B_tor(first_wall_transp)
-        
-        bvec=np.vstack((bR,bz,btor))
-        bvec=bvec/np.linalg.norm(bvec,axis=0)
-        
-        return bvec
    
     def impact_angle_cos(self):
         """Impact angle calculation - dot product of PFC norm and local magnetic field direction
@@ -402,11 +374,11 @@ class Coordinates(object):
         :param first_wall: interpolated first wall
         :return: array of impact angles
         """
-        
+        eq=self._eq
+
         normal_vecs=self.normal_vector()
         
-        bvec=self.bvec_at_limiter()
-        #print(np.shape(Bvec[:,:-1]),np.shape(normal_vecs))
+        bvec=eq.Bvec_norm(self)
         
         impcos=np.einsum('ij,ij->j', bvec[:,:-1], normal_vecs.T)
         

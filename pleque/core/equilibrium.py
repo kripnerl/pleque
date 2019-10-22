@@ -461,6 +461,51 @@ class Equilibrium(object):
 
         return B_abs
 
+    def Bvec(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """ Magnetic field vector
+
+        :param grid:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return: Unnormalised magnetic field vector
+        """
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        bR = self.B_R(coord)
+        bz = self.B_Z(coord)
+        btor = self.B_tor(coord)
+
+        bvec = np.vstack((bR, bz, btor))
+
+        return bvec
+
+    def Bvec_norm(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """ Magnetic field vector, normalised
+
+        :param grid:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return: Unnormalised magnetic field vector
+        """
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        bR = self.B_R(coord)
+        bz = self.B_Z(coord)
+        btor = self.B_tor(coord)
+
+        bvec = np.vstack((bR, bz, btor))
+        bvec_n = bvec / np.linalg.norm(bvec, axis=0)
+
+        return bvec_n
+
     # XXXXXX TODO TODO TODO
     @deprecated('The structure and behaviour of this function will change soon!\n'
                 'to keep the same behaviour use `_flux_surface` instead.')
@@ -561,8 +606,8 @@ class Equilibrium(object):
         midplane. 
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        
-        B_midplane = self.B_abs(r=coord.r_mid, theta=0)
+        #print(coord.r_mid)
+        B_midplane = self.B_abs(r=coord.r_mid, theta=0, grid=False)
         B_coord = self.B_abs(coord)
 
         return B_midplane / B_coord
