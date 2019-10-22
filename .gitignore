@@ -38,3 +38,5 @@ docs/\.doctrees/
 docs/_sources/
 
 docs/_static/
+
+venv/
