@@ -180,7 +180,11 @@ def read_efithdf5(file_path, time=None):
             'F': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
             'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'q': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-
+            'psi_lcfs': (['time'], f5efit['output/globalParameters/psiBoundary']),
+            'mg_axis': (['time'], f5efit['output/globalParameters/magneticAxis']),
+            'x_points': (['time', 'n'], f5efit['output/separatrixGeometry/xpointCoords']),
+            'strike_points': (['time', 'n'], f5efit['output/separatrixGeometry/strikepointCoords']),
+            # 'first_wall': ([], f5efit['output/separatrixGeometry/boundaryCoords']),
         }, coords={
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
