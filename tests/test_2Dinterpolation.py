@@ -55,12 +55,13 @@ F = multivariate_gaussian(pos, mu, Sigma)
 
 if test_util.get_test_cases_number():
     eq = test_util.load_testing_equilibrium(2)
+    spline2d = test_surfacefunction(eq, r, z, F, spline_order=3, spline_smooth=1)
+
+    fig, ax = plt.subplots()
+    ax.contour(R, Z, F, 30, cmap=cm.viridis)
+    ax.contour(r, z, spline2d(r, z), 30, colors='k', linestyles=':')
+    plt.show()
+
 else:
     print('testing equilibrium was not found')
 
-spline2d = test_surfacefunction(eq, r, z, F, spline_order=3, spline_smooth=1)
-
-fig, ax = plt.subplots()
-ax.contour(R, Z, F, 30, cmap=cm.viridis)
-ax.contour(r, z, spline2d(r, z), 30, colors='k', linestyles=':')
-plt.show()
