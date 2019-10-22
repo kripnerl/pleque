@@ -90,3 +90,18 @@ def test_eq_properties(equilibrium):
             assert len(equilibrium.strike_points) > 1
 
     print(equilibrium.contact_point)
+
+
+@pytest.mark.parametrize(('case',), [[0], [1], [2], [3], [4], [5]])
+def test_equilibria_init(case):
+    gfiles = get_test_equilibria_filenames()
+    print("Reading {}".format(gfiles[case]))
+    eq_full = read_geqdsk(gfiles[case], init_method='full')
+    eq_hints = read_geqdsk(gfiles[case], init_method='hints')
+    eq_fast = read_geqdsk(gfiles[case], init_method='fast')
+    for eq in [eq_full, eq_hints, eq_fast]:
+        assert np.allclose(eq._mg_axis, o_points[case])
+        if eq._x_point is not None:
+            assert np.allclose(eq._x_point, x_points[case])
+        if eq._strike_points is not None and st_points[case] is not None:
+            assert np.allclose(eq._strike_points[0], st_points[case])

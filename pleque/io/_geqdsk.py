@@ -292,17 +292,21 @@ def data_as_ds(data):
     return eq_xarray
 
 
-def read_as_equilibrium(fh, cocos=3):
+def read_as_equilibrium(fh, cocos=3, init_method='hints'):
     """
     Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
     :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
+    :param init_method: str One of ("full", "hints", "fast").
+                            If "full" no hints are taken and module tries to recognize all critical points itself.
+                            If "hints" module use given optional arguments as a help with initialization.
+                            If "fast" module use given optional arguments as final and doesn't try to correct.
     :return: instance of `Equilibrium`
     """
 
     data = read(fh)
     ds = data_as_ds(data)  # as dataset
     fw = np.stack((ds['r_lim'].values, ds['z_lim'].values)).T  # first wall
-    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos, init_method=init_method)
     return eq
