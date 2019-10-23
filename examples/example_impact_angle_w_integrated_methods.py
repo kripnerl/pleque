@@ -52,7 +52,7 @@ vec=np.linspace(0,0.2,2)
 
 impcos=coords2.impact_angle_cos()
 
-
+impcos=coords2.pol_projection_impact_angle_cos()
 
 fign,axn=plt.subplots()
 
