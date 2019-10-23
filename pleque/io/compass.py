@@ -205,7 +205,7 @@ def read_efithdf5(file_path, time=None, init_method='hints'):
 
         dst.load()
 
-    efit_slices = EquilibriaTimeSlices(dst, limiter)
+    efit_slices = EquilibriaTimeSlices(dst)
     if time is not None:
         eq = efit_slices.get_time_slice(time, init_method=init_method)
         return eq
