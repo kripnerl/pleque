@@ -179,6 +179,8 @@ def read_efithdf5(file_path, time=None):
         xp = np.array((xp['R'], xp['Z']))
         sp = f5efit['output/separatrixGeometry/strikepointCoords']
         sp = np.array((sp['R'], sp['Z']))
+        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
+                                   for x in 'rz'])
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
@@ -190,7 +192,7 @@ def read_efithdf5(file_path, time=None):
             'mg_axis': (['ndim', 'time'], ma),
             'x_points': (['ndim', 'time', 'nx'], xp),
             'strike_points': (['ndim', 'time', 'ns'], sp),
-            # 'first_wall': ([], f5efit['output/separatrixGeometry/boundaryCoords']),
+            'first_wall': (['points','ndim'], limiter),
         }, coords={
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
