@@ -618,84 +618,81 @@ class Coordinates(object):
         import inspect
         import numpy as np
         from scipy.integrate import trapz, simps, quad
-        if not hasattr(self, '_line_integral'):
-            #
-            dx = np.hstack((0, np.cumsum(self.dists)))
-            # first evaluate the dimension of coord - self and the function
-            if self.grid:
-                raise TypeError(
-                    'The grid is used - currently not possible to calculated the line average value from grid')
 
-            if self.dim == 1:
+        #
+        dx = np.hstack((0, np.cumsum(self.dists)))
+        # first evaluate the dimension of coord - self and the function
+        if self.grid:
+            raise TypeError(
+                'The grid is used - currently not possible to calculated the line average value from grid')
+
+        if self.dim == 1:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+            else:
+                x1 = self.x1
+
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1)
+            else:
                 if method == 'sum':
-                    x1 = (self.x1[1:] - self.x1[:-1]) / 2
+                    func_val = (func[1:] + func[:-1]) / 2
                 else:
-                    x1 = self.x1
-
-                if inspect.isclass(func) or inspect.isfunction(func):
-                    func_val = func(x1)
-                elif isinstance(func, float) or isinstance(func, int):
                     func_val = func
-                elif inspect.ismodule(inspect.getmodule(func)):
-                    func_val = func(x1)
-                else:
-                    if method == 'sum':
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                line_integral = trapz(func_val, dx)
+            elif method == 'simps':
+                line_integral = simps(func_val, dx)
+            else:
+                line_integral = None
+
+        elif self.dim == 2:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+            else:
+                x1 = self.x1
+                x2 = self.x2
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1, x2)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1, x2)
+            else:
+                if method == 'sum':
+                    if func.ndim == 1:
                         func_val = (func[1:] + func[:-1]) / 2
                     else:
-                        func_val = func
-
-                if method == 'sum':
-                    self._line_integral = np.sum(func_val * self.dists)
-                elif method == 'trapz':
-                    self._line_integral = trapz(func_val, dx)
-                elif method == 'simps':
-                    self._line_integral = simps(func_val, dx)
+                        func_val = (func[1:, 1:] + func[:-1, :-1]) / 2
                 else:
-                    self._line_integral = None
-
-            elif self.dim == 2:
-                if method == 'sum':
-                    x1 = (self.x1[1:] - self.x1[:-1]) / 2
-                    x2 = (self.x2[1:] - self.x2[:-1]) / 2
-                else:
-                    x1 = self.x1
-                    x2 = self.x2
-                if inspect.isclass(func) or inspect.isfunction(func):
-                    func_val = func(x1, x2)
-                elif isinstance(func, float) or isinstance(func, int):
                     func_val = func
-                elif inspect.ismodule(inspect.getmodule(func)):
-                    func_val = func(x1, x2)
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                if func_val.ndim == 1:
+                    line_integral = trapz(func_val, dx)
                 else:
-                    if method == 'sum':
-                        if func.ndim == 1:
-                            func_val = (func[1:] + func[:-1]) / 2
-                        else:
-                            func_val = np.asarray(func)
-                            func_val[:, 0] = (func[1:, 0] + func[:-1, 0]) / 2
-                            func_val[:, 1] = (func[1:, 1] + func[:-1, 1]) / 2
-                    else:
-                        func_val = func
-
-                if method == 'sum':
-                    self._line_integral = np.sum(func_val * self.dists)
-                elif method == 'trapz':
-                    if func_val.ndims == 1:
-                        self._line_integral = trapz(func_val, dx)
-                    else:
-                        self._line_integral = trapz(trapz(func_val, x1), x2)
-                elif method == 'simps':
-                    if func_val.ndims == 1:
-                        self._line_integral = simps(func_val, dx)
-                    else:
-                        self._line_integral = simps(simps(func_val, x1), x2)
+                    line_integral = trapz(trapz(func_val, x1), x2)
+            elif method == 'simps':
+                if func_val.ndim == 1:
+                    line_integral = simps(func_val, dx)
                 else:
-                    self._line_integral = None
+                    line_integral = simps(simps(func_val, x1), x2)
+            else:
+                line_integral = None
 
-            elif self.dim == 3:
-                raise TypeError('The 3D function was given - line averaged value needs 2D')
+        elif self.dim == 3:
+            raise TypeError('The 3D function was given - line averaged value needs 2D')
 
-        return self._line_integral
+        return line_integral
 
-    #def line_average(self, func, method="sum"):
-
+    # def line_average(self, func, method="sum"):
