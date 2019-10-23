@@ -377,12 +377,42 @@ class Coordinates(object):
         eq=self._eq
 
         normal_vecs=self.normal_vector()
-        
+
         bvec=eq.Bvec_norm(self)
 
-
         impcos=np.einsum('ij,ij->j', bvec[:,:-1], normal_vecs.T)
-        
+
+        return impcos
+
+    def pol_projection_impact_angle_cos(self):
+        """Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        :param eq: object equilibrium
+        :param first_wall: interpolated first wall
+        :return: array of impact angles
+        """
+
+        ### TO DO clean this and see if it is working
+
+        eq = self._eq
+
+        normal_vecs = self.normal_vector().T
+
+        print(np.shape(normal_vecs)) #np.shape(np.zeros(normal_vecs[2,:])))
+
+        normal_vecs[2,:] = 0
+
+
+
+        normal_vecs=normal_vecs/np.linalg.norm(normal_vecs, axis=0)
+
+        bvec = eq.Bvec_norm(self)
+
+        bvec[2,:] = 0
+
+        bvec = bvec / np.linalg.norm(bvec, axis=0)
+
+        impcos = np.einsum('ij,ij->j', bvec[:, :-1], normal_vecs)
+
         return impcos
     
 
