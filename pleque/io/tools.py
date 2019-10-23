@@ -11,20 +11,19 @@ class EquilibriaTimeSlices:
     *Note:* This is temporary solution before implementation of support of time-evolving equilibrium.
     """
 
-    def __init__(self, eqs_dataset, limiter=None):
+    def __init__(self, eqs_dataset):
         """Create instance for generating equilibria at given times
 
         :param eqs_dataset: Dataset containing time-dependent equilibira inputs
-        "param limiter: time-independent limiter [R,Z] coords
         """
         self.eqs_dataset = eqs_dataset
-        self.limiter = limiter
 
-    def get_time_slice(self, time: float, tolerance=None):
+    def get_time_slice(self, time: float, init_method='hints', tolerance=None):
         """
         Creates an Equilibrium from the slice nearest to the specified time
 
         :param time: float, time in ms
+        :param init_method: str optional
         :param tolerance: float or None, raise ValueError if the selected time slice is outside the tolerance.
                           If None the warning is shown if the time difference is more then 10 ms.
         """
@@ -44,7 +43,7 @@ class EquilibriaTimeSlices:
                   .format(ds.time.item() - time, time, ds.time.item()))
             print('!!!!!!!!!!!')
 
-        eq = Equilibrium(ds, self.limiter)
+        eq = Equilibrium(basedata=ds, init_method=init_method)
         return eq
 
 

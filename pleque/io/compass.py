@@ -158,13 +158,14 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     return dst
 
 
-def read_efithdf5(file_path, time=None):
+def read_efithdf5(file_path, time=None, init_method='hints'):
     """
     Loads Equilibrium information from an efit file.
 
     :param file_path: path to the hdf5 compass efit file
     :param time: closest time [ms] of target equilibrium,
                  if None then an EFITSlices instance is returned
+    :param init_method: str
     :return: Equilibrium
     """
 
@@ -201,13 +202,12 @@ def read_efithdf5(file_path, time=None):
         }
         )
         # the limiter is not expected to change in time, so take 0th time index
-        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
-                                   for x in 'rz'])
+
         dst.load()
 
     efit_slices = EquilibriaTimeSlices(dst, limiter)
     if time is not None:
-        eq = efit_slices.get_time_slice(time)
+        eq = efit_slices.get_time_slice(time, init_method=init_method)
         return eq
     else:
         return efit_slices
