@@ -605,10 +605,10 @@ class Equilibrium(object):
         WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
         midplane. 
         """
-        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         #print(coord.r_mid)
-        B_midplane = self.B_abs(r=coord.r_mid, theta=0, grid=False)
-        B_coord = self.B_abs(coord)
+        B_midplane = self.B_abs(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
+        B_coord = self.B_abs(target)
 
         return B_coord / B_midplane
 
@@ -617,10 +617,10 @@ class Equilibrium(object):
         WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
         midplane.
         """
-        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         #print(coord.r_mid)
-        B_midplane = self.B_pol(r=coord.r_mid, theta=0, grid=False)
-        B_coord = self.B_pol(coord)
+        B_midplane = self.B_pol(r=target.r_mid, theta=0, grid=False)
+        B_coord = self.B_pol(target)
 
         return B_coord / B_midplane
 

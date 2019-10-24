@@ -386,6 +386,7 @@ class Coordinates(object):
 
     def pol_projection_impact_angle_cos(self):
         """Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        poloidal projection only
         :param eq: object equilibrium
         :param first_wall: interpolated first wall
         :return: array of impact angles
