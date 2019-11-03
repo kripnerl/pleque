@@ -71,7 +71,7 @@ def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=No
     return ret
 
 
-def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
+def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -80,7 +80,8 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
     Parameters
     ----------
     BR_func, BZ_func, Bphi_func : 
-        
+    :param direction: if positive trace field line in/cons the direction of magnetic field.
+
     Returns
     -------
     dphi_func: function (phi: float, X: [float, float]) -> [float, float]
@@ -99,7 +100,7 @@ def dhpi_tracer_factory(BR_func, BZ_func, Bphi_func):
         Bphi = Bphi_func(R, Z)
         dRdphi = R * BR / Bphi
         dZdphi = R * BZ / Bphi
-        return np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+        return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return dphi_func
 
@@ -131,14 +132,14 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         BZ = BZ_func(R, Z)
         Bphi = Bphi_func(R, Z)
         B = np.sqrt(np.sum(np.square([BR, BZ, Bphi])))
-        dRds = R * BR / B
-        dZds = R * BZ / B
+        dRds = BR / B
+        dZds = BZ / B
         return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return ds_func
 
 
-def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 180):
+def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 360):
     """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
     
@@ -191,6 +192,70 @@ def z_coordinate_stopper_factory(z_0):
         min = np.min(dist)
 
         return min
+
+    stopper.terminal = True
+
+    return stopper
+
+
+def rz_coordinate_stopper_factory(r_0, z_0):
+    """
+    Factory for function which stops field line tracing close to the defined z planes.
+    Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
+
+    :param r_0: [float, float]
+        [R_bottom, R_upper] boundary
+    :param z_0: [float, float]
+        [Z_bottom, Z_upper] boundary
+    :return:
+    """
+
+    def stopper(t, y):
+        dist = [y[0] - r_0[0], r_0[1] - y[0], y[1] - z_0[0], z_0[1] - y[1]]
+        min = np.min(dist)
+
+        return min
+
+    stopper.terminal = True
+
+    return stopper
+
+
+def ds_grad_psi_tracer_factory(psi_spl):
+    """Trace perpendicular to the gradient vector of the psi function
+
+    equivalent to tracing along the poloidal mag. field,
+    but the needless 1/R (cancels) and other factors are neglected,
+    hopefully making this faster
+    """
+    def ds_func(s, x):
+        R, Z = x
+        dpsi_dx = psi_spl(R, Z, dx=1, grid=False)
+        dpsi_dy = psi_spl(R, Z, dy=1, grid=False)
+        dpsi_ds = (dpsi_dx**2 + dpsi_dy**2)**0.5
+        dy_ds = - dpsi_dx / dpsi_ds  # negative to be perp to gradient
+        dx_ds = dpsi_dy / dpsi_ds
+        return [dx_ds, dy_ds]
+
+    return ds_func
+
+
+def rz_target_s_min_stopper_factory(y0, s_min, atol=1e-6):
+    """Stopper which returns the (squared) distance after a minimum traced length
+
+    atol is subtracted from the distance to guarantee 0-crossing
+
+
+    This should prevent early stopping by having the initial distance 0
+
+    A good estimate for s_min could be r_mid of y0=[Rt, Zt],
+    because the total flux surface length will be at least pi times larger
+    """
+    def stopper(s, y):
+        if s < s_min:           # only started tracing
+            return 42
+        else:
+            return np.sum((y-y0)**2) - atol
 
     stopper.terminal = True
 

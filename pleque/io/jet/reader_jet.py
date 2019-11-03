@@ -132,8 +132,9 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
         limiter_r = sal.get(data_path.format(pulse, 'rlim', sequence)).data.T
         limiter_z = sal.get(data_path.format(pulse, 'zlim', sequence)).data.T
     except NodeNotFound:
-        limiter_r = None
-        limiter_z = None
+        limiter_r = sal.get(data_path.format(94508, 'rlim', sequence)).data.T
+        limiter_z = sal.get(data_path.format(94508, 'zlim', sequence)).data.T
+        print("Limiter points not present in #{}, loaded from #94508".format(pulse))
 
     limiter = np.column_stack([limiter_r, limiter_z])
 

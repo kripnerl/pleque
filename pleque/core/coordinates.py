@@ -5,16 +5,21 @@ import numpy as np
 import xarray
 
 from pleque.utils.decorators import deprecated
+from .cocos import cocos_coefs
+from scipy.interpolate import splprep, splev
+
 
 class Coordinates(object):
 
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         """
 
         :param equilibrium:
         :param coordinates:
         :param coord_type:
         :param grid:
+        :param cocos: Define coordinate system cocos. Id `None` equilibrium default cocos is used.
+                        If `equilibrium is None` cocos = 3  (both systems cnt-clockwise) is used.
         :param coords:
 
         Default coordinate systems
@@ -70,7 +75,17 @@ class Coordinates(object):
         self.dim = -1  # init only
         self.grid = grid
 
-        self.__evaluate_input__(*coordinates, coord_type=coord_type, **coords)
+        if cocos is None:
+            if equilibrium is None:
+                self.cocos = 3
+            else:
+                self.cocos = equilibrium.cocos
+        else:
+            self.cocos = cocos
+
+        self.cocos_dict = cocos_coefs(self.cocos)
+
+        self._evaluate_input(*coordinates, coord_type=coord_type, **coords)
 
     def __iter__(self):
         if self.grid:
@@ -89,6 +104,21 @@ class Coordinates(object):
             return len(self.x1) * len(self.x2)
         else:
             return len(self.x1)
+
+    def __eq__(self, other):
+        if isinstance(other, Coordinates):
+            if self.dim != other.dim or self.grid != other.grid or len(self) != len(other):
+                return False
+            if self.dim == 0:
+                return True
+            elif self.dim == 1:
+                return np.allclose(self.psi_n, other.psi_n)
+            elif self.dim == 2:
+                return np.allclose(self.R, other.R) and np.allclose(self.Z, other.Z)
+            elif self.dim == 3:
+                return np.allclose(self.R, other.R) and np.allclose(self.Z, other.Z) and np.allclose(self.phi,
+                                                                                                     other.phi)
+        return False
 
     # def sort(self, order):
     #     pass
@@ -137,7 +167,8 @@ class Coordinates(object):
     @property
     def theta(self):
         r_mgax, z_mgax = self._eq._mg_axis
-        return np.arctan2((self.x2 - z_mgax), (self.x1 - r_mgax))
+        cc_coef = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
+        return np.arctan2(cc_coef * (self.x2 - z_mgax), (self.x1 - r_mgax))
 
     @property
     def r_mid(self):
@@ -155,7 +186,8 @@ class Coordinates(object):
     @property
     def Y(self):
         if self.dim >= 2:
-            return self.R * np.sin(self.phi)
+            cocos_coef = self.cocos_dict['sigma_cyl']
+            return cocos_coef * self.R * np.sin(self.phi)
 
     def mesh(self):
         if self.dim != 2 or not self.grid:
@@ -173,6 +205,76 @@ class Coordinates(object):
     #
     #     return
 
+    def resample(self, multiple=None):
+        """
+        Return new, resampled instance of `pleque.Coordinates`
+
+        :param multiple: int, use multiple to multiply number of points.
+        :return: pleque.Coordinates
+        """
+        # TODO: TEST ME (!!!!!!)
+
+        grid = self.grid
+        eq = self._eq
+        if self.dim == 1:
+            psi_n = self.psi_n
+            len_psi_n = len(psi_n)
+            psi_n = np.interp(np.arange(len_psi_n * multiple), multiple * np.arange(len_psi_n), psi_n)
+
+            return Coordinates(eq, psi_n, grid=grid)
+
+        elif self.dim == 2:
+            rs = self.R
+            zs = self.Z
+            len_rs = len(rs)
+            len_zs = len(zs)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+
+            return Coordinates(eq, rs, zs, grid=grid)
+
+        elif self.dim == 3:
+            rs = self.R
+            zs = self.Z
+            phi = self.phi
+
+            len_rs = len(rs)
+            len_zs = len(zs)
+            len_phi = len(phi)
+            rs = np.interp(np.arange(len_rs * multiple), multiple * np.arange(len_rs), rs)
+            zs = np.interp(np.arange(len_zs * multiple), multiple * np.arange(len_zs), zs)
+            phi = np.interp(np.arange(phi * multiple), multiple * np.arange(len_phi), phi)
+
+            return Coordinates(eq, rs, zs, phi, grid=grid)
+        else:
+            return Coordinates(eq)
+        
+    def resample2(self, npoints):
+        """
+        Implicit spline curve interpolation for the limiter, number of points must be specified
+    
+        :param coords: instance of coordinates object
+        :param npoints: int - number of points of the result
+        
+        """
+        
+        ### TODO: deal with different coordinate systems and dimensions
+
+        eq = self._eq
+        
+        dists=self.cum_length
+        
+        #dists=np.cumsum(np.sqrt(dR**2+dZ**2))
+        #print(np.shape(first_wall.R[:-1]),np.shape(dists))
+        #print(dists)
+        
+        tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
+        t=np.linspace(np.amin(u),np.amax(u),npoints)
+        rs,zs = splev(t, tck)
+        new_coords=Coordinates(eq, rs, zs)
+        
+        return new_coords
+
     def plot(self, ax=None, **kwargs):
         """
 
@@ -180,7 +282,7 @@ class Coordinates(object):
         :param kwargs: Arguments forwarded to matplotlib plot function.
         :return:
         """
-        #todo: THis function should be somewhere else. A function taking coordinates as input....
+        # todo: THis function should be somewhere else. A function taking coordinates as input....
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -191,6 +293,31 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
+    def intersection(self, coords2, dim=None):
+        """
+        input: 2 sets of coordinates
+        crossection of two lines (2 sets of coordinates)
+
+        :param dim: reduce number of dimension in which is the intersection searched
+        :return:
+        """
+        from shapely import geometry
+
+        dim_ = np.max((dim, self.dim, coords2.dim))
+
+        if self.grid:
+            raise ValueError("grid ")
+        coor1 = geometry.linestring.LineString(self.as_array(dim=dim_))
+        coor2 = geometry.linestring.LineString(coords2.as_array(dim=dim_))
+        intersec = coor1.intersection(coor2)
+        if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
+            return None
+        elif intersec is not None:
+            intersec = np.array(intersec).T
+            return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
+        else:
+            return None
+
     def as_array(self, dim=None, coord_type=None):
         """
         Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
@@ -199,11 +326,13 @@ class Coordinates(object):
         :param coord_type: not effected at the moment (TODO)
         :return:
         """
+        # TODO integrate with numpy _as_array
+
         if self.dim == 0:
             return np.array(())
         # coord_type_ = self._verify_coord_type(coord_type)
         elif dim == 1 or self.dim == 1:
-            return self.x1
+            return np.asanyarray(self.x1)
         elif dim == 2 or self.dim == 2:
             if self.grid:
                 x1, x2 = self.mesh()
@@ -212,12 +341,125 @@ class Coordinates(object):
                 # x2 = x2.ravel()
                 # return np.array([x1, x2]).T
             else:
-                return np.array([self.x1, self.x2]).T
+                return np.atleast_2d([self.x1, self.x2]).T
         elif dim == 3 or self.dim == 3:
             # todo: replace this by split method
-            return np.array([self.x1, self.x2, self.x3]).T
+            return np.asarray([self.x1, self.x2, self.x3]).T
+        
+    def normal_vector(self):
+        """
+        Calculate limiter normal vector with fw input directly from eq class
+        
+        :param first_wall: interpolated first wall
+        :return: array of limiter elements normals
+        """
+        
+        ### TODO: deal with different coordinate systems and dimensions
+        
+        dR=-np.diff(self.R)
+        dZ=-np.diff(self.Z)
+        lim_vec=np.vstack((dR,dZ,np.zeros(np.shape(dR))))
+        #print(np.shape(lim_vec))
+        
+        pol=lim_vec/np.linalg.norm(lim_vec,axis=0)
+    
+        tor=[0,0,1]
+        
+        normal=np.cross(pol,tor,axis=0)/np.linalg.norm(np.cross(pol,tor,axis=0))
+        
+        return normal.T
+   
+    def impact_angle_cos(self):
+        """Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        :param eq: object equilibrium
+        :param first_wall: interpolated first wall
+        :return: array of impact angles
+        """
+        eq=self._eq
 
-    def __evaluate_input__(self, *coordinates, coord_type=None, **coords):
+        normal_vecs=self.normal_vector()
+
+        bvec=eq.Bvec_norm(self)
+
+        impcos=np.einsum('ij,ij->j', bvec[:,:-1], normal_vecs.T)
+
+        return impcos
+
+    def pol_projection_impact_angle_cos(self):
+        """Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        poloidal projection only
+        :param eq: object equilibrium
+        :param first_wall: interpolated first wall
+        :return: array of impact angles
+        """
+
+        ### TO DO clean this and see if it is working
+
+        eq = self._eq
+
+        normal_vecs = self.normal_vector().T
+
+        print(np.shape(normal_vecs)) #np.shape(np.zeros(normal_vecs[2,:])))
+
+        normal_vecs[2,:] = 0
+
+
+
+        normal_vecs=normal_vecs/np.linalg.norm(normal_vecs, axis=0)
+
+        bvec = eq.Bvec_norm(self)
+
+        bvec[2,:] = 0
+
+        bvec = bvec / np.linalg.norm(bvec, axis=0)
+
+        impcos = np.einsum('ij,ij->j', bvec[:, :-1], normal_vecs)
+
+        return impcos
+    
+
+    @property
+    def dists(self):
+        """
+        distances between spatial steps along the tracked field line
+        :return:
+        self._dists
+        """
+        if self.grid:
+            raise TypeError('The grid is used - no distances between spatial steps will be calculated')
+        if not hasattr(self, '_dists'):
+            if self.dim == 1:
+                self._dists = (self.x1[1:] - self.x1[:-1])
+            elif self.dim == 2:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
+            elif self.dim == 3:
+                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
+                                      (self.x3[1:] - self.x3[:-1]) ** 2)
+        return self._dists
+
+    @property
+    def cum_length(self):
+        """
+        Cumulative length along the coordinate points.
+
+        :return: array(N)
+        """
+        if not hasattr(self, '_cum_length'):
+            self._cum_length = np.hstack((0, np.cumsum(self.dists)))
+        return self._cum_length
+
+    @property
+    def length(self):
+        """
+        Total length along the coordinate points.
+
+        :return: length in meters
+        """
+        if not hasattr(self, '_cum_length'):
+            self._cum_length = np.hstack((0, np.cumsum(self.dists)))
+        return self._cum_length[-1]
+
+    def _evaluate_input(self, *coordinates, coord_type=None, **coords):
         from collections import Iterable
 
         if len(coordinates) == 0:
@@ -258,7 +500,7 @@ class Coordinates(object):
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
             elif self.dim == 3:
-                #if tuple(xy_name) in self._valid_coordinates_3d:
+                # if tuple(xy_name) in self._valid_coordinates_3d:
                 permutations = list(itertools.permutations(xy_name))
                 # if any([p in self._valid_coordinates_3d for p in permutations]):
                 #
@@ -332,9 +574,9 @@ class Coordinates(object):
                 self._x2_input = x2
             elif len(coordinates) == 3:
                 self.dim = 3
-                x1 = coordinates[0]
-                x2 = coordinates[1]
-                x3 = coordinates[2]
+                x1 = np.atleast_1d(coordinates[0])
+                x2 = np.atleast_1d(coordinates[1])
+                x3 = np.atleast_1d(coordinates[2])
 
                 # assume _x1_input and _x2_input to be arrays of size (N)
                 if not isinstance(x1, np.ndarray):
@@ -427,29 +669,129 @@ class Coordinates(object):
                 self.x1 = self._x1_input ** 2
             else:
                 raise ValueError('This should not happen.')
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
             if self._coord_type_input == ('R', 'Z'):
                 self.x1 = self._x1_input
                 self.x2 = self._x2_input
             elif self._coord_type_input == ('r', 'theta'):
-                # todo: COCOS
+                # todo COCOS
                 r_mgax, z_mgax = self._eq._mg_axis
+                cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
-                self.x2 = z_mgax + self._x1_input * np.sin(self._x2_input)
+                self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
-            #if self._coord_type_input == ('R', 'Z', 'phi'):
+            # if self._coord_type_input == ('R', 'Z', 'phi'):
             if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
-                self.x1 = self._x1_input
-                self.x2 = self._x2_input
-                self.x3 = self._x3_input
-            #elif self._coord_type_input == ('X', 'Y', 'Z'):
+                self.x1 = np.asanyarray(self._x1_input)
+                self.x2 = np.asanyarray(self._x2_input)
+                self.x3 = np.asanyarray(self._x3_input)
+            # elif self._coord_type_input == ('X', 'Y', 'Z'):
             elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
                 # R(1)**2 = X(1)**2 + Y(2)**2
                 # Z(2) = Z(3)
                 # phi(3) = atan2(Y(2), X(1)]
+                cc = self.cocos_dict['sigma_cyl']
                 self.x1 = np.sqrt(self._x1_input ** 2 + self._x2_input ** 2)
                 self.x2 = self._x3_input
-                self.x3 = np.arctan2(self._x2_input, self._x1_input)
+                self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
+
+            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+            self.x3 = np.array(self.x3, copy=False, ndmin=1)
+
+    def line_integral(self, func, method='sum'):
+        """
+        func = /oint F(x,y) dl
+        :param func: self - func(X, Y), Union[ndarray, int, float] or function values or 2D spline
+        :param method: str, ['sum', 'trapz', 'simps']
+        :return:
+        """
+        import inspect
+        import numpy as np
+        from scipy.integrate import trapz, simps, quad
+
+        #
+        dx = np.hstack((0, np.cumsum(self.dists)))
+        # first evaluate the dimension of coord - self and the function
+        if self.grid:
+            raise TypeError(
+                'The grid is used - currently not possible to calculated the line average value from grid')
+
+        if self.dim == 1:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+            else:
+                x1 = self.x1
+
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1)
+            else:
+                if method == 'sum':
+                    func_val = (func[1:] + func[:-1]) / 2
+                else:
+                    func_val = func
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                line_integral = trapz(func_val, dx)
+            elif method == 'simps':
+                line_integral = simps(func_val, dx)
+            else:
+                line_integral = None
+
+        elif self.dim == 2:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+            else:
+                x1 = self.x1
+                x2 = self.x2
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1, x2)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1, x2)
+            else:
+                if method == 'sum':
+                    if func.ndim == 1:
+                        func_val = (func[1:] + func[:-1]) / 2
+                    else:
+                        func_val = (func[1:, 1:] + func[:-1, :-1]) / 2
+                else:
+                    func_val = func
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                if func_val.ndim == 1:
+                    line_integral = trapz(func_val, dx)
+                else:
+                    line_integral = trapz(trapz(func_val, x1), x2)
+            elif method == 'simps':
+                if func_val.ndim == 1:
+                    line_integral = simps(func_val, dx)
+                else:
+                    line_integral = simps(simps(func_val, x1), x2)
+            else:
+                line_integral = None
+
+        elif self.dim == 3:
+            raise TypeError('The 3D function was given - line averaged value needs 2D')
+
+        return line_integral
+
+    # def line_average(self, func, method="sum"):

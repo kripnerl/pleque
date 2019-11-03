@@ -79,7 +79,7 @@ def plot_overview(eq: Equilibrium):
 def main():
     import matplotlib.pyplot as plt
 
-    tokamak = 'JET'
+    tokamak = 'COMPASS-U'
 
     if tokamak == 'JET':
         eq = reader_jet.sal_jet(92400)
