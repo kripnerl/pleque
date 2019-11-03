@@ -9,6 +9,7 @@ from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunctions, Surface  # , FluxSurface
+from pleque.core import SurfaceFunctions
 from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
@@ -1502,6 +1503,16 @@ class Equilibrium(object):
         if not hasattr(self, '_fluxfunc'):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
+
+
+
+    @property
+    def surfacefuncs(self):
+        if not hasattr(self, '_surfacefunc'):
+            self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
+        return self._surfacefunc
+
+
 
     def to_geqdsk(self, file, nx=64, ny=128, q_positive=True):
         """
