@@ -7,6 +7,7 @@ import xarray
 from pleque.utils.decorators import deprecated
 from .cocos import cocos_coefs
 
+
 class Coordinates(object):
 
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
@@ -217,7 +218,7 @@ class Coordinates(object):
         if self.dim == 1:
             psi_n = self.psi_n
             len_psi_n = len(psi_n)
-            psi_n = np.interp(np.arange(len_psi_n*multiple), multiple*np.arange(len_psi_n), psi_n)
+            psi_n = np.interp(np.arange(len_psi_n * multiple), multiple * np.arange(len_psi_n), psi_n)
 
             return Coordinates(eq, psi_n, grid=grid)
 
@@ -254,7 +255,7 @@ class Coordinates(object):
         :param kwargs: Arguments forwarded to matplotlib plot function.
         :return:
         """
-        #todo: THis function should be somewhere else. A function taking coordinates as input....
+        # todo: THis function should be somewhere else. A function taking coordinates as input....
         import matplotlib.pyplot as plt
 
         if ax is None:
@@ -400,7 +401,7 @@ class Coordinates(object):
                 else:
                     raise ValueError('Invalid combination of input coordinates.')
             elif self.dim == 3:
-                #if tuple(xy_name) in self._valid_coordinates_3d:
+                # if tuple(xy_name) in self._valid_coordinates_3d:
                 permutations = list(itertools.permutations(xy_name))
                 # if any([p in self._valid_coordinates_3d for p in permutations]):
                 #
@@ -606,3 +607,92 @@ class Coordinates(object):
             self.x1 = np.array(self.x1, copy=False, ndmin=1)
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
             self.x3 = np.array(self.x3, copy=False, ndmin=1)
+
+    def line_integral(self, func, method='sum'):
+        """
+        func = /oint F(x,y) dl
+        :param func: self - func(X, Y), Union[ndarray, int, float] or function values or 2D spline
+        :param method: str, ['sum', 'trapz', 'simps']
+        :return:
+        """
+        import inspect
+        import numpy as np
+        from scipy.integrate import trapz, simps, quad
+
+        #
+        dx = np.hstack((0, np.cumsum(self.dists)))
+        # first evaluate the dimension of coord - self and the function
+        if self.grid:
+            raise TypeError(
+                'The grid is used - currently not possible to calculated the line average value from grid')
+
+        if self.dim == 1:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+            else:
+                x1 = self.x1
+
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1)
+            else:
+                if method == 'sum':
+                    func_val = (func[1:] + func[:-1]) / 2
+                else:
+                    func_val = func
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                line_integral = trapz(func_val, dx)
+            elif method == 'simps':
+                line_integral = simps(func_val, dx)
+            else:
+                line_integral = None
+
+        elif self.dim == 2:
+            if method == 'sum':
+                x1 = (self.x1[1:] - self.x1[:-1]) / 2
+                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+            else:
+                x1 = self.x1
+                x2 = self.x2
+            if inspect.isclass(func) or inspect.isfunction(func):
+                func_val = func(x1, x2)
+            elif isinstance(func, float) or isinstance(func, int):
+                func_val = func
+            elif inspect.ismodule(inspect.getmodule(func)):
+                func_val = func(x1, x2)
+            else:
+                if method == 'sum':
+                    if func.ndim == 1:
+                        func_val = (func[1:] + func[:-1]) / 2
+                    else:
+                        func_val = (func[1:, 1:] + func[:-1, :-1]) / 2
+                else:
+                    func_val = func
+
+            if method == 'sum':
+                line_integral = np.sum(func_val * self.dists)
+            elif method == 'trapz':
+                if func_val.ndim == 1:
+                    line_integral = trapz(func_val, dx)
+                else:
+                    line_integral = trapz(trapz(func_val, x1), x2)
+            elif method == 'simps':
+                if func_val.ndim == 1:
+                    line_integral = simps(func_val, dx)
+                else:
+                    line_integral = simps(simps(func_val, x1), x2)
+            else:
+                line_integral = None
+
+        elif self.dim == 3:
+            raise TypeError('The 3D function was given - line averaged value needs 2D')
+
+        return line_integral
+
+    # def line_average(self, func, method="sum"):
