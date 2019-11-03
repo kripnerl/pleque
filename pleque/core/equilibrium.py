@@ -9,6 +9,7 @@ from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
 from pleque.utils.tools import arglis
 from pleque.core import FluxFunctions, Surface  # , FluxSurface
+from pleque.core import SurfaceFunctions
 from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
@@ -382,6 +383,11 @@ class Equilibrium(object):
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
+    
+    def r_mid(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        # todo: map the r_mid to psi_n
+        return self._rmid_spl(coord.psi)
 
     @property
     def _diff_psi_n(self):
@@ -455,6 +461,51 @@ class Equilibrium(object):
         B_abs = np.sqrt(B_R ** 2 + B_Z ** 2 + B_T ** 2)
 
         return B_abs
+
+    def Bvec(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """ Magnetic field vector
+
+        :param grid:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return: Unnormalised magnetic field vector
+        """
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        bR = self.B_R(coord)
+        bz = self.B_Z(coord)
+        btor = self.B_tor(coord)
+
+        bvec = np.vstack((bR, bz, btor))
+
+        return bvec
+
+    def Bvec_norm(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """ Magnetic field vector, normalised
+
+        :param grid:
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param coords:
+        :return: Unnormalised magnetic field vector
+        """
+
+        coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        bR = self.B_R(coord)
+        bz = self.B_Z(coord)
+        btor = self.B_tor(coord)
+
+        bvec = np.vstack((bR, bz, btor))
+        bvec_n = bvec / np.linalg.norm(bvec, axis=0)
+
+        return bvec_n
 
     # XXXXXX TODO TODO TODO
     @deprecated('The structure and behaviour of this function will change soon!\n'
@@ -549,7 +600,32 @@ class Equilibrium(object):
             fluxsurface.append(tmp2)
 
         return fluxsurface
+    
+    def outter_parallel_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
+        midplane. 
+        """
+        target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        #print(coord.r_mid)
+        B_midplane = self.B_abs(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
+        B_coord = self.B_abs(target)
 
+        return B_coord / B_midplane
+
+    def outter_poloidal_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        """
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
+        midplane.
+        """
+        target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+        #print(coord.r_mid)
+        B_midplane = self.B_pol(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
+        B_coord = self.B_pol(target)
+
+        return B_coord / B_midplane
+
+    
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
@@ -1427,6 +1503,16 @@ class Equilibrium(object):
         if not hasattr(self, '_fluxfunc'):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
+
+
+
+    @property
+    def surfacefuncs(self):
+        if not hasattr(self, '_surfacefunc'):
+            self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
+        return self._surfacefunc
+
+
 
     def to_geqdsk(self, file, nx=64, ny=128, q_positive=True):
         """
