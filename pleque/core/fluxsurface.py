@@ -346,12 +346,17 @@ class FluxSurface(Surface):
 
     @property
     def minor_radius(self):
+        '''
+        a= (R_min - R_max)./2
+        :return:
+        '''
         return (np.max(self.R) - np.min(self.R)) * 0.5
 
     @property
     def geom_radius(self):
         '''
         Geometrical radius
+        a= (R_min + R_max)./2
         :return:
         '''
         return (np.max(self.R) + np.min(self.R)) * 0.5
