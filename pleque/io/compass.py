@@ -138,6 +138,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         })
 
     dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
+    dst['shot'] = int(shot)
 
     if first_wall is None:
         resource_package = 'pleque'
