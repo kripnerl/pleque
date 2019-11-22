@@ -303,7 +303,7 @@ def find_strike_points(psi_spl, rs, zs, psi_lcfs, first_wall):
     if contours is not None:
         for contour in contours:
             intersects = surf.intersection(contour, first_wall)
-            if intersects is not None:
+            if intersects.size != 0:
                 sp.append(intersects)
 
     if len(sp) > 0:
