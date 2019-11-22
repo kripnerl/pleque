@@ -39,7 +39,7 @@ def intersection(line1, line2):
 
     :param line1: array(N, 2)
     :param line2: array(N, 2)
-    :return: array(N_intersect, 2) or None
+    :return: array(N_intersect, 2) or empty array
     """
     # TODO: move this method to some utilities (!)
 
@@ -48,10 +48,12 @@ def intersection(line1, line2):
 
     intersec = l1.intersection(l2)
 
+    # later version of shapely has 'array_interface' for empty intersection.
+    # So instead of "None empty array is returned (array.size == 0)
     if hasattr(intersec, "array_interface"):
         intersec = np.atleast_2d(intersec)
     else:
-        intersec = None
+        intersec = np.array([])
 
     return intersec
 
