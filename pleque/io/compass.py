@@ -140,19 +140,22 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
     dst['shot'] = int(shot)
 
-    if first_wall is None:
+    if first_wall == 'IBAv3.1':
         resource_package = 'pleque'
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
         first_wall = np.loadtxt(first_wall)
+    elif first_wall is None:
+        r_limiter = cdb.get_signal("R_limiter/Fiesta_OUT:" + strid_postfix)
+        z_limiter = cdb.get_signal("Z_limiter/Fiesta_OUT:" + strid_postfix)
+        first_wall = np.array([r_limiter.data, z_limiter.data]).T
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
     dst['Z_first_wall'] = xr.DataArray(first_wall[:, 1], coords=[first_wall[:, 0]], dims=['R_first_wall'])
 
     if cdb_host_def:
         os.environ['CDB_HOST'] = cdb_host_def
-        print('baf')
     if cdb_data_root_def:
         os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
