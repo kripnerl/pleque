@@ -71,7 +71,7 @@ def B_for_soft(shot,time, R, Z, save=False):
         ax[i].plot(-eq.lcfs.R, eq.lcfs.Z, color='k', ls='--', lw=2)
         ax[i].plot(-eq.first_wall.R, eq.first_wall.Z, 'k-', lw=2)
         ax[i].scatter([-1*eq.magnetic_axis.R],[eq.magnetic_axis.Z])
-        ax[i].contour(R,Z,psi_rz,color='w')
+        ax[i].contour(R, Z, psi_rz, color='w')
         
         ax[i].set_xlabel('R [m]')
         ax[i].set_ylabel('Z [m]')
