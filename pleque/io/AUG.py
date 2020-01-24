@@ -38,13 +38,15 @@ def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0)
     psi_axis = pfxx.data[0]
     psi_lcfs = pfxx.data[1]
     # TODO should pleque be given psi and define psi_n after LCFS and axis are found for consistence?
-    psi_n = (pfl - psi_axis) / (psi_lcfs - psi_axis)  # TODO should be a function
+    psi_n_factor = (psi_lcfs - psi_axis)    # factor for psi_n derivatives
+    psi_n = (pfl - psi_axis) / psi_n_factor  # TODO should be a function
 
     ds = xr.Dataset({
         'psi': (['R', 'Z', 'time'], psi_RZ),  # poloidal flux matrix
         'pressure' : (['psi_n', 'time'], pressure),
-        'pprime' : (['psi_n', 'time'], pprime),
-        'FFprime' : (['psi_n', 'time'], ffprime),
+        # pleque internally uses derivatives with respect to psi_n and will later divide by this factor
+        'pprime' : (['psi_n', 'time'], pprime * psi_n_factor),
+        'FFprime' : (['psi_n', 'time'], ffprime * psi_n_factor),
         'q' : (['psi_n', 'time'], q),
         'pfl': (['psi_n'], pfl),  # for consistence
     }, coords={
