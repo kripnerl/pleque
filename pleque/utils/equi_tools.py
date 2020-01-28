@@ -24,6 +24,16 @@ def is_monotonic(f, x0, x1, n_test=10):
 
 
 def minimize_in_vicinity(point, func, r_lims, z_lims):
+    """
+
+    :param point: (R, Z) point.
+    :param func: f(point) function to be minimized
+    :param r_lims: R limits where func is valid
+    :param z_lims: Z limits where func is valid
+    :return:
+    """
+    # TODO: test performance of the both methods
+
     # minimize in the vicinity:
 
     # Study different methods and find the most propriate and fastest!
@@ -33,8 +43,13 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
                np.min((z_lims[-1], point[1] + 0.1))))
 
     res = minimize(func, point, method='Powell', options={'xtol': 1e-7})
-    # res = minimize(func, point, bounds=bounds)
     res_point = np.array((res['x'][0], res['x'][1]))
+
+    # If unbounded Powell algorithm finds wrong minimum, algorithm with bounds is used.
+    if np.sum(res_point ** 2 - point ** 2) > 1e-2:
+        res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': 1e-7})
+        res_point = np.array((res['x'][0], res['x'][1]))
+
     return res_point
 
 
