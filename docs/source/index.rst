@@ -12,6 +12,13 @@ Code home: https://github.com/kripnerl/pleque/
    examples
    naming_convention
 
+Notebooks
+---------
+.. toctree::
+   :maxdepth: 2
+   
+   notebooks_flux_expansion
+
 API Reference
 -------------
 
