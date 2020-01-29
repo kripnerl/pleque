@@ -33,6 +33,8 @@ class EquilibriaTimeSlices:
             .sel(time=time, method='nearest')
         if 'Rt' in ds:
             ds = ds.rename({'Rt': 'R', 'Zt': 'Z'})
+        if 'psi_nt' in ds:      # time-evolving psi_n
+            ds = ds.rename({'psi_nt': 'psi_n'})
         if tolerance is not None and np.abs(ds.time - time) > tolerance:
             raise ValueError('Insufficient time slice found! Delta time: {:.1f} ms\n'
                              '         Required time: {:.1f} ms, selected time {:.1f} ms. '
