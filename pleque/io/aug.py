@@ -44,6 +44,7 @@ def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0)
         'pprime' : (['time', 'psi_n'], pprime),
         'FFprime' : (['time', 'psi_n'], FFprime),
         'Fprime' : (['time', 'psi_n'], Fprime),
+        'F' : (['time', 'psi_n'], F),
         'q' : (['time', 'psi_n'], q),
         'pfl': (['time', 'psi_n'], pfl),  # for consistence
         'psi_lcfs': (['time'], eq_aug.psix),
