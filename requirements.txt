@@ -8,3 +8,4 @@ h5py
 omas
 ipykernel
 nbsphinx
+nbsphinx-link
