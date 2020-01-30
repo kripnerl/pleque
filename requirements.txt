@@ -6,3 +6,5 @@ xarray
 pandas
 h5py
 omas
+ipykernel
+nbsphinx

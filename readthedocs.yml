@@ -1,3 +1,6 @@
+version: 2
+
+formats: all
 
 build:
   image: latest
@@ -5,3 +8,9 @@ build:
 python:
   version: 3.6
   setup_py_install: true
+  install:
+    - requirements: requirements.txt
+  system_packages: true
+  
+
+
