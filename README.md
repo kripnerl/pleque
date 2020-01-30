@@ -56,20 +56,35 @@ pip install --user .
 
 ## Examples
 
-Since `pleque` is all about tokamak equilibria, to try it out you first need to procure an equilibrium. Out of the several possible equilibrium formats, the following example uses the `eqdsk` format.
+The following example shows how to load an equilibrium saved in the `eqdsk` format. The equilibrium used here comes from a FIESTA simulation of the COMPASS-Upgrade tokamak.
 
 ```python
 from pleque.io import readers
+import pkg_resources
 import matplotlib as plt
 
-# Create an instance of the `Equilibrium` class
-eq = readers.read_geqdsk("path_to_my_gfile.gfile")
+#Locate a test equilibrium
+filepath = pkg_resources.resource_filename('pleque', 'resources/baseline_eqdsk')
 ```
-The heart of `pleque` is its `Equilibrium` class, whose instances are respective equilibria with tons of interesting functions and caveats on top.
+The heart of `pleque` is its `Equilibrium` class, which contains all the equilibrium information (and much more). Typically its instances are called `eq`.
+
+```python
+# Create an instance of the `Equilibrium` class
+eq = readers.read_geqdsk(filepath)
+```
+The `Equilibrium` class comes with tons of interesting functions and caveats.
 
 ```python
 # Plot a simple overview of the equilibrium
 eq.plot_overview()
+
+# Calculate the separatrix area
+sep_area = eq.lcfs.area
+
+# Get absolute magnetic field magnitude at given point
+R = 0.7 #m
+Z = 0.1 #m
+B = eq.B_abs(R, Z)
 ```
 
 Equilibria may be visualised in many different ways; they may be used for mapping or field line tracing; the possibilities are virtually endless. If there's a caveat you find missing from `pleque`, write to us! Further examples can be found as notebooks in the `notebooks` folder or in the `examples` directory. 
@@ -91,10 +106,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Related projects
 
-* [FreeGS](https://github.com/bendudson/freegs) - Free boundary Grad-Shafranov solver in Python
+* [FreeGS](https://github.com/bendudson/freegs) - free boundary Grad-Shafranov solver in Python.
 * [OMFIT](https://gafusion.github.io/OMFIT-source/) is an integrated modeling and experimental data analysis software for magnetically confined thermonuclear fusion experiments. The goal of OMFIT is to enhance existing scientific workflows and enable new integrated modeling capabilities. To achieve these goals OMFIT adopts a bottom-up collaborative development approach.
 * [OMAS](https://gafusion.github.io/omas/) (Ordered Multidimensional Array Structure) is a Python library designed to simplify the interface of third-party codes with the ITER Integrated Modeling and Analysis Suite (IMAS) . ITER IMAS defines a data model, a data get/put API, and a data storage infrastructure used for manipulating ITER data.
 
 ## References
-* [Sauter, O. & Medvedev, S. Y. "Tokamak coordinate conventions: COCOS." Comput. Phys. Commun. **184**, 293–302 (2013)](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
-* S. Jardin "Computational Methods in Plasma Physics" CRC Press
+* [O. Sauter and S. Yu. Medvedev: *Tokamak coordinate conventions: COCOS*, Computer Physics Communications **184**, 293–302 (2013)](https://www.sciencedirect.com/science/article/pii/S0010465512002962)
+* S. Jardin: *Computational Methods in Plasma Physics*, CRC Press
