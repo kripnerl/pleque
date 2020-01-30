@@ -5,7 +5,8 @@ Examples
    :maxdepth: 2
    :caption: Jupyter notebooks:
 
-   notebooks_link
+   basic_example_link
+   notebooks_flux_expansion_link
 
 
 Please see examples in ``notebooks`` and ``examples`` folder.
