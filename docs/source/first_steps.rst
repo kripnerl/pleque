@@ -1,7 +1,7 @@
 First steps
 ===========
 
-.. highlight:: console
+.. highlight:: bash
 
 Prerequisites
 -------------
@@ -33,16 +33,16 @@ From PyPI (https://pypi.org/project/pleque/)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-   $ pip install --user pleque
+   pip install --user pleque
 
-Alternatively, you may use the unstable experimental release (probably with more fixed bugs)
-
+Alternatively, you may use the unstable experimental release (probably with more fixed bugs)::
 
    pip install --user -i https://test.pypi.org/simple/ pleque
 
 Clone the github repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. highlight:: bash
+::
+
    git clone https://github.com/kripnerl/pleque.git
    cd pleque
    pip install --user .
