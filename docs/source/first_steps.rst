@@ -1,3 +1,5 @@
+.. _First steps:
+
 First steps
 ===========
 
@@ -20,8 +22,8 @@ The following packages are required to install PLEQUE::
 
 They should be automatically handled by pip further in the installation process.
 
-Download the source code
-------------------------
+Download the source code and install PLEQUE
+-------------------------------------------
 
 First, pick where you wish to install the code::
 
