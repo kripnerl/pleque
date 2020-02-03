@@ -12,4 +12,4 @@ Browse examples of PLEQUE in use with these **Jupyter notebooks**:
    notebooks_flux_expansion_link
 
 
-The notebooks are stored in the ``notebooks`` folder in the source code.
+The notebooks are stored in the ``notebooks`` folder in the source code. More examples can be found in the ``examples`` folder.
