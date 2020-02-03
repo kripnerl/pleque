@@ -29,8 +29,8 @@ First, pick where you wish to install the code::
 
 There are two options how to get the code: from PyPI or by cloning the repository.
 
-From PyPI (https://pypi.org/project/pleque/)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install from PyPI (https://pypi.org/project/pleque/)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
    pip install --user pleque
@@ -39,12 +39,12 @@ Alternatively, you may use the unstable experimental release (probably with more
 
    pip install --user -i https://test.pypi.org/simple/ pleque
 
-Clone the github repository
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install after cloning the github repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
    git clone https://github.com/kripnerl/pleque.git
    cd pleque
    pip install --user .
 
-Congratulations, you have just installed pleque!
+Congratulations, you have installed PLEQUE!
