@@ -57,6 +57,10 @@ def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0)
         'R': eq_aug.Rmesh,
         'Z': eq_aug.Zmesh,
     })
+
+    # close AUG shotfile to be safe as it is global in the map_equ module :(
+    eq_aug.Close()
+
     ds['psi_n_factor'] = ds['psi_lcfs'] - ds['psi_axis']
     ds.coords['psi_nt'] = (ds['pfl'] - ds['psi_axis']) / ds['psi_n_factor']
     # pleque internally uses and expects derivatives with respect to psi_n and
