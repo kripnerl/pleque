@@ -957,6 +957,21 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
+    def shear(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """Normalized magnetic shear parameter
+
+        .. math::
+          \hat s = \frac{r}{q}\frac{dq}{dr}
+
+        where r is taken as r_midplane
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        q = self.q(coord)
+        dq_dpsi = self.diff_q(coord)
+        dpsi_dr = self.diff_psi(coord)
+        s = coord.r_mid / q * dq_dpsi * dpsi_dr
+        return s
+
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Calculate toroidal magnetic flux :math:`\Phi` from:
