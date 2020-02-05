@@ -10,8 +10,29 @@ from .tools import EquilibriaTimeSlices
 # Python helper for working with AUG equilibria
 # NOTE uses a different dd library than the standard one
 import map_equ
+# get the one used, because it might have a version string appended :(
+dd = getattr(map_equ, map_equ.sf.__module__)
 
 _2PI = 2*pi
+
+
+def read_aug_first_wall(shot_no, experiment='AUGD', edition=0):
+    """Read the R, Z coordinates of the first wall for the given shot
+
+    Uses the YGC shotfile (graphit contours - now actually wolfram)
+    from the most recent shot preceding shot_no where YGC was recorded
+
+    WIP: for now just returns all vessel parts points, not just first wall
+    """
+    most_recent_shot = dd.PreviousShot(shotfile, shot_no, experiment)
+    sf = dd.shotfile()          # apparently __init__ was unknown to the authors :(
+    if not sf.Open(shotfile, most_recent_shot, experiment, edition):
+        raise RuntimeError(f'Cannot open shotfile {experiment}:{shotfile} {shot_no}({edition})')
+    R_first_wall = sg.GetSignal('RrGC')
+    Z_first_wall = sg.GetSignal('zzGC')
+    # to be safe since no __del__ is present :(
+    sf.Close()
+    return R_first_wall, Z_first_wall
 
 
 def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0):
