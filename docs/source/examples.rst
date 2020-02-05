@@ -3,7 +3,7 @@
 Examples
 ========
 
-Browse examples of PLEQUE in use with these **Jupyter notebooks**:
+Browse examples of using PLEQUE with these **Jupyter notebooks**:
 
 .. toctree::
    :maxdepth: 2
