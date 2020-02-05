@@ -175,6 +175,10 @@ class Coordinates(object):
         return self._eq._rmid_spl(self.psi)
 
     @property
+    def R_mid(self):
+        return self._eq._mg_axis[0] + self.r_mid
+
+    @property
     def phi(self):
         return self.x3
 
@@ -274,6 +278,17 @@ class Coordinates(object):
         new_coords=Coordinates(eq, rs, zs)
         
         return new_coords
+
+    def as_RZ_mid(self):
+        """Transforms 1D coordinates to 2D coordinates on the midplane
+
+        uses r_mid and the magnetic axis equilibrium
+        """
+        r_mgax, z_mgax = self._eq._mg_axis
+        R = self.R_mid
+        Z = np.full_like(R, z_mgax)
+        coords = Coordinates(self._eq, R, Z)
+        return coords
 
     def plot(self, ax=None, **kwargs):
         """
