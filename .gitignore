@@ -39,4 +39,6 @@ docs/_sources/
 
 docs/_static/
 
+docs/source/_build/
+
 venv/
