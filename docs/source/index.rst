@@ -10,6 +10,7 @@ Code home: https://github.com/kripnerl/pleque/
 
    coordinates
    examples
+   flux_expansion
    naming_convention
 
 API Reference
