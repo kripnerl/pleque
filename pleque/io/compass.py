@@ -3,7 +3,6 @@ import numpy as np
 import os
 import pkg_resources
 import xarray as xr
-from pyCDB.pyCDBBase import CDBException
 
 from pleque.core import Equilibrium
 from pleque.io._geqdsk import read, data_as_ds
@@ -41,6 +40,7 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
     eq = read_efithdf5(data_ref.full_path, time=time)
 
     return eq
+
 
 def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
                      cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
@@ -87,6 +87,8 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     :param time_unit: 
     :return: 
     """
+    from pyCDB.pyCDBBase import CDBException
+
     cdb_host_def = os.getenv('CDB_HOST')
     cdb_data_root_def = os.getenv('CDB_DATA_ROOT')
 
