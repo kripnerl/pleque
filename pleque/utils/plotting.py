@@ -90,6 +90,11 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
         ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
         ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], color='k', lw=2,
                 label='First wall')
+        sep = eq.separatrix
+        in_fw = eq.in_first_wall(sep)
+        ax.plot(sep.R[in_fw], sep.Z[in_fw], color='C3', lw=2, alpha=0.5)
+
+
     # separatrix
     ax.plot(eq.lcfs.R, eq.lcfs.Z, color='C1', lw=2, ls='--')
 
