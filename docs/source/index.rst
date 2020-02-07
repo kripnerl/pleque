@@ -13,6 +13,13 @@ Code home: https://github.com/kripnerl/pleque/
    flux_expansion
    naming_convention
 
+Notebooks
+---------
+.. toctree::
+   :maxdepth: 2
+   
+   notebooks_flux_expansion
+
 API Reference
 -------------
 
