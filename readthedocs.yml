@@ -1,6 +1,8 @@
 
 version: 2
 
+formats: true
+
 sphinx:
     configuration: docs/source/conf.py
 
@@ -9,3 +11,10 @@ build:
 
 python:
   version: 3.6
+
+  install:
+    - method: pip
+      path: .
+    - requirements: requirements.txt
+
+   system_packages: true
