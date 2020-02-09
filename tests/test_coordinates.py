@@ -153,3 +153,11 @@ def test_coordinates(equilibrium):
     # 0d case
     xy = Coordinates(eq)
     assert xy.dim == 0
+
+def test_distances():
+        R = 2
+        N = 50
+
+        coord = Coordinates(None, R=np.ones(N), Z=np.zeros(N), phi=np.linspace(0, 2*np.pi, N))
+
+        assert np.isclose(coord.length, R*np.pi*2) 
