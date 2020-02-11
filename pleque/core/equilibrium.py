@@ -1564,6 +1564,8 @@ class Equilibrium(object):
                 print('>>> tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
                 print('>>> atol = {}'.format(atol))
 
+            stopper = None
+
             if stopper_method is None:
                 if coords.psi_n[i] <= 1:
                     # todo: determine the direction (now -1) !!
@@ -1583,23 +1585,23 @@ class Equilibrium(object):
                     print('direction: {}'.format(direction))
                     print('dphidtheta: {}'.format(dphidtheta))
 
-                    stopper_method = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                                        dphidtheta * direction)
+                    stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                                 dphidtheta * direction)
                 else:
                     if self._verbose:
                         print('>>> z-lim stopper is used')
-                    stopper_method = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
+                    stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'z-stopper':
                 if self._verbose:
                     print('>>> z-lim stopper is used')
-                stopper_method = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
+                stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'poloidal':
                 if self._verbose:
                     print('>>> poloidal stopper is used')
 
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
-                stopper_method = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                                    dphidtheta * direction)
+                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                             dphidtheta * direction)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
@@ -1607,7 +1609,7 @@ class Equilibrium(object):
                             y0,
                             #                            method='RK45',
                             method='LSODA',
-                            events=stopper_method,
+                            events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             atol=atol,
                             rtol=1e-8,
