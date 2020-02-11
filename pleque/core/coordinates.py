@@ -711,6 +711,7 @@ class Coordinates(object):
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
             self.x3 = np.array(self.x3, copy=False, ndmin=1)
 
+    @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
         """
         func = /oint F(x,y) dl
@@ -758,8 +759,8 @@ class Coordinates(object):
 
         elif self.dim == 2:
             if method == 'sum':
-                x1 = (self.x1[1:] - self.x1[:-1]) / 2
-                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+                x1 = (self.x1[1:] + self.x1[:-1]) / 2
+                x2 = (self.x2[1:] + self.x2[:-1]) / 2
             else:
                 x1 = self.x1
                 x2 = self.x2
