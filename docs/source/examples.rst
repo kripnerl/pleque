@@ -9,6 +9,7 @@ Browse examples of using PLEQUE with these **Jupyter notebooks**:
    :maxdepth: 2
 
    basic_example_link
+   fuzenet_phd_link
    notebooks_flux_expansion_link
 
 
