@@ -157,3 +157,7 @@ texinfo_documents = [
      author, 'Pleque', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+#Give each notebook cell 3 minutes to execute
+nbsphinx_timeout=180
+
