@@ -161,3 +161,11 @@ texinfo_documents = [
 #Give each notebook cell 3 minutes to execute
 nbsphinx_timeout=180
 
+
+def skip(app, what, name, obj, would_skip, options):
+    if name == "__init__":
+        return False
+    return would_skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)

@@ -28,8 +28,6 @@ def load_testing_equilibrium(case=0, cocos=None):
     :param case -
     :return:
     """
-    from pleque.io.compass import read_fiesta_equilibrium
-
     # cases are numbered from one... for now :-)
     res_file = get_test_equilibria_filenames()[case]
     res_limiterfile = get_test_divertor()[0]
