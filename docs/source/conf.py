@@ -38,6 +38,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
               'sphinx.ext.githubpages',
+              'nbsphinx',
+              'nbsphinx_link',
               ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -155,6 +157,10 @@ texinfo_documents = [
      author, 'Pleque', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+#Give each notebook cell 3 minutes to execute
+nbsphinx_timeout=180
+
 
 def skip(app, what, name, obj, would_skip, options):
     if name == "__init__":

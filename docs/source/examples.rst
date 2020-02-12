@@ -1,7 +1,16 @@
+.. _Examples:
+
 Examples
 ========
 
-Nothing here yet.
+Browse examples of using PLEQUE with these **Jupyter notebooks**:
 
-Please see examples in ``notebooks`` and ``examples`` folder.
-The examples will be also improved soon.
+.. toctree::
+   :maxdepth: 2
+
+   basic_example_link
+   fuzenet_phd_link
+   notebooks_flux_expansion_link
+
+
+The notebooks are stored in the ``notebooks`` folder in the source code. More examples can be found in the ``examples`` folder.

@@ -5,3 +5,6 @@ scikit-image
 xarray
 h5py
 omas
+ipykernel
+nbsphinx
+nbsphinx-link
