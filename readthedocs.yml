@@ -12,6 +12,3 @@ python:
       path: .
     - requirements: requirements.txt
   system_packages: true
-  
-
-
