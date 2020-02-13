@@ -1,6 +1,11 @@
 import pytest
 pycdb = pytest.importorskip('pyCDB')
 
+import numpy as np
+import os
+
+os.environ['CDB_PATH'] = os.getenv('CDB_PATH', '/home/kripner/Projects/CDB/src')
+
 def test_cdb():
     from pleque.io.compass import read_efithdf5
     from pleque.io.compass import cdb
@@ -23,3 +28,24 @@ def test_cdb_EFITSlices():
     assert isinstance(efit_slices, EquilibriaTimeSlices)
     eq = efit_slices.get_time_slice(1125)
     print(eq)
+
+
+def test_cudb():
+    from pleque.io.compass import cudb
+
+    eq = cudb(6400, 2.0)
+
+    assert np.isclose(np.abs(eq.I_plasma), 2e6, atol=1e-2, rtol=1e-2)
+
+    # shots = [3100, 3109, 3400, 4400, 6400, 6408, 6409, 6600, 7400]
+    # shot_time = 2.0
+    # currents = []
+    #
+    # for shot in shots:
+    #     eq = cudb(shot, shot_time)
+    #     currents.append(eq.I_plasma)
+    #
+    # currents = np.abs(currents)
+    #
+    # assert np.all(currents < 3.0e6)
+    # assert np.all(currents > 0.2e6)

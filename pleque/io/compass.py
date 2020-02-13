@@ -64,7 +64,7 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
     dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
                      cdb_host, cdb_data_root)
 
-    eqts = EquilibriaTimeSlices(dst)
+    eqts = EquilibriaTimeSlices(dst, cocos=13)
 
     if eq_time is not None:
         eq = eqts.get_time_slice(eq_time)
