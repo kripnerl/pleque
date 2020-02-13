@@ -21,13 +21,15 @@ class EquilibriaTimeSlices:
         self.limiter = limiter
         self.cocos = cocos
 
-    def get_time_slice(self, time: float, tolerance=None):
+    def get_time_slice(self, time: float, tolerance=None, **kwargs):
         """
         Creates an Equilibrium from the slice nearest to the specified time
 
         :param time: float, time in ms
         :param tolerance: float or None, raise ValueError if the selected time slice is outside the tolerance.
                           If None the warning is shown if the time difference is more then 10 ms.
+        :param kwargs: extra keyword arguments passed to Equilibrium(...).
+                       Of interest may be verbose=False, since for-cycles over equilibria may print too much
         """
         ds = self.eqs_dataset.dropna(dim='time', how='all') \
             .sel(time=time, method='nearest')
@@ -47,7 +49,7 @@ class EquilibriaTimeSlices:
                   .format(ds.time.item() - time, time, ds.time.item()))
             print('!!!!!!!!!!!')
 
-        eq = Equilibrium(ds, self.limiter, cocos=self.cocos)
+        eq = Equilibrium(ds, self.limiter, cocos=self.cocos, **kwargs)
         return eq
 
 
