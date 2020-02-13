@@ -450,6 +450,9 @@ class Coordinates(object):
     def dists(self):
         """
         distances between spatial steps along the tracked field line
+
+        Distance is returned in psi_n for dim = 1. In meters otherwise.
+       
         :return:
         self._dists
         """
@@ -461,8 +464,9 @@ class Coordinates(object):
             elif self.dim == 2:
                 self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
             elif self.dim == 3:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
-                                      (self.x3[1:] - self.x3[:-1]) ** 2)
+                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 + 
+                                      (self.Y[1:] - self.Y[:-1]) ** 2 +
+                                      (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dists
 
     @property
@@ -735,6 +739,7 @@ class Coordinates(object):
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
             self.x3 = np.array(self.x3, copy=False, ndmin=1)
 
+    @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
         """
         func = /oint F(x,y) dl
@@ -782,8 +787,8 @@ class Coordinates(object):
 
         elif self.dim == 2:
             if method == 'sum':
-                x1 = (self.x1[1:] - self.x1[:-1]) / 2
-                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+                x1 = (self.x1[1:] + self.x1[:-1]) / 2
+                x2 = (self.x2[1:] + self.x2[:-1]) / 2
             else:
                 x1 = self.x1
                 x2 = self.x2
