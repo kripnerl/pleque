@@ -51,10 +51,10 @@ def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0)
     eq_aug.read_pfm()       # reads the poloidal flux matrix
     eq_aug.read_scalars()   # such as psix=pci_lcfs
     Ipol, dIpol = eq_aug.get_mixed('Jpol')  # poloidal current Ip(psi) and deriv
-    ffprime = eq_aug.get_profile('FFP')    # ff'   (f=F * mu_0)
-    F = Ipol / _2PI
-    Fprime = dIpol / _2PI
-    FFprime = ffprime * mu_0**2
+    FFprime = eq_aug.get_profile('FFP')    # TODO probably, even though description claims ff'
+    Ipol2F_scale = mu_0 / _2PI   # TODO HOTFIX apparently they divided Ipol by mu_0??
+    F = Ipol * Ipol2F_scale
+    Fprime = dIpol * Ipol2F_scale
     pressure, pprime = eq_aug.get_mixed('Pres')
     q = eq_aug.get_profile('Qpsi')  # q(psi)
     pfl = eq_aug.get_profile('PFL')                # poloidal flux label
@@ -77,6 +77,8 @@ def read_aug_eq(shot_no, eq_type='EQH', time=None, experiment='AUGD', edition=0)
         # evolve, it typically contains many more time steps than actually used
         'R': eq_aug.Rmesh,
         'Z': eq_aug.Zmesh,
+    }, attrs={
+        'cocos': 13,            # for CLISTE according to the COCOS article
     })
 
     # close AUG shotfile to be safe as it is global in the map_equ module :(

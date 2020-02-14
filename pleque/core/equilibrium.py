@@ -64,8 +64,10 @@ class Equilibrium(object):
                             *Note:* Only "hints" method is currently tested.
         :param spline_order:
         :param spline_smooth:
-        :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
-                      working. Be aware of signs in the module!
+        :param cocos: Fallback if not provided in basedata.attrs["cocos"].
+                      At the moment the module assumes cocos to be 3 (no other option).
+                      The implemetnation is not fully working.
+                      Be aware of signs in the module!
         :param verbose:
         """
 
@@ -83,7 +85,7 @@ class Equilibrium(object):
         self._spline_order = spline_order
         # TODO TODO TODO
         self._init_method = init_method
-        self._cocos = cocos
+        self._cocos = basedata.attrs.get('cocos', cocos)
         self._cocosdic = cc.cocos_coefs(cocos)
 
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
