@@ -49,3 +49,22 @@ def test_cudb():
     #
     # assert np.all(currents < 3.0e6)
     # assert np.all(currents > 0.2e6)
+
+
+def test_cudb_to_gfile():
+    from pleque.io import compass, readers
+    import tempfile
+
+    eq = eq = compass.cudb(6400, 2.0)
+
+    tmp_dir = tempfile.gettempdir()
+    print(tmp_dir)
+
+    file = tmp_dir + 'cubd_eqdsk'
+
+    eq.to_geqdsk(file)
+
+    eq_gfile = readers.read_geqdsk(file)
+
+    assert np.isclose(eq.I_plasma, eq_gfile.I_plasma)
+    assert np.isclose(eq.B_tor(eq.magnetic_axis), eq_gfile.B_tor(eq_gfile.magnetic_axis))
