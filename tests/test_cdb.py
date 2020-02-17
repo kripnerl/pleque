@@ -60,7 +60,7 @@ def test_cudb_to_gfile():
     tmp_dir = tempfile.gettempdir()
     print(tmp_dir)
 
-    file = tmp_dir + 'cubd_eqdsk'
+    file = tmp_dir + '/cubd_eqdsk'
 
     eq.to_geqdsk(file)
 
