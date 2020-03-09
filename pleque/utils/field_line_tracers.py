@@ -250,6 +250,9 @@ def rz_target_s_min_stopper_factory(y0, s_min, atol=1e-6):
 
     A good estimate for s_min could be r_mid of y0=[Rt, Zt],
     because the total flux surface length will be at least pi times larger
+
+    This stopper can be also used with phi_min instead of s_min if q is known,
+    e.g. with an estimate phi_min = q*pi
     """
     def stopper(s, y):
         if s < s_min:           # only started tracing

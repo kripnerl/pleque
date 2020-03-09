@@ -1522,7 +1522,8 @@ class Equilibrium(object):
         :param Z:
         :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
-        :param stopper_method: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
+        :param stopper_method: (None, 'poloidal', 'z-stopper, 'q-phi_min') force to use stopper.
+                       If None stopper is
                        automatically chosen based on psi_n coordinate.
         :param in_first_wall: if True the only inner part of field line is returned.
         :param coords:
@@ -1602,6 +1603,10 @@ class Equilibrium(object):
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                              dphidtheta * direction)
+            elif stopper_method == 'q-phi_min':
+                q_est = self.q(psi_n=coords.psi_n[i])
+                phi_min = q_est * np.pi/2
+                stopper = flt.rz_target_s_min_stopper_factory(y0, phi_min, atol)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
