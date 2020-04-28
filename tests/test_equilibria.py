@@ -50,22 +50,6 @@ def test_equilibria(case):
 
     eq = read_geqdsk(gfiles[case])
 
-    # ## DEBUG plot
-    # print(eq.magnetic_axis.psi)
-    # print(eq.lcfs.psi[0])
-    # import matplotlib.pyplot as plt
-    # from pleque.utils.plotting import _plot_debug
-    #
-    # plt.figure()
-    # #_plot_debug(eq, levels=200, colorbar=True)
-    # _plot_debug(eq, levels=np.linspace(-0.0211, -0.0209, 1000), colorbar=True)
-    #
-    # if eq._x_point is not None:
-    #     plt.plot(x_points[case][0], x_points[case][1], 'x', color='grey')
-    # plt.plot(o_points[case][0], o_points[case][1], 'o', color='grey')
-    # plt.show()
-    # ## END of debug plot
-
     assert np.allclose(eq._mg_axis, o_points[case])
     if eq._x_point is not None:
         assert np.allclose(eq._x_point, x_points[case])
@@ -85,8 +69,27 @@ def test_eq_properties(equilibrium):
         assert isinstance(equilibrium.contact_point, Coordinates)
         assert isinstance(equilibrium.strike_points, Coordinates)
     else:
-        assert equilibrium.contact_point == None
+        assert equilibrium.contact_point is None
         if len(equilibrium.first_wall) > 4:
             assert len(equilibrium.strike_points) > 1
 
-    print(equilibrium.contact_point)
+    assert equilibrium.B_R(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(15),
+                           grid=True).shape == (15, 10)
+
+    assert equilibrium.Bvec(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(10),
+                            swap_order=False, grid=False).shape == (3, 10)
+
+    assert equilibrium.Bvec(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(10),
+                            swap_order=True, grid=False).shape == (10, 3)
+
+    assert equilibrium.Bvec(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(15),
+                            swap_order=False, grid=True).shape == (3, 15, 10)
+
+    assert equilibrium.Bvec(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(15),
+                            swap_order=True, grid=True).shape == (15, 10, 3)
+
+    assert equilibrium.Bvec_norm(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(15),
+                                 swap_order=False, grid=True).shape == (3, 15, 10)
+
+    assert equilibrium.Bvec_norm(R=np.linspace(0.3, 0.5, 10), Z=np.zeros(15),
+                                 swap_order=True, grid=True).shape == (15, 10, 3)

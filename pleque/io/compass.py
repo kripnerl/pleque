@@ -41,6 +41,7 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
 
     return eq
 
+
 def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
                      cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
     """
@@ -63,7 +64,7 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
     dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
                      cdb_host, cdb_data_root)
 
-    eqts = EquilibriaTimeSlices(dst)
+    eqts = EquilibriaTimeSlices(dst, cocos=13)
 
     if eq_time is not None:
         eq = eqts.get_time_slice(eq_time)
@@ -86,6 +87,8 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     :param time_unit: 
     :return: 
     """
+    from pyCDB.pyCDBBase import CDBException
+
     cdb_host_def = os.getenv('CDB_HOST')
     cdb_data_root_def = os.getenv('CDB_DATA_ROOT')
 
@@ -101,12 +104,11 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
 
     psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
-    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
-    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix) # 1D
+    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)       # 2D (!)
+    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)    # 1D
     # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
     FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
-    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
-
+    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)    # 2D
 
     try:
         dst = xr.Dataset({
@@ -137,9 +139,20 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'psi_n': pprime.axis1.data,
         })
 
+    dst['Bvac'] = dst.Bvac.fillna(0)
+
     dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
+    dst['shot'] = int(shot)
 
     if first_wall is None:
+        try:
+            r_limiter = cdb.get_signal("R_limiter/Fiesta_OUT:" + strid_postfix)
+            z_limiter = cdb.get_signal("Z_limiter/Fiesta_OUT:" + strid_postfix)
+            first_wall = np.array([r_limiter.data, z_limiter.data]).T
+        except CDBException:
+            first_wall = 'IBAv3.1'
+
+    if isinstance(first_wall, str) and first_wall == 'IBAv3.1':
         resource_package = 'pleque'
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall = 'resources/limiter_v3_1_iba_v2.dat'
@@ -151,7 +164,6 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     if cdb_host_def:
         os.environ['CDB_HOST'] = cdb_host_def
-        print('baf')
     if cdb_data_root_def:
         os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
