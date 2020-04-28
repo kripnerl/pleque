@@ -3,7 +3,7 @@ import numpy as np
 
 
 def arglis(seq):
-    """Returns arguments of the Longest Increasing Subsequence in the Given List/Array"""
+    """Returns the indices of the Longest Increasing Subsequence in the Given List/Array"""
     n = len(seq)
     p = [0] * n
     m = [0] * (n + 1)
