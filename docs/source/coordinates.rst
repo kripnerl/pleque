@@ -1,6 +1,9 @@
 Coordinates
 ===========
 
+The tokamak is a curvilinear device which can be described in a number of coordinate systems: the Cartesian coordinates :math:`(X,Y,Z)`, the cylindrical coordinates :math:`(R, Z, \phi)`, the toroidal coordinates :math:`(r, \theta, \phi)` and many more. PLEQUE supports all of the above and more, see the :doc:`Straight Field Lines <straight_field_lines_link>` example notebook.
+
+
 Accepted coordinates types
 --------------------------
 
