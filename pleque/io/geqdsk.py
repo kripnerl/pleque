@@ -31,7 +31,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
                  If None, default number obtained by FluxFunc will be used.
                  Note: Actual number number of points can be in (nbdry/2, n-bry)
     :param label: str, max 11 characters long text added on the beginning of g-file (default is PLEQUE)
-    :param cocos_out: not used at the moment
+    :param cocos_out: At the moment only perform 2pi normalization (!) (TODO)
     :return:
     """
 
@@ -61,6 +61,15 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
 
     grid_2d = equilibrium.grid(resolution=(nx, ny), dim="size")
 
+    cocos = equilibrium.cocos
+
+    psi_factor = 1
+
+    if cocos < 10 < cocos_out:
+        psi_factor = 2 * np.pi
+    elif cocos > 10 > cocos_out:
+        psi_factor = 1 / (2 * np.pi)
+
     # Using center of the computational region as a geometrical center
     # Todo: use center rmin rmax of limiter instead?
     r0 = (equilibrium.R_max + equilibrium.R_min) / 2
@@ -77,9 +86,10 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
 
     data['rmagx'] = equilibrium.magnetic_axis.R[0]
     data['zmagx'] = equilibrium.magnetic_axis.Z[0]
-    data['simagx'] = equilibrium._psi_axis
 
-    data['sibdry'] = equilibrium._psi_lcfs
+    data['simagx'] = equilibrium._psi_axis * psi_factor
+    data['sibdry'] = equilibrium._psi_lcfs * psi_factor
+
     data['cpasma'] = equilibrium.I_plasma
 
     # Boundary:
@@ -97,21 +107,22 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
         bdry_down_sample = (len(bnd_r) // nbdry) + 1
     else:
         bdry_down_sample = 1
+
     data["rbdry"] = bnd_r[::bdry_down_sample]
     data["zbdry"] = bnd_z[::bdry_down_sample]
 
     # 1d profiles:
     data['F'] = equilibrium.F(grid_1d, grid=False)
-    data['FFprime'] = equilibrium.FFprime(grid_1d, grid=False)
+    data['FFprime'] = equilibrium.FFprime(grid_1d, grid=False) / psi_factor
     data['pres'] = equilibrium.pressure(grid_1d, grid=False)
-    data['pprime'] = equilibrium.pprime(grid_1d, grid=False)
+    data['pprime'] = equilibrium.pprime(grid_1d, grid=False) / psi_factor
     # Check values on axis (!)
     if q_positive:
         data['q'] = equilibrium.abs_q(grid_1d, grid=False)
     else:
         data['q'] = equilibrium.q(grid_1d, grid=False)
 
-    data['psi'] = grid_2d.psi.T
+    data['psi'] = grid_2d.psi.T * psi_factor
 
     # Tokamak wall:
     data['rlim'] = equilibrium.first_wall.R

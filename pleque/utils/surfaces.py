@@ -67,6 +67,7 @@ def fluxsurf_error(psi_spl, points, psi_target):
     :param psi_target: float
     :return:
     """
+
     psi = psi_spl(points[:, 0], points[:, 1], grid=False)
 
     abs_err = 1 / len(psi) * np.sqrt(np.sum((psi - psi_target) ** 2))
