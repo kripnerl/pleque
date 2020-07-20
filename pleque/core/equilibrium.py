@@ -540,7 +540,7 @@ class Equilibrium(object):
                                   coord_type=coord_type, **coords)
 
     def _flux_surface(self, *coordinates, resolution=None, dim="step",
-                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      closed=None, inlcfs=True, R=None, Z=None, psi_n=None,
                       coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
@@ -604,9 +604,13 @@ class Equilibrium(object):
                 if inlcfs and contour[i].closed and contour[i].contains(magaxis):
                     fluxsurface.append(contour[i])
                     return fluxsurface
-                elif not inlcfs and closed and contour[i].closed:
+                # generally this logic is quite odd; however, if we specify closed=None, it should add the contour
+                # whatsoever
+                elif not inlcfs and closed is None:
                     fluxsurface.append(contour[i])
-                elif not inlcfs and not closed and not contour[i].closed:
+                elif not inlcfs and (closed is True) and contour[i].closed:
+                    fluxsurface.append(contour[i])
+                elif not inlcfs and (closed is False) and not contour[i].closed:
                     fluxsurface.append(contour[i])
         elif coordinates.dim == 2:
             # Sadly contour des not go through the point due to mesh resolution :-(
@@ -1312,13 +1316,13 @@ class Equilibrium(object):
         """
 
         found = False
-        cnt = 1
+        cnt = 0
         # todo: This should be rewritten
         while not found and cnt < 101:
-            psi_n = 1+1e-6*cnt
+            psi_n = 1 + 1e-6 * cnt
             cnt += 1
-            separatrix = self._flux_surface(inlcfs=False, closed=False, psi_n=psi_n)
-            selstrikepoints = []
+            separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
+
             for j in separatrix:
                 # todo: this is not separatrix... for example in limiter plasma
                 intersection = np.array(self.first_wall._string.intersection(j._string))
