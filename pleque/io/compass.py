@@ -108,16 +108,18 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)    # 1D
     # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
     FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
-    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)    # 2D
+    Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
+    q = cdb.get_signal('q/Fiesta_OUT:' + strid_postfix)
 
     try:
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], psi.data),
             'pressure': (['time', 'R', 'Z'], pressure.data),
-            'pprime': (['psi_n', 'time'], pprime.data), # these dimensions are flipped in the database
+            'pprime': (['psi_n', 'time'], pprime.data),  # these dimensions are flipped in the database
             # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
             'FFprime': (['psi_n', 'time'], FFprime.data),
             'Bvac': (['time', 'R', 'Z'], Bvac.data),
+            'q': (['time', 'psi_n'], q.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
@@ -185,6 +187,19 @@ def read_efithdf5(file_path, time=None):
         t = f5efit['time'][:]
         if t[0] < 100:  # heuristic, first time should be above 100 if in ms
             t *= 1e3  # put into ms
+        ma = f5efit['output/globalParameters/magneticAxis']
+        ma = np.array((ma['R'], ma['Z']))
+        xp = f5efit['output/separatrixGeometry/xpointCoords']
+        xp = np.array((xp['R'], xp['Z']))
+        sp = f5efit['output/separatrixGeometry/strikepointCoords']
+        sp = np.array((sp['R'], sp['Z']))
+        limiter = np.column_stack([f5efit['input/limiter/{}Values'
+                                  .format(x)][0, :] for x in 'rz'])
+
+        # todo create better representation of these objects
+        lcfs_R = f5efit['/output/separatrixGeometry/boundaryCoordsR']
+        lcfs_Z = f5efit['/output/separatrixGeometry/boundaryCoordsZ']
+
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
@@ -192,7 +207,15 @@ def read_efithdf5(file_path, time=None):
             'F': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
             'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'q': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-
+            'psi_axis': (["time"], f5efit['/output/globalParameters/psiAxis']),
+            'psi_lcfs': (['time'], f5efit['output/globalParameters/psiBoundary']),
+            'Ip': (['time'], f5efit['/output/globalParameters/plasmaCurrent']),
+            'mg_axis': (['ndim', 'time'], ma),
+            'x_points': (['ndim', 'time', 'nx'], xp),
+            'strike_points': (['ndim', 'time', 'ns'], sp),
+            'first_wall': (['points', 'ndim'], limiter),
+            'R_lcfs': (['time', 'np_lcfs'], lcfs_R),
+            'Z_lcfs': (['time', 'np_lcfs'], lcfs_Z),
         }, coords={
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),

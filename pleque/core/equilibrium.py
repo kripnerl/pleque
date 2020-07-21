@@ -1720,17 +1720,13 @@ class Equilibrium(object):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
 
-
-
     @property
     def surfacefuncs(self):
         if not hasattr(self, '_surfacefunc'):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-
-
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True):
+    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False):
         """
         Write a GEQDSK equilibrium file.
 
@@ -1740,7 +1736,7 @@ class Equilibrium(object):
         """
         import pleque.io.geqdsk as geqdsk
 
-        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive)
+        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata)
 
 
     @property
