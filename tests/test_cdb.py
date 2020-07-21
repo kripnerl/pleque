@@ -51,9 +51,9 @@ def test_cdb_to_gfile():
     eq_gfile2 = readers.read_geqdsk(file)
 
     assert np.isclose(eq.I_plasma, eq_gfile2.I_plasma, atol=1e6, rtol=1e-2)
-    assert np.isclose(eq.B_tor(eq.magnetic_axis), eq_gfile2.B_tor(eq_gfile2.magnetic_axis), rtol=1e-4)
+    assert np.isclose(eq.B_tor(eq.magnetic_axis), eq_gfile2.B_tor(eq_gfile2.magnetic_axis), rtol=1e-2)
 
-    assert np.isclose(eq_gfile.x_point.as_array(), eq_gfile2.x_point.as_array())
+    assert np.allclose(eq_gfile.magnetic_axis.as_array(), eq_gfile2.magnetic_axis.as_array(), rtol=1e-2)
 
 
 def test_cudb():

@@ -105,7 +105,7 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
 
     # 1d profiles:
     if "F" in basedata:
-        data['F'] = basedata.values
+        data['F'] = basedata.F.values
     else:
         data['F'] = equilibrium.F(grid_1d, grid=False)
 
@@ -130,7 +130,7 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
         data['q'] = equilibrium.abs_q(grid_1d, grid=False)
 
     # todo: test tranformatiom
-    data['psi'] = basedata.psi.T.values * psi_factor
+    data['psi'] = basedata.psi.values * psi_factor
 
     # Tokamak wall:
     if "first_wall" in basedata:
