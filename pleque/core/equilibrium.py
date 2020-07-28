@@ -1452,7 +1452,7 @@ class Equilibrium(object):
         #     points = np.vstack((R, Z)).T
         # mask_in = point_in_first_wall(self, points)
         # return mask_in
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._first_wall)
         if points.grid:
@@ -1466,7 +1466,7 @@ class Equilibrium(object):
         #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
         # else:
         #     points = np.vstack((R, Z)).T
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._lcfs)
         if points.grid:

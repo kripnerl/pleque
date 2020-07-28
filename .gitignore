@@ -43,3 +43,4 @@ docs/source/_build/
 
 venv/
 /local/gfile_vs_spline.ipynb
+/local/
