@@ -74,7 +74,8 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
 
 
 def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
-                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+                     cdb_host='cudb.tok.ipp.cas.cz',
+                     cdb_data_root='/compass/CC19_COMPASS-U_data/:/compass/CC20_COMPASS-U_data/'):
     """
     Load data from CUDB Fiesta signal.
     
@@ -104,21 +105,27 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
 
     psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
-    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)       # 2D (!)
-    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)    # 1D
+    pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
+    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)  # 1D
     # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
     FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
     Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
+    Bphi = cdb.get_signal('Bphi/Fiesta_OUT:' + strid_postfix)  # 2D
     q = cdb.get_signal('q/Fiesta_OUT:' + strid_postfix)
+
+    # todo: Check with database and Martin
+    pprime_data = pprime.data / (2 * np.pi)
+    FFprime_data = FFprime.data / (2 * np.pi)
 
     try:
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], psi.data),
             'pressure': (['time', 'R', 'Z'], pressure.data),
-            'pprime': (['psi_n', 'time'], pprime.data),  # these dimensions are flipped in the database
+            'pprime': (['psi_n', 'time'], pprime_data),  # these dimensions are flipped in the database
             # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
-            'FFprime': (['psi_n', 'time'], FFprime.data),
+            'FFprime': (['psi_n', 'time'], FFprime_data),
             'Bvac': (['time', 'R', 'Z'], Bvac.data),
+            'Bphi': (['time', 'R', 'Z'], Bphi.data),
             'q': (['time', 'psi_n'], q.data),
         }, coords={
             'time' : psi.time_axis.data,
@@ -130,10 +137,12 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], psi.data),
             'pressure': (['time', 'R', 'Z'], pressure.data),
-            'pprime': (['time', 'psi_n'], pprime.data), # these dimensions are flipped in the database
-            # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
-            'FFprime': (['time', 'psi_n'], FFprime.data),
+            'pprime': (['time', 'psi_n'], pprime_data),  # these dimensions are flipped in the database
+            # 'F': (['time', 'psi_n'], ),  # METIS has different dimensions
+            'FFprime': (['time', 'psi_n'], FFprime_data),
             'Bvac': (['time', 'R', 'Z'], Bvac.data),
+            'Bphi': (['time', 'R', 'Z'], Bphi.data),
+            'q': (['time', 'psi_n'], q.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
