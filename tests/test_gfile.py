@@ -11,7 +11,6 @@ from pleque.io.readers import read_geqdsk
 import pkg_resources
 import xarray as xr
 
-
 def test_calculated_profiles(geqdsk_file):
     """
     Octants: https://en.wikipedia.org/wiki/Octant_(solid_geometry)#/media/File:Octant_numbers.svg
@@ -33,7 +32,7 @@ def test_calculated_profiles(geqdsk_file):
     psi_n = np.linspace(0, 1, len(pressure))
 
     assert np.allclose(pressure, eq.pressure(psi_n=psi_n), atol=1)
-    assert np.allclose(pprime, eq.pprime(psi_n=psi_n), atopkg_resourcesl=100)
+    assert np.allclose(pprime, eq.pprime(psi_n=psi_n), atol=100)
 
     assert np.allclose(F, eq.F(psi_n=psi_n), atol=1e-2)
     assert np.allclose(FFprime, eq.FFprime(psi_n=psi_n), atol=1e-3)
