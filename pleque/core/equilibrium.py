@@ -1452,7 +1452,7 @@ class Equilibrium(object):
         #     points = np.vstack((R, Z)).T
         # mask_in = point_in_first_wall(self, points)
         # return mask_in
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._first_wall)
         if points.grid:
@@ -1466,7 +1466,7 @@ class Equilibrium(object):
         #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
         # else:
         #     points = np.vstack((R, Z)).T
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._lcfs)
         if points.grid:
@@ -1724,17 +1724,13 @@ class Equilibrium(object):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
 
-
-
     @property
     def surfacefuncs(self):
         if not hasattr(self, '_surfacefunc'):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-
-
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True):
+    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False):
         """
         Write a GEQDSK equilibrium file.
 
@@ -1744,7 +1740,7 @@ class Equilibrium(object):
         """
         import pleque.io.geqdsk as geqdsk
 
-        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive)
+        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata)
 
 
     @property
