@@ -42,7 +42,7 @@ class Equilibrium(object):
                  spline_order=3,
                  spline_smooth=0,
                  cocos=3,
-                 verbose=True
+                 verbose=False,
                  ):
         """
         Equilibrium class instance should be obtained generally by functions in pleque.io
@@ -126,6 +126,8 @@ class Equilibrium(object):
                 self._first_wall = np.stack((newwall_r, newwall_z)).T
         else:
             self._first_wall = first_wall
+
+        self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
 
         if 'time' in basedata:
             self.time = basedata['time'].values

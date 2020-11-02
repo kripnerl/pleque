@@ -5,7 +5,7 @@ from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
 
 
-def read(file, cocos=3):
+def read(file, cocos=3, first_wall=None):
     """
     Read the eqdsk file and open it as `Equilibrium`.
 
@@ -14,7 +14,7 @@ def read(file, cocos=3):
     :return:
     """
     with open(file, 'r') as f:
-        eq = read_as_equilibrium(f, cocos)
+        eq = read_as_equilibrium(f, cocos, first_wall=first_wall)
 
     return eq
 
