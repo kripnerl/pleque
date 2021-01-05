@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='pleque',
-    version='0.0.4.1',
+    version='0.0.5',
     packages=find_packages(),  # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
     package_data={'pleque': ['resources/*']},
     url='https://pleque.readthedocs.io',

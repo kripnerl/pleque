@@ -119,8 +119,11 @@ class FluxSurface(Surface):
         :param coords: Instance of coordinate class
         """
 
-        # FluxSurface can use only equilibrium default inner cocos (!).
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
+        # FluxSurface can use only equilibrium default inner cocos if exists:
+        if equilibrium is not None:
+            super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
+        else:
+            super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
 
     @property
     def eval_q(self):
