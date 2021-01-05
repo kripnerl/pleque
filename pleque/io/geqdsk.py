@@ -149,7 +149,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     Write a GEQDSK equilibrium file.
 
     :param equilibrium: pleque.Equilibrum
-    :param file:cocos = equilibrium.cocos str, file name
+    :param file: str, file name
     :param nx: int, R-dimension
     :param ny: int, Z-dimension
     :param nbdry: int, None - Maximal number of points used to describe boundary (LCFS).
