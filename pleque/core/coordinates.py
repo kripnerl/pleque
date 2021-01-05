@@ -172,14 +172,29 @@ class Coordinates(object):
 
     @property
     def r_mid(self):
+        """
+        Minor radius on the outer (magnetic) midplane. Minor radius is distance from magnetic axis.
+
+        :return: Minor radius mapped on the outer midplane.
+        """
         return self._eq._rmid_spl(self.psi)
 
     @property
     def R_mid(self):
+        """
+        Major radius on the outer (magnetic) midplane. Major radius is distance from the tokamak axis.
+
+        :return: Major radius mapped on the outer midplane.
+        """
         return self._eq._mg_axis[0] + self.r_mid
 
     @property
     def phi(self):
+        """
+        Toroidal angle.
+
+        :return: Toroidal angle.
+        """
         return self.x3
 
     @property
@@ -197,17 +212,6 @@ class Coordinates(object):
         if self.dim != 2 or not self.grid:
             raise TypeError('mesh can be returned only for 2d grid coordinates.')
         return np.meshgrid(self.x1, self.x2)
-
-    # todo
-    # @property
-    # def r_mid(self):
-    #     """
-    #     Midplane coordinate.
-    #     :return:
-    #     """
-    #
-    #
-    #     return
 
     def resample(self, multiple=None):
         """
