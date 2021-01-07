@@ -10,6 +10,7 @@ from .cocos import cocos_coefs
 from scipy.interpolate import splprep, splev
 
 
+
 class Coordinates(object):
 
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
