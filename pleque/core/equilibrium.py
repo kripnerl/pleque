@@ -1326,7 +1326,7 @@ class Equilibrium(object):
             separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
 
             for j in separatrix:
-                # todo: this is not separatrix... for example in limiter plasma
+                # todo: this is not separatrix... for example in limiter plasma and without first wall
                 intersection = np.array(self.first_wall._string.intersection(j._string))
                 if len(intersection) > 0:
                     self._separatrix = j.as_array(("R", "Z"))
