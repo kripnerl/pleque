@@ -90,6 +90,11 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
         ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
         ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], color='k', lw=2,
                 label='First wall')
+        sep = eq.separatrix
+        in_fw = eq.in_first_wall(sep)
+        ax.plot(sep.R[in_fw], sep.Z[in_fw], color='C3', lw=2, alpha=0.5)
+
+
     # separatrix
     ax.plot(eq.lcfs.R, eq.lcfs.Z, color='C1', lw=2, ls='--')
 
@@ -106,20 +111,24 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
     psi_out = np.ma.masked_array(psi, mask_inlcfs)
     # ax.pcolormesh(coords.R, coords.Z, psi_in, shading='gouraud')
 
-    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 11), theta=np.zeros(10), grid=False)
+    # contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 11), theta=np.zeros(10), grid=False)
+    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 6), theta=np.zeros(5), grid=False)
 
     cl = ax.contour(coords.R, coords.Z, psi_in, 20, **kwargs)
-    plt.colorbar(cl, ax=ax)
+
+    if colorbar:
+        plt.colorbar(cl, ax=ax)
 
     # todo: psi should be 1-d (!) resolve this
-    ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
+    # ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
+    ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0', linewidths=0.7,
+               linestyles="solid")
 
     #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
 
     op = eq.magnetic_axis
     ax.plot(op.R, op.Z, "C0o")
-
 
     psi_lcfs = eq._psi_lcfs
     z0 = eq._mg_axis[1]

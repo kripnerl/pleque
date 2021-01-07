@@ -38,3 +38,9 @@ docs/\.doctrees/
 docs/_sources/
 
 docs/_static/
+
+docs/source/_build/
+
+venv/
+/local/gfile_vs_spline.ipynb
+/local/

@@ -119,8 +119,11 @@ class FluxSurface(Surface):
         :param coords: Instance of coordinate class
         """
 
-        # FluxSurface can use only equilibrium default inner cocos (!).
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
+        # FluxSurface can use only equilibrium default inner cocos if exists:
+        if equilibrium is not None:
+            super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, cocos=equilibrium.cocos, **coords)
+        else:
+            super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
 
     @property
     def eval_q(self):
@@ -327,3 +330,78 @@ class FluxSurface(Surface):
         point = geometry.Point(coords.as_array()[0])
         distance = self._string.distance(point)
         return distance
+
+    @property
+    def max_radius(self):
+        '''
+        maximum radius on the given flux surface
+        :return:
+        '''
+        return np.max(self.R)
+
+    @property
+    def min_radius(self):
+        '''
+        minimum radius on the given flux surface
+        :return:
+        '''
+        return np.min(self.R)
+
+    @property
+    def minor_radius(self):
+        '''
+        a= (R_min - R_max)./2
+        :return:
+        '''
+        return (np.max(self.R) - np.min(self.R)) * 0.5
+
+    @property
+    def geom_radius(self):
+        '''
+        Geometrical radius
+        a= (R_min + R_max)./2
+        :return:
+        '''
+        return (np.max(self.R) + np.min(self.R)) * 0.5
+
+    @property
+    def elongation(self):
+        '''
+        Elongation
+        :return:
+        '''
+        return (np.max(self.Z) - np.min(self.Z)) * 0.5 / self.minor_radius
+
+
+    @property
+    def triangul_up(self):
+        '''
+        Upper triangularity
+        :return:
+        '''
+        imax = np.argmax(self.Z)
+        zma1 = self.R[imax]
+
+        rep = (self.geom_radius - zma1) / self.minor_radius
+        return rep
+
+    @property
+    def triangul_low(self):
+        '''
+        Lower triangularity
+        :return:
+        '''
+        imin = np.argmin(self.Z)
+        zma1 = self.R[imin]
+
+        rep= (self.geom_radius - zma1) / self.minor_radius
+        return rep
+
+    @property
+    def triangularity(self):
+        '''
+        triangularity
+        :return:
+        '''
+        rep = (self.triangul_up + self.triangul_low) * 0.5
+        return rep

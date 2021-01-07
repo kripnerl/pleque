@@ -28,14 +28,12 @@ def load_testing_equilibrium(case=0, cocos=None):
     :param case -
     :return:
     """
-    from pleque.io.compass import read_fiesta_equilibrium
-
     # cases are numbered from one... for now :-)
     res_file = get_test_equilibria_filenames()[case]
     res_limiterfile = get_test_divertor()[0]
 
     #    equil = read_fiesta_equilibrium(res_file)
-    if 'eqdsk' in res_file or 'gfile' in res_file or '/g' in res_file:
+    if 'eqdsk' in res_file or 'gfile' in res_file or '/g' in res_file or '\g' in res_file:
         # load as NetCDF
         if cocos is None:
             equil = readers.read_geqdsk(res_file)

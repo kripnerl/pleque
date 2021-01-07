@@ -24,6 +24,16 @@ def is_monotonic(f, x0, x1, n_test=10):
 
 
 def minimize_in_vicinity(point, func, r_lims, z_lims):
+    """
+
+    :param point: (R, Z) point.
+    :param func: f(point) function to be minimized
+    :param r_lims: R limits where func is valid
+    :param z_lims: Z limits where func is valid
+    :return:
+    """
+    # TODO: test performance of the both methods
+
     # minimize in the vicinity:
 
     # Study different methods and find the most propriate and fastest!
@@ -33,8 +43,13 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
                np.min((z_lims[-1], point[1] + 0.1))))
 
     res = minimize(func, point, method='Powell', options={'xtol': 1e-7})
-    # res = minimize(func, point, bounds=bounds)
     res_point = np.array((res['x'][0], res['x'][1]))
+
+    # If unbounded Powell algorithm finds wrong minimum, algorithm with bounds is used.
+    if np.sum(res_point ** 2 - point ** 2) > 1e-2:
+        res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': 1e-7})
+        res_point = np.array((res['x'][0], res['x'][1]))
+
     return res_point
 
 
@@ -200,7 +215,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     sortidx = np.argsort(psi_diff * monotonic * len_diff)
     xp1 = x_points[sortidx[0]]
 
-    if len(x_points) < 1:
+    if len(x_points) > 1:
         xp2 = x_points[sortidx[1]]
 
         if psi_diff[sortidx[0]] > psi_diff[sortidx[1]]:
@@ -242,6 +257,7 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, 50)):
         i += 1
+
     if i == len(idxs_wall):
         iwall_min = -1
         wall_min_diff = np.inf
@@ -251,7 +267,8 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     limiter_plasma = True
     limiter_point = first_wall[idxs_wall[iwall_min]]
-    if x_point is not None and (len(first_wall) < 4 or points_inside_curve([x_point], first_wall)[0]):
+    if x_point is not None and (len(first_wall) < 4 or
+                                points_inside_curve([x_point], first_wall)[0]):
         diff_psi_xp = np.abs(psi_spl(*x_point, grid=False) - psi_axis)
         if diff_psi_xp < wall_min_diff or iwall_min == -1:
             limiter_plasma = False
@@ -303,7 +320,7 @@ def find_strike_points(psi_spl, rs, zs, psi_lcfs, first_wall):
     if contours is not None:
         for contour in contours:
             intersects = surf.intersection(contour, first_wall)
-            if intersects is not None:
+            if intersects.size != 0:
                 sp.append(intersects)
 
     if len(sp) > 0:

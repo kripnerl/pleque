@@ -5,21 +5,28 @@ import numpy as np
 import xarray
 
 from pleque.utils.decorators import deprecated
+import pleque.utils.flux_expansions as flux_expansion
 from .cocos import cocos_coefs
+from scipy.interpolate import splprep, splev
+
 
 
 class Coordinates(object):
 
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
-        """
+        r"""
+        Basic PLEQUE class to handle various coordinate systems in tokamak equilibrium.
 
         :param equilibrium:
-        :param coordinates:
+        :param *coordinates: * Can be skipped.
+                             * ``array (N, dim)`` - ``N`` points will be generated.
+                             * One, two are three comma separated one dimensional arrays.
         :param coord_type:
         :param grid:
         :param cocos: Define coordinate system cocos. Id `None` equilibrium default cocos is used.
                         If `equilibrium is None` cocos = 3  (both systems cnt-clockwise) is used.
-        :param coords:
+        :param **coords: Lorem ipsum.
+
 
         Default coordinate systems
         --------------------------
@@ -248,6 +255,28 @@ class Coordinates(object):
         else:
             return Coordinates(eq)
 
+    def resample2(self, npoints):
+        """
+        Implicit spline curve interpolation for the limiter, number of points must be specified
+
+        :param coords: instance of coordinates object
+        :param npoints: int - number of points of the result
+
+        """
+
+        ### TODO: deal with different coordinate systems and dimensions
+
+        eq = self._eq
+
+        dists=self.cum_length
+
+        tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
+        t=np.linspace(np.amin(u),np.amax(u),npoints)
+        rs,zs = splev(t, tck)
+        new_coords=Coordinates(eq, rs, zs)
+
+        return new_coords
+
     def plot(self, ax=None, **kwargs):
         """
 
@@ -319,10 +348,112 @@ class Coordinates(object):
             # todo: replace this by split method
             return np.asarray([self.x1, self.x2, self.x3]).T
 
+    def normal_vector(self):
+        """
+        Calculate limiter normal vector with fw input directly from eq class
+        
+        :param first_wall: interpolated first wall
+        :return: array (3, N_vecs) of limiter elements normals of the same
+        """
+        
+        ### TODO: deal with different coordinate systems and dimensions
+
+        # There will be used first order derivation in the edges and second order derivative elsewhere
+        dR = -np.diff(self.R)
+        dR = np.hstack((dR, [dR[-1]]))
+        dR[1:-1] = dR[:-2] + dR[1:-1]
+
+        dZ = -np.diff(self.Z)
+        dZ = np.hstack((dZ, [dZ[-1]]))
+        dZ[1:-1] = dZ[:-2] + dZ[1:-1]
+
+        lim_vec = np.vstack((dR, dZ, np.zeros(np.shape(dR))))
+
+        pol = lim_vec/np.linalg.norm(lim_vec, axis=0)
+    
+        tor = [0, 0, 1]
+
+        normal = np.cross(pol, tor, axis=0)
+        normal = normal / np.linalg.norm(normal, axis=0)
+
+        return normal
+
+    @deprecated('Replaced by ``incidence_angle_sin``.')
+    def incidence_angle_cos(self, vecs):
+        """
+
+        :param vecs: array (3, N_vecs)
+        :return: array of cosines of angles of incidence
+        """
+
+        return flux_expansion.incidence_angle_sin(self, vecs)
+
+    def incidence_angle_sin(self, vecs):
+        """
+
+        :param vecs: array (3, N_vecs)
+        :return: array of sines of angles of incidence
+        """
+
+        return flux_expansion.incidence_angle_sin(self, vecs)
+
+    @deprecated('Replaced by ``impact_angle_sin``')
+    def impact_angle_cos(self):
+        """
+        Impact angle calculation - dot product of PFC norm and local magnetic field direction.
+        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
+        of the magnetic field.
+
+        :return: array of impact angles cosines
+
+        """
+
+        return flux_expansion.impact_angle_sin(self)
+
+    def impact_angle_sin(self):
+        """
+        Impact angle calculation - dot product of PFC norm and local magnetic field direction.
+        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
+        of the magnetic field.
+
+        :return: array of impact angles sines
+
+        """
+
+        return flux_expansion.impact_angle_sin(self)
+
+    @deprecated('Replaced by impact_angle_sin_pol_projection.')
+    def pol_projection_impact_angle_cos(self):
+        """
+        Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        poloidal projection only.
+        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
+        of the poloidal magnetic field (Bphi = 0).
+
+        :return: array of impact angles cosines
+        """
+
+        return flux_expansion.impact_angle_cos_pol_projection(self)
+
+    def impact_angle_sin_pol_projection(self):
+        """
+        Impact angle calculation - dot product of PFC norm and local magnetic field direction
+        poloidal projection only.
+        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
+        of the poloidal magnetic field (Bphi = 0).
+
+        :return: array of impact angles cosines
+        """
+
+        return flux_expansion.impact_angle_cos_pol_projection(self)
+
     @property
     def dists(self):
         """
         distances between spatial steps along the tracked field line
+
+        Distance is returned in psi_n for dim = 1. In meters otherwise.
+       
         :return:
         self._dists
         """
@@ -334,8 +465,9 @@ class Coordinates(object):
             elif self.dim == 2:
                 self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
             elif self.dim == 3:
-                self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2 +
-                                      (self.x3[1:] - self.x3[:-1]) ** 2)
+                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 + 
+                                      (self.Y[1:] - self.Y[:-1]) ** 2 +
+                                      (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dists
 
     @property
@@ -608,6 +740,7 @@ class Coordinates(object):
             self.x2 = np.array(self.x2, copy=False, ndmin=1)
             self.x3 = np.array(self.x3, copy=False, ndmin=1)
 
+    @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
         """
         func = /oint F(x,y) dl
@@ -655,8 +788,8 @@ class Coordinates(object):
 
         elif self.dim == 2:
             if method == 'sum':
-                x1 = (self.x1[1:] - self.x1[:-1]) / 2
-                x2 = (self.x2[1:] - self.x2[:-1]) / 2
+                x1 = (self.x1[1:] + self.x1[:-1]) / 2
+                x2 = (self.x2[1:] + self.x2[:-1]) / 2
             else:
                 x1 = self.x1
                 x2 = self.x2
