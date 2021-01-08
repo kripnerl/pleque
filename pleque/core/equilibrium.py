@@ -1181,9 +1181,9 @@ class Equilibrium(object):
         """Normalized magnetic shear parameter
 
         .. math::
-          \hat s = \frac{r}{q}\frac{dq}{dr}
+          \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
 
-        where r is taken as r_midplane
+        where r_\mathrm{mid} is plasma radius on midplane.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         q = self.q(coord)
