@@ -2,6 +2,7 @@ from collections.abc import Sequence
 
 import numpy as np
 import xarray
+from scipy.constants import mu_0
 
 from pleque.utils.decorators import deprecated
 
@@ -13,6 +14,7 @@ from pleque.core import SurfaceFunctions
 from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
+import pleque.utils.flux_expansions as flux_expansion
 
 
 class Equilibrium(object):
@@ -40,7 +42,7 @@ class Equilibrium(object):
                  spline_order=3,
                  spline_smooth=0,
                  cocos=3,
-                 verbose=True
+                 verbose=False,
                  ):
         """
         Equilibrium class instance should be obtained generally by functions in pleque.io
@@ -124,6 +126,8 @@ class Equilibrium(object):
                 self._first_wall = np.stack((newwall_r, newwall_z)).T
         else:
             self._first_wall = first_wall
+
+        self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
 
         if 'time' in basedata:
             self.time = basedata['time'].values
@@ -329,6 +333,7 @@ class Equilibrium(object):
 
         self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
         self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
+        self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=3, s=0)
 
         self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
         self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
@@ -383,7 +388,7 @@ class Equilibrium(object):
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
-    
+
     def r_mid(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo: map the r_mid to psi_n
@@ -409,6 +414,11 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pprime_spl(coord.psi_n)
 
+    def f(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+
+        return self.F(coord) / mu_0
+
     def F(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo use in_plasma
@@ -429,11 +439,17 @@ class Equilibrium(object):
         :param coords:
         :return:
         '''
+
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
         Fprime = self._Fprime_spl(coord.psi_n)
         Fprime[mask_out] = 0
         return Fprime
+
+    def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+
+        return self.FFprime(coord) / mu_0**2
 
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -462,16 +478,17 @@ class Equilibrium(object):
 
         return B_abs
 
-    def Bvec(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+    def Bvec(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector
 
         :param grid:
         :param coordinates:
+        :param swap_order: bool,
         :param R:
         :param Z:
         :param coord_type:
         :param coords:
-        :return: Unnormalised magnetic field vector
+        :return: Magnetic field vector array (3, N) if swap_order is False.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -480,20 +497,24 @@ class Equilibrium(object):
         bz = self.B_Z(coord)
         btor = self.B_tor(coord)
 
-        bvec = np.vstack((bR, bz, btor))
+        bvec = np.stack((bR, bz, btor))
 
-        return bvec
+        if not swap_order:
+            return bvec
+        else:
+            return np.moveaxis(bvec, 0, -1)
 
-    def Bvec_norm(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+    def Bvec_norm(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector, normalised
 
         :param grid:
         :param coordinates:
+        :param swap_order:
         :param R:
         :param Z:
         :param coord_type:
         :param coords:
-        :return: Unnormalised magnetic field vector
+        :return: Normalised magnetic field vector array (3, N) if swap_order is False.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -502,10 +523,13 @@ class Equilibrium(object):
         bz = self.B_Z(coord)
         btor = self.B_tor(coord)
 
-        bvec = np.vstack((bR, bz, btor))
+        bvec = np.stack((bR, bz, btor))
         bvec_n = bvec / np.linalg.norm(bvec, axis=0)
 
-        return bvec_n
+        if not swap_order:
+            return bvec_n
+        else:
+            return np.moveaxis(bvec_n, 0, -1)
 
     # XXXXXX TODO TODO TODO
     @deprecated('The structure and behaviour of this function will change soon!\n'
@@ -518,7 +542,7 @@ class Equilibrium(object):
                                   coord_type=coord_type, **coords)
 
     def _flux_surface(self, *coordinates, resolution=None, dim="step",
-                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
+                      closed=None, inlcfs=True, R=None, Z=None, psi_n=None,
                       coord_type=None, **coords):
         """
         Function which finds flux surfaces with requested values of psi or psi-normalized. Specification of the
@@ -582,9 +606,13 @@ class Equilibrium(object):
                 if inlcfs and contour[i].closed and contour[i].contains(magaxis):
                     fluxsurface.append(contour[i])
                     return fluxsurface
-                elif not inlcfs and closed and contour[i].closed:
+                # generally this logic is quite odd; however, if we specify closed=None, it should add the contour
+                # whatsoever
+                elif not inlcfs and closed is None:
                     fluxsurface.append(contour[i])
-                elif not inlcfs and not closed and not contour[i].closed:
+                elif not inlcfs and (closed is True) and contour[i].closed:
+                    fluxsurface.append(contour[i])
+                elif not inlcfs and (closed is False) and not contour[i].closed:
                     fluxsurface.append(contour[i])
         elif coordinates.dim == 2:
             # Sadly contour des not go through the point due to mesh resolution :-(
@@ -600,7 +628,196 @@ class Equilibrium(object):
             fluxsurface.append(tmp2)
 
         return fluxsurface
-    
+
+    def poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Poloidal magnetic flux expansion coefficient.**
+
+
+        **Definition:**
+
+        .. math::
+           f_\mathrm{pol} = \frac{\Delta r^\mathrm{t}}{\Delta r^\mathrm{u}} =
+           \frac{B_\theta^\mathrm{u} R^\mathrm{u}}{B_\theta^\mathrm{t} R^\mathrm{t}}
+
+        **Typical usage:**
+
+        *Poloidal magnetic flux expansion coefficient* is typically used for :math:`\lambda` scaling
+        in plane perpendicular to the poloidal component of the magnetic field.
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.poloidal_mag_flux_exp_coef(self, coords)
+
+    def effective_poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Effective poloidal magnetic flux expansion coefficient**
+
+        **Definition:**
+
+        .. math::
+            f_\mathrm{pol, eff} = \frac{B_\theta^\mathrm{u} R^\mathrm{u}}{B_\theta^\mathrm{t} R^\mathrm{t}}
+            \frac{1}{\sin \beta} = \frac{f_\mathrm{pol}}{\sin \beta}
+
+        Where :math:`\beta` is inclination angle of the poloidal magnetic field and the target plane.
+
+        **Typical usage:**
+
+        *Effective magnetic flux expansion coefficient* is typically used for :math:`\lambda` scaling
+        of the target :math:`\lambda` with respect to the upstream value.
+
+        .. math::
+            \lambda^\mathrm{t} = \lambda^\mathrm{u} f_{\mathrm{pol, eff}}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.effective_poloidal_mag_flux_exp_coef(self, coords)
+
+    def poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Poloidal heat flux expansion coefficient**
+
+        **Definition:**
+
+        .. math::
+            f_\mathrm{pol, heat} = \frac{B_\theta^\mathrm{u}}{B_\theta^\mathrm{t}}
+
+        **Typical usage:**
+        *Poloidal heat flux expansion coefficient* is typically used to scale poloidal heat flux
+        (heat flux projected along poloidal magnetic field)  along the magnetic field line.
+
+        .. math::
+            q_\theta^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat}}}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.poloidal_heat_flux_exp_coef(self, coords)
+
+    def effective_poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Effective poloidal heat flux expansion coefficient**
+
+        **Definition:**
+
+        .. math::
+            f_\mathrm{pol, heat, eff} = \frac{B_\theta^\mathrm{u}}{B_\theta^\mathrm{t}}
+            \frac{1}{\sin \beta} = \frac{f_\mathrm{pol}}{\sin \beta}
+
+        Where :math:`\beta` is inclination angle of the poloidal magnetic field and the target plane.
+
+        **Typical usage:**
+
+        *Effective poloidal heat flux expansion coefficient* is typically used scale upstream poloidal
+        heat flux to the target plane.
+
+        .. math::
+            q_\perp^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat, eff}}}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.effective_poloidal_heat_flux_exp_coef(self, coords)
+
+    def parallel_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Parallel heat flux expansion coefficient**
+
+        **Definition:**
+
+        .. math::
+            f_\parallel= \frac{B^\mathrm{u}}{B^\mathrm{t}}
+
+        **Typical usage:**
+
+        *Parallel heat flux expansion coefficient* is typically used to scale total upstream heat flux
+        parallel to the magnetic field along the magnetic field lines.
+
+        .. math::
+            q_\parallel^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_\parallel}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.parallel_heat_flux_exp_coef(self, coords)
+
+    def total_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
+        r"""
+        **Total heat flux expansion coefficient**
+
+        **Definition:**
+
+        .. math::
+            f_\mathrm{tot} = \frac{B^\mathrm{u}}{B^\mathrm{t}} \frac{1}{\sin \alpha} =
+            \frac{f_\parallel}{\sin \alpha}
+
+        Where :math:`\alpha` is inclination angle of the total magnetic field and the target plane.
+
+        **Typical usage:**
+
+        *Total heat flux expansion coefficient* is typically used to project total upstream heat flux
+        parallel to the magnetic field to the target plane.
+
+        .. math::
+            q_\perp^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_{\mathrm{tot}}}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
+        return flux_expansion.total_heat_flux_exp_coef(self, coords)
+
+    @deprecated('This function was not written correctly and with the state of the knowlige and'
+                'nobody is allowed to use it! It has been or will be replaced by the new functions.')
     def outter_parallel_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
@@ -613,6 +830,9 @@ class Equilibrium(object):
 
         return B_coord / B_midplane
 
+
+    @deprecated('This function was not written correctly and with the state of the knowlige and'
+                'nobody is allowed to use it! It has been or will be replaced by the new functions.')
     def outter_poloidal_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
@@ -625,7 +845,7 @@ class Equilibrium(object):
 
         return B_coord / B_midplane
 
-    
+
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
         finds contours
@@ -646,11 +866,11 @@ class Equilibrium(object):
 
         return contour
 
-    def plot_geometry(self, axs=None, **kwargs):
+    def plot_geometry(self, axs = None, **kwargs):
         """
         Plots the the directions of angles, current and magnetic field.
 
-        :axs = None or tuple of axes.
+        :param axs: None or tuple of axes. If None new figure with to axes is created.
         :param kwargs: parameters passed to the `plot` routine.
         :return: tuple of axis (ax1, ax2)
         """
@@ -756,7 +976,7 @@ class Equilibrium(object):
         ax2.yaxis.set_label_position("right")
         ax2.set_ylabel('Z [m]')
 
-        return fig
+        return axs
 
     def plot_overview(self, ax=None, **kwargs):
         """
@@ -1113,13 +1333,13 @@ class Equilibrium(object):
         """
 
         found = False
-        cnt = 1
+        cnt = 0
         # todo: This should be rewritten
         while not found and cnt < 101:
-            psi_n = 1+1e-6*cnt
+            psi_n = 1 + 1e-6 * cnt
             cnt += 1
-            separatrix = self._flux_surface(inlcfs=False, closed=False, psi_n=psi_n)
-            selstrikepoints = []
+            separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
+
             for j in separatrix:
                 # todo: this is not separatrix... for example in limiter plasma
                 intersection = np.array(self.first_wall._string.intersection(j._string))
@@ -1249,7 +1469,7 @@ class Equilibrium(object):
         #     points = np.vstack((R, Z)).T
         # mask_in = point_in_first_wall(self, points)
         # return mask_in
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._first_wall)
         if points.grid:
@@ -1263,7 +1483,7 @@ class Equilibrium(object):
         #     points = np.vstack((r_mesh.ravel(), z_mesh.ravel())).T
         # else:
         #     points = np.vstack((R, Z)).T
-        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+        points = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
         mask_in = points_inside_curve(points.as_array(), self._lcfs)
         if points.grid:
@@ -1365,6 +1585,8 @@ class Equilibrium(object):
                 print('>>> tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
                 print('>>> atol = {}'.format(atol))
 
+            stopper = None
+
             if stopper_method is None:
                 if coords.psi_n[i] <= 1:
                     # todo: determine the direction (now -1) !!
@@ -1384,23 +1606,23 @@ class Equilibrium(object):
                     print('direction: {}'.format(direction))
                     print('dphidtheta: {}'.format(dphidtheta))
 
-                    stopper_method = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                                        dphidtheta * direction)
+                    stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                                 dphidtheta * direction)
                 else:
                     if self._verbose:
                         print('>>> z-lim stopper is used')
-                    stopper_method = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
+                    stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'z-stopper':
                 if self._verbose:
                     print('>>> z-lim stopper is used')
-                stopper_method = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
+                stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'poloidal':
                 if self._verbose:
                     print('>>> poloidal stopper is used')
 
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
-                stopper_method = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                                    dphidtheta * direction)
+                stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
+                                                             dphidtheta * direction)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
@@ -1408,7 +1630,7 @@ class Equilibrium(object):
                             y0,
                             #                            method='RK45',
                             method='LSODA',
-                            events=stopper_method,
+                            events=stopper,
                             max_step=1e-2,  # we want high phi resolution
                             atol=atol,
                             rtol=1e-8,
@@ -1519,17 +1741,13 @@ class Equilibrium(object):
             self._fluxfunc = FluxFunctions(self)  # filters out methods from self
         return self._fluxfunc
 
-
-
     @property
     def surfacefuncs(self):
         if not hasattr(self, '_surfacefunc'):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-
-
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True):
+    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False):
         """
         Write a GEQDSK equilibrium file.
 
@@ -1539,7 +1757,7 @@ class Equilibrium(object):
         """
         import pleque.io.geqdsk as geqdsk
 
-        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive)
+        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata)
 
 
     @property

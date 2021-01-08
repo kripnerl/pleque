@@ -41,6 +41,7 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
 
     return eq
 
+
 def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
                      cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
     """
@@ -63,7 +64,7 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
     dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
                      cdb_host, cdb_data_root)
 
-    eqts = EquilibriaTimeSlices(dst)
+    eqts = EquilibriaTimeSlices(dst, cocos=13)
 
     if eq_time is not None:
         eq = eqts.get_time_slice(eq_time)
@@ -73,7 +74,8 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
 
 
 def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
-                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+                     cdb_host='cudb.tok.ipp.cas.cz',
+                     cdb_data_root='/compass/CC19_COMPASS-U_data/:/compass/CC20_COMPASS-U_data/'):
     """
     Load data from CUDB Fiesta signal.
     
@@ -86,6 +88,8 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     :param time_unit: 
     :return: 
     """
+    from pyCDB.pyCDBBase import CDBException
+
     cdb_host_def = os.getenv('CDB_HOST')
     cdb_data_root_def = os.getenv('CDB_DATA_ROOT')
 
@@ -102,20 +106,27 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
     pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
-    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix) # 1D
+    pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)  # 1D
     # F = cdb.get_signal("profil0d_fdia/METIS_OUT:" + strid_postfix)  # METIS!
     FFprime = cdb.get_signal('ffprime/Fiesta_OUT:' + strid_postfix)  # 1D
     Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
+    Bphi = cdb.get_signal('Bphi/Fiesta_OUT:' + strid_postfix)  # 2D
+    q = cdb.get_signal('q/Fiesta_OUT:' + strid_postfix)
 
+    # todo: Check with database and Martin
+    pprime_data = pprime.data / (2 * np.pi)
+    FFprime_data = FFprime.data / (2 * np.pi)
 
     try:
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], psi.data),
             'pressure': (['time', 'R', 'Z'], pressure.data),
-            'pprime': (['psi_n', 'time'], pprime.data), # these dimensions are flipped in the database
+            'pprime': (['psi_n', 'time'], pprime_data),  # these dimensions are flipped in the database
             # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
-            'FFprime': (['psi_n', 'time'], FFprime.data),
+            'FFprime': (['psi_n', 'time'], FFprime_data),
             'Bvac': (['time', 'R', 'Z'], Bvac.data),
+            'Bphi': (['time', 'R', 'Z'], Bphi.data),
+            'q': (['time', 'psi_n'], q.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
@@ -126,10 +137,12 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], psi.data),
             'pressure': (['time', 'R', 'Z'], pressure.data),
-            'pprime': (['time', 'psi_n'], pprime.data), # these dimensions are flipped in the database
-            # 'F': (['time', 'psi_n'], ), # METIS has different dimensions
-            'FFprime': (['time', 'psi_n'], FFprime.data),
+            'pprime': (['time', 'psi_n'], pprime_data),  # these dimensions are flipped in the database
+            # 'F': (['time', 'psi_n'], ),  # METIS has different dimensions
+            'FFprime': (['time', 'psi_n'], FFprime_data),
             'Bvac': (['time', 'R', 'Z'], Bvac.data),
+            'Bphi': (['time', 'R', 'Z'], Bphi.data),
+            'q': (['time', 'psi_n'], q.data),
         }, coords={
             'time' : psi.time_axis.data,
             'R': psi.axis1.data,
@@ -137,19 +150,25 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'psi_n': pprime.axis1.data,
         })
 
+    dst['Bvac'] = dst.Bvac.fillna(0)
+
     dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
     dst['shot'] = int(shot)
 
-    if first_wall == 'IBAv3.1':
+    if first_wall is None:
+        try:
+            r_limiter = cdb.get_signal("R_limiter/Fiesta_OUT:" + strid_postfix)
+            z_limiter = cdb.get_signal("Z_limiter/Fiesta_OUT:" + strid_postfix)
+            first_wall = np.array([r_limiter.data, z_limiter.data]).T
+        except CDBException:
+            first_wall = 'IBAv3.1'
+
+    if isinstance(first_wall, str) and first_wall == 'IBAv3.1':
         resource_package = 'pleque'
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall = pkg_resources.resource_filename(resource_package, first_wall)
         first_wall = np.loadtxt(first_wall)
-    elif first_wall is None:
-        r_limiter = cdb.get_signal("R_limiter/Fiesta_OUT:" + strid_postfix)
-        z_limiter = cdb.get_signal("Z_limiter/Fiesta_OUT:" + strid_postfix)
-        first_wall = np.array([r_limiter.data, z_limiter.data]).T
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
     dst['Z_first_wall'] = xr.DataArray(first_wall[:, 1], coords=[first_wall[:, 0]], dims=['R_first_wall'])
@@ -177,6 +196,19 @@ def read_efithdf5(file_path, time=None):
         t = f5efit['time'][:]
         if t[0] < 100:  # heuristic, first time should be above 100 if in ms
             t *= 1e3  # put into ms
+        ma = f5efit['output/globalParameters/magneticAxis']
+        ma = np.array((ma['R'], ma['Z']))
+        xp = f5efit['output/separatrixGeometry/xpointCoords']
+        xp = np.array((xp['R'], xp['Z']))
+        sp = f5efit['output/separatrixGeometry/strikepointCoords']
+        sp = np.array((sp['R'], sp['Z']))
+        limiter = np.column_stack([f5efit['input/limiter/{}Values'
+                                  .format(x)][0, :] for x in 'rz'])
+
+        # todo create better representation of these objects
+        lcfs_R = f5efit['/output/separatrixGeometry/boundaryCoordsR']
+        lcfs_Z = f5efit['/output/separatrixGeometry/boundaryCoordsZ']
+
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
             'pressure': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/staticPressure']),
@@ -184,7 +216,15 @@ def read_efithdf5(file_path, time=None):
             'F': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/rBphi']),
             'FFprime': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/ffPrime']),
             'q': (['time', 'psi_n'], f5efit['output/fluxFunctionProfiles/q']),
-
+            'psi_axis': (["time"], f5efit['/output/globalParameters/psiAxis']),
+            'psi_lcfs': (['time'], f5efit['output/globalParameters/psiBoundary']),
+            'Ip': (['time'], f5efit['/output/globalParameters/plasmaCurrent']),
+            'mg_axis': (['ndim', 'time'], ma),
+            'x_points': (['ndim', 'time', 'nx'], xp),
+            'strike_points': (['ndim', 'time', 'ns'], sp),
+            'first_wall': (['points', 'ndim'], limiter),
+            'R_lcfs': (['time', 'np_lcfs'], lcfs_R),
+            'Z_lcfs': (['time', 'np_lcfs'], lcfs_Z),
         }, coords={
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
