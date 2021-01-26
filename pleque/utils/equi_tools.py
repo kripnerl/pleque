@@ -71,8 +71,8 @@ def find_extremes(rs, zs, psi_spl):
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=3))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=3))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
@@ -87,6 +87,13 @@ def find_extremes(rs, zs, psi_spl):
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
+    def psi_2nd_derivatives(r_coord, z_coord):
+        _psi_xx = (psi_spl(r_coord, z_coord, dx=2, dy=0, grid=False))
+        _psi_yy = (psi_spl(r_coord, z_coord, dx=0, dy=2, grid=False))
+        _psi_xy = (psi_spl(r_coord, z_coord, dx=1, dy=1, grid=False)) ** 2
+
+        return _psi_xx, _psi_yy, _psi_xy
+
     x_points = []
     o_points = []
 
@@ -100,9 +107,7 @@ def find_extremes(rs, zs, psi_spl):
                 if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
                     continue
 
-                psi_xx = (psi_spl(r_ex, z_ex, dx=2, dy=0, grid=False))
-                psi_yy = (psi_spl(r_ex, z_ex, dx=0, dy=2, grid=False))
-                psi_xy = (psi_spl(r_ex, z_ex, dx=1, dy=1, grid=False)) ** 2
+                psi_xx, psi_yy, psi_xy = psi_2nd_derivatives(r_ex, z_ex)
 
                 D = psi_xx * psi_yy - psi_xy
 
