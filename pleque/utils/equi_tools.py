@@ -65,14 +65,14 @@ def find_extremes(rs, zs, psi_spl):
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
 
-    psi = psi_spl(rs, zs)
+    # psi = psi_spl(rs, zs)
     psi_x = psi_spl(rs, zs, dx=1, dy=0)
     psi_y = psi_spl(rs, zs, dx=0, dy=1)
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=3))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=3))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=10))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=10))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
