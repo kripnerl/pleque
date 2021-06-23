@@ -1177,6 +1177,21 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
+    def shear(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
+        """Normalized magnetic shear parameter
+
+        .. math::
+          \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
+
+        where r_\mathrm{mid} is plasma radius on midplane.
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        q = self.q(coord)
+        dq_dpsi = self.diff_q(coord)
+        dpsi_dr = self.diff_psi(coord)
+        s = coord.r_mid / q * dq_dpsi * dpsi_dr
+        return s
+
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Calculate toroidal magnetic flux :math:`\Phi` from:
@@ -1326,7 +1341,7 @@ class Equilibrium(object):
             separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
 
             for j in separatrix:
-                # todo: this is not separatrix... for example in limiter plasma
+                # todo: this is not separatrix... for example in limiter plasma and without first wall
                 intersection = np.array(self.first_wall._string.intersection(j._string))
                 if len(intersection) > 0:
                     self._separatrix = j.as_array(("R", "Z"))
