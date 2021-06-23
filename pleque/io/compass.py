@@ -178,6 +178,8 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     if cdb_data_root_def:
         os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
+    dst.attrs["cocos"] = 13
+
     return dst
 
 

@@ -202,6 +202,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     r0 = (equilibrium.R_max + equilibrium.R_min) / 2
 
     if use_basedata:
+        # todo: test it and put some warining if not proper data!
         data = basedata_to_dict(equilibrium, cocos_out)
     else:
         data['nx'] = nx

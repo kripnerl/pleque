@@ -41,7 +41,7 @@ class Equilibrium(object):
                  init_method="hints",
                  spline_order=3,
                  spline_smooth=0,
-                 cocos=3,
+                 cocos=None,
                  verbose=False,
                  ):
         """
@@ -73,6 +73,14 @@ class Equilibrium(object):
             print('---------------------------------')
             print('Equilibrium module initialization')
             print('---------------------------------')
+
+        if cocos is None:
+            if "cocos" in basedata.attrs:
+                cocos = basedata.attrs["cocos"]
+            elif "cocos" in basedata:
+                cocos = basedata["cocos"]
+            else:
+                cocos = 3
 
         self._basedata = basedata
         self._verbose = verbose
@@ -1747,17 +1755,21 @@ class Equilibrium(object):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False):
+    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3):
         """
         Write a GEQDSK equilibrium file.
 
         :param file: str, file name
-        :param nx: int
-        :param ny: int
+        :param nx: int, number radial radial points and profiles points
+        :param ny: int, number of vertical points
+        :param use_basedata: The original basedata of equilibrium are used instead of interpolation splines.
+        :param q_positive: Save q value always positive.
+        :param cocos_out: Number of output cocos.
         """
         import pleque.io.geqdsk as geqdsk
 
-        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata)
+        geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata,
+                     cocos_out=cocos_out)
 
 
     @property
