@@ -5,12 +5,21 @@ import pleque
 from pleque.utils.equi_tools import get_psi_n_on_q
 
 
-def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
+def _plot_extremes(o_points, x_points, ax: plt.Axes = None,
+                   all_o_points=True, all_x_points=True, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue', **kwargs)
-    ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
+    ax.plot(o_points[0, 0], o_points[0, 1], 'o', color='royalblue', **kwargs)
+    if all_o_points and len(o_points) > 1:
+        ax.plot(o_points[1:, 0], o_points[1:, 1], 'o', color='cornflowerblue', **kwargs)
+
+    if len(x_points) > 0:
+        if all_x_points:
+            ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
+        else:
+            n_xpoints = np.min([len(x_points), 2])
+            ax.plot(x_points[:n_xpoints, 0], x_points[:n_xpoints, 1], '+', color='crimson', **kwargs)
 
 
 def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorbar=False):
@@ -77,11 +86,14 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     ax.set_aspect("equal")
 
 
-def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
+def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None,
+                  all_o_points=True, all_x_points=True, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    _plot_extremes(eq._o_points, eq._x_points, ax=ax, **kwargs)
+    _plot_extremes(eq._o_points, eq._x_points, ax=ax,
+                   all_o_points=all_o_points, all_x_points=all_o_points,
+                   **kwargs)
 
 
 def plot_rational_surface(eq, ax, q_tuple, linestyles="--", colors="C3"):
@@ -177,7 +189,7 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
     #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
 
-    plot_extremes(eq, ax)
+    plot_extremes(eq, ax, all_o_points=False, all_x_points=False)
 
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
