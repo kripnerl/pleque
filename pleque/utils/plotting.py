@@ -2,13 +2,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pleque
+from pleque.utils.equi_tools import get_psi_n_on_q
 
-def _plot_extremes(o_points, x_points, ax: plt.Axes = None, **kwargs):
+
+def _plot_extremes(o_points, x_points, ax: plt.Axes = None,
+                   all_o_points=True, all_x_points=True, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    ax.plot(o_points[:, 0], o_points[:, 1], 'o', color='royalblue', **kwargs)
-    ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
+    ax.plot(o_points[0, 0], o_points[0, 1], 'o', color='royalblue', **kwargs)
+    if all_o_points and len(o_points) > 1:
+        ax.plot(o_points[1:, 0], o_points[1:, 1], 'o', color='cornflowerblue', **kwargs)
+
+    if len(x_points) > 0:
+        if all_x_points:
+            ax.plot(x_points[:, 0], x_points[:, 1], '+', color='crimson', **kwargs)
+        else:
+            n_xpoints = np.min([len(x_points), 2])
+            ax.plot(x_points[:n_xpoints, 0], x_points[:n_xpoints, 1], '+', color='crimson', **kwargs)
 
 
 def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorbar=False):
@@ -75,11 +86,86 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     ax.set_aspect("equal")
 
 
-def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None, **kwargs):
+def plot_extremes(eq: pleque.Equilibrium, ax: plt.Axes = None,
+                  all_o_points=True, all_x_points=True, **kwargs):
     if ax is None:
         ax = plt.gca()
 
-    _plot_extremes(eq._o_points, eq._x_points, ax=ax, **kwargs)
+    _plot_extremes(eq._o_points, eq._x_points, ax=ax,
+                   all_o_points=all_o_points, all_x_points=all_o_points,
+                   **kwargs)
+
+
+def plot_rational_surface(eq, ax, q_tuple, linestyles="--", colors="C3"):
+    qarr = np.array(q_tuple)
+    q = qarr[:, 0] / qarr[:, 1]
+
+    psi_n = get_psi_n_on_q(eq, q, max_psi_n=0.95)
+
+    i_ok = np.nonzero(psi_n)[0]
+
+    psi_n = np.atleast_1d(psi_n)[i_ok]
+    qarr = qarr[i_ok, :]
+
+    coords = eq.grid((400, 600), 'size')
+    mask_inlcfs = eq.in_lcfs(coords)
+
+    psi_ns = np.ma.masked_array(coords.psi_n, np.logical_not(mask_inlcfs))
+
+    fmt = {}
+    for _psi_n, m, n in zip(psi_n, qarr[:, 0], qarr[:, 1]):
+        fmt[_psi_n] = f"{m}/{n}"
+
+    cs = ax.contour(coords.R, coords.Z, psi_ns, psi_n, colors=colors, linestyles=linestyles)
+    ax.clabel(cs, cs.levels, inline=True, fmt=fmt, fontsize=10)
+
+    return cs
+
+
+def plot_separatrix(eq, ax, in_first_wall=True, color="C3", lw=2, ls="-", alpha=0.5):
+    sep = eq.separatrix
+    if in_first_wall:
+        in_fw = eq.in_first_wall(sep)
+        rs, zs = sep.R[in_fw], sep.Z[in_fw]
+    else:
+        rs, zs = sep.R, sep.Z
+
+    ax.plot(rs, zs, color=color, lw=lw, ls=ls, alpha=alpha)
+
+
+def plot_first_wall(eq, ax):
+    ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
+    ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], color='k', lw=2,
+            label='First wall')
+
+
+def plot_lcfs(eq, ax, color="C1", lw=2, ls="--"):
+    ax.plot(eq.lcfs.R, eq.lcfs.Z, color=color, lw=lw, ls=ls)
+
+
+def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
+    coords = eq.grid((400, 600), 'size')
+    psi = eq.psi(coords)
+
+    mask_inlcfs = eq.in_lcfs(coords)
+
+    if where.lower() == "in_lcfs":
+        psi = np.ma.masked_array(psi, np.logical_not(mask_inlcfs))
+    elif where.lower() == "out_lcfs":
+        psi = np.ma.masked_array(psi, mask_inlcfs)
+
+    cl = ax.contour(coords.R, coords.Z, psi, 20, alpha=alpha, **kwargs)
+
+    return cl
+
+
+def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", lw=0.7, ls="solid"):
+    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 6), theta=np.zeros(5), grid=False)
+    coords = eq.grid((400, 600), 'size')
+
+    ax.contour(coords.R, coords.Z, coords.psi, np.sort(np.squeeze(contour_out.psi)), colors=colors,
+               linewidths=lw,
+               linestyles=ls)
 
 
 def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, **kwargs):
@@ -87,75 +173,47 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
         ax = plt.gca()
 
     if eq._first_wall is not None and len(eq._first_wall) > 2:
-        ax.fill_between(eq._first_wall[:, 0], eq._first_wall[:, 1], color='lightgrey')
-        ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], color='k', lw=2,
-                label='First wall')
-        sep = eq.separatrix
-        in_fw = eq.in_first_wall(sep)
-        ax.plot(sep.R[in_fw], sep.Z[in_fw], color='C3', lw=2, alpha=0.5)
+        plot_first_wall(eq, ax)
+        plot_separatrix(eq, ax)
 
+    # LCFS
+    plot_lcfs(eq, ax)
 
-    # separatrix
-    ax.plot(eq.lcfs.R, eq.lcfs.Z, color='C1', lw=2, ls='--')
-
-    coords = eq.grid((400, 600), 'size')
-    rs, zs = coords.mesh()
-
-    psi = eq.psi(coords)
-
-    mask_inlcfs = eq.in_lcfs(coords)
-    mask_inlimiter = eq.in_first_wall(coords)
-    mask_insol = mask_inlcfs ^ mask_inlimiter
-
-    psi_in = np.ma.masked_array(psi, np.logical_not(mask_inlcfs))
-    psi_out = np.ma.masked_array(psi, mask_inlcfs)
-    # ax.pcolormesh(coords.R, coords.Z, psi_in, shading='gouraud')
-
-    # contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 11), theta=np.zeros(10), grid=False)
-    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 6), theta=np.zeros(5), grid=False)
-
-    cl = ax.contour(coords.R, coords.Z, psi_in, 20, **kwargs)
+    cl = plot_psi_contours(eq, ax)
 
     if colorbar:
         plt.colorbar(cl, ax=ax)
 
-    # todo: psi should be 1-d (!) resolve this
-    # ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0')
-    ax.contour(coords.R, coords.Z, psi, np.sort(np.squeeze(contour_out.psi)), colors='C0', linewidths=0.7,
-               linestyles="solid")
+    plot_near_sol(eq, ax)
 
     #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
 
-    op = eq.magnetic_axis
-    ax.plot(op.R, op.Z, "C0o")
-
-    psi_lcfs = eq._psi_lcfs
-    z0 = eq._mg_axis[1]
-
-    # ax.pcolormesh(coords.R, coords.Z, mask_in)
-    # ax.pcolormesh(rs, zs, mask_inlimiter)
-    # ax.pcolormesh(coords.R, coords.Z, mask_insol)
+    plot_extremes(eq, ax, all_o_points=False, all_x_points=False)
 
     ax.set_xlabel('R [m]')
     ax.set_ylabel('Z [m]')
 
     if len(eq._first_wall) > 2:
-        rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
-        zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
-
-        size = rlim[1] - rlim[0]
-        rlim[0] -= size / 12
-        rlim[1] += size / 12
-
-        size = zlim[1] - zlim[0]
-        zlim[0] -= size / 12
-        zlim[1] += size / 12
-        ax.set_xlim(*rlim)
-        ax.set_ylim(*zlim)
+        normalize_axis_xylim_by_first_wall(eq, ax)
     ax.set_aspect('equal')
 
     return ax
+
+
+def normalize_axis_xylim_by_first_wall(eq, ax):
+    rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
+    zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
+
+    size = rlim[1] - rlim[0]
+    rlim[0] -= size / 12
+    rlim[1] += size / 12
+
+    size = zlim[1] - zlim[0]
+    zlim[0] -= size / 12
+    zlim[1] += size / 12
+    ax.set_xlim(*rlim)
+    ax.set_ylim(*zlim)
 
 
 def plot_cocos_geometry(eq: pleque.Equilibrium):

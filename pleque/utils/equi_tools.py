@@ -1,10 +1,29 @@
+from collections import Iterable
+
 from scipy.signal import argrelmin
-from scipy.optimize import minimize
+from scipy.optimize import minimize, brentq
 from scipy.integrate import trapz, cumtrapz
+
+import pleque
 import pleque.utils.surfaces as surf
 from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
+
+
+def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
+    # todo: brentq method is probably not the fastest.
+    if not (np.abs(eq.q(0)) < q < np.abs(eq.q(max_psi_n))):
+        return None
+
+    psi_n = brentq(lambda psi_n: np.abs(eq.q(psi_n)) - q, 0, 0.99)
+    return psi_n
+
+
+def get_psi_n_on_q(eq, q, max_psi_n=0.95):
+    if isinstance(q, Iterable):
+        return [_get_psi_n_on_q(eq, _q, max_psi_n=max_psi_n) for _q in q]
+    return _get_psi_n_on_q(eq, q, max_psi_n=max_psi_n)
 
 
 def is_monotonic(f, x0, x1, n_test=10):
@@ -71,8 +90,8 @@ def find_extremes(rs, zs, psi_spl):
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=10))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=10))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=20))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=20))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
