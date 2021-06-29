@@ -71,8 +71,8 @@ def find_extremes(rs, zs, psi_spl):
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=10))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=10))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=20))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=20))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
