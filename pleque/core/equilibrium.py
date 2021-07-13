@@ -1346,13 +1346,13 @@ class Equilibrium(object):
         while not found and cnt < 101:
             psi_n = 1 + 1e-6 * cnt
             cnt += 1
-            separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
+            flux_surfaces = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
 
-            for j in separatrix:
+            for flux_surface in flux_surfaces:
                 # todo: this is not separatrix... for example in limiter plasma and without first wall
-                intersection = np.array(self.first_wall._string.intersection(j._string))
-                if len(intersection) > 0:
-                    self._separatrix = j.as_array(("R", "Z"))
+                intersection = np.array(self.first_wall._string.intersection(flux_surface._string))
+                if len(intersection) > 0 and all(surf.points_inside_curve([self._mg_axis], flux_surface.as_array())):
+                    self._separatrix = flux_surface.as_array(("R", "Z"))
                     found = True
 
         return self._separatrix
