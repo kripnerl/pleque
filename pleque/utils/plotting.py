@@ -82,6 +82,7 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     except:
         print("WARNING: Strike-points in trouble.")
 
+    ax.set_title("DEBUG PLOT")
     ax.legend()
     ax.set_aspect("equal")
 

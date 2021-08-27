@@ -41,6 +41,7 @@ class Equilibrium(object):
                  init_method="hints",
                  spline_order=3,
                  spline_smooth=0,
+                 find_extremes_order=20,
                  cocos=None,
                  verbose=False,
                  ):
@@ -64,9 +65,12 @@ class Equilibrium(object):
                             *Note:* Only "hints" method is currently tested.
         :param spline_order:
         :param spline_smooth:
+        :param find_extremes_order: Define number of points on internal grid used for identifying
+                                    magnetic axis and x-points.
         :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
                       working. Be aware of signs in the module!
         :param verbose:
+
         """
 
         if verbose:
@@ -97,264 +101,287 @@ class Equilibrium(object):
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
 
-        r = basedata.R.values
-        z = basedata.Z.values
-        psi = basedata.psi.transpose('R', 'Z').values
+        try:
 
-        if first_wall is None:
-            if 'first_wall' in basedata:
-                self._first_wall = basedata["first_wall"]
-            elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
-                self._first_wall = np.array([basedata.R_first_wall.values, basedata.Z_first_wall.values]).T
+            r = basedata.R.values
+            z = basedata.Z.values
+            psi = basedata.psi.transpose('R', 'Z').values
+
+            if first_wall is None:
+                if 'first_wall' in basedata:
+                    self._first_wall = basedata["first_wall"]
+                elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
+                    self._first_wall = np.array([basedata.R_first_wall.values,
+                                                 basedata.Z_first_wall.values]).T
+                elif 'r_lim' in basedata and 'z_lim' in basedata:
+                    self._first_wall = np.array([basedata.r_lim.values,
+                                                 basedata.z_lim.values]).T
+                else:
+                    rwall_min = np.min(r)
+                    rwall_max = np.max(r)
+                    zwall_min = np.min(z)
+                    zwall_max = np.max(z)
+
+                    dr = rwall_max - rwall_min
+                    dz = zwall_max - zwall_min
+
+                    # todo: remove this if possible
+                    # lets reduce the wall a bit to be have some plasma behind the wall
+                    rwall_min += dr / 100
+                    rwall_max -= dr / 100
+                    zwall_min += dz / 100
+                    zwall_max -= dz / 100
+
+                    corners = np.array(
+                        [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
+                         [rwall_min, zwall_min]])
+                    newwall_r = []
+                    newwall_z = []
+                    for i in range(-1, 3):
+                        rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
+                        zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
+                        newwall_r += list(rs)
+                        newwall_z += list(zs)
+                    self._first_wall = np.stack((newwall_r, newwall_z)).T
             else:
-                rwall_min = np.min(r)
-                rwall_max = np.max(r)
-                zwall_min = np.min(z)
-                zwall_max = np.max(z)
+                self._first_wall = first_wall
 
-                dr = rwall_max - rwall_min
-                dz = zwall_max - zwall_min
+            self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
 
-                # todo: remove this if possible
-                # lets reduce the wall a bit to be have some plasma behind the wall
-                rwall_min += dr / 100
-                rwall_max -= dr / 100
-                zwall_min += dz / 100
-                zwall_max -= dz / 100
+            if 'time' in basedata:
+                self.time = basedata['time'].values
+            else:
+                self.time = -1
 
-                corners = np.array(
-                    [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min], [rwall_min, zwall_min]])
-                newwall_r = []
-                newwall_z = []
-                for i in range(-1, 3):
-                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
-                    newwall_r += list(rs)
-                    newwall_z += list(zs)
-                self._first_wall = np.stack((newwall_r, newwall_z)).T
-        else:
-            self._first_wall = first_wall
+            if 'time_unit' in basedata:
+                self.time_unit = basedata['time_unit']
+            else:
+                self.time_unit = "ms"
 
-        self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
+            if 'shot' in basedata:
+                # Shot number will be strictly integer
+                self.shot = int(basedata['shot'])
+            else:
+                self.shot = 0
 
-        if 'time' in basedata:
-            self.time = basedata['time'].values
-        else:
-            self.time = -1
+            # todo: other machine-related information
 
-        if 'time_unit' in basedata:
-            self.time_unit = basedata['time_unit']
-        else:
-            self.time_unit = "ms"
+            self.R_min = np.min(r)
+            self.R_max = np.max(r)
+            self.Z_min = np.min(z)
+            self.Z_max = np.max(z)
 
-        if 'shot' in basedata:
-            # Shot number will be strictly integer
-            self.shot = int(basedata['shot'])
-        else:
-            self.shot = 0
+            # TODO: allow FFprime, ffprime, pprime and other on the input
+            psi_n = basedata.psi_n.values
 
-        # todo: other machine-related informations
+            pressure = None
+            pprime = None
 
-        self.R_min = np.min(r)
-        self.R_max = np.max(r)
-        self.Z_min = np.min(z)
-        self.Z_max = np.max(z)
+            if 'pprime' in basedata:
+                pprime = basedata.pprime.values
+            if 'pressure' in basedata:
+                pressure = basedata.pressure.values
 
-        # TODO: allow FFprime, ffprime, pprime and other on the input
-        psi_n = basedata.psi_n.values
+            self.F0 = None
+            # Try to find F0 in basedata:
+            if 'F0' in basedata:
+                self.F0 = basedata['F0']
+                if isinstance(self.F0, xarray.DataArray):
+                    self.F0 = np.asscalar(self.F0.values)
+            elif 'F0' in basedata.attrs:
+                self.F0 = basedata.attrs['F0']
 
-        pressure = None
-        pprime = None
+            F = None
+            FFprime = None
 
-        if 'pprime' in basedata:
-            pprime = basedata.pprime.values
-        if 'pressure' in basedata:
-            pressure = basedata.pressure.values
+            if 'FFprime' in basedata:
+                FFprime = basedata.FFprime.values
+            if 'F' in basedata:
+                F = basedata.F.values
 
-        self.F0 = None
-        # Try to find F0 in basedata:
-        if 'F0' in basedata:
-            self.F0 = basedata['F0']
-            if isinstance(self.F0, xarray.DataArray):
-                self.F0 = np.asscalar(self.F0.values)
-        elif 'F0' in basedata.attrs:
-            self.F0 = basedata.attrs['F0']
+            # Other attempts to identify F0:
+            if self.F0 is None:
+                if F is not None:
+                    self.F0 = F[-1]
 
-        F = None
-        FFprime = None
+                elif 'B0' in basedata and 'R0' in basedata:
+                    self.F0 = basedata['B0'] * basedata['R0']
+                elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
+                    self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
 
-        if 'FFprime' in basedata:
-            FFprime = basedata.FFprime.values
-        if 'F' in basedata:
-            F = basedata.F.values
+            # ---------------------------
+            # --- Generate psi spline ---
+            # ---------------------------
+            if verbose:
+                print('--- Generate 2D spline ---')
 
-        # Other attempts to identify F0:
-        if self.F0 is None:
-            if F is not None:
-                self.F0 = F[-1]
+            spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
+                                      s=spline_smooth)
+            self._spl_psi = spl
 
-            elif 'B0' in basedata and 'R0' in basedata:
-                self.F0 = basedata['B0'] * basedata['R0']
-            elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
-                self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+            # -------------------------------
+            # ---- Find critical points -----
+            # -------------------------------
+            if verbose:
+                print('--- Looking for critical points ---')
 
+            x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
 
-        # ---------------------------
-        # --- Generate psi spline ---
-        # ---------------------------
-        if verbose:
-            print('--- Generate 2D spline ---')
+            # TODO: Raise warning if no o_point was found!
 
-        spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
-                                  s=spline_smooth)
-        self._spl_psi = spl
+            r_lim = (self.R_min, self.R_max)
+            z_lim = (self.Z_min, self.Z_max)
 
-        # -------------------------------
-        # ---- Find critical points -----
-        # -------------------------------
-        if verbose:
-            print('--- Looking for critical points ---')
+            self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
+                                                                first_wall=self._first_wall,
+                                                                mg_axis_candidate=self._mg_axis)
 
-        rs = np.linspace(self.R_min, self.R_max, 300)
-        zs = np.linspace(self.Z_min, self.Z_max, 400)
+            self._psi_axis = self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False).item()
+            self._o_points = o_points[sortidx]
+            self._o_points[0] = self._mg_axis
 
-        x_points, o_points = eq_tools.find_extremes(rs, zs, self._spl_psi)
+            # ------------------------------------------
+            # Recognize x-point plasma vs limiter plasma
+            # ------------------------------------------
+            if verbose:
+                print('--- Recognizing equilibrium type ---')
 
-        r_lim = (self.R_min, self.R_max)
-        z_lim = (self.Z_min, self.Z_max)
+            # todo: use these two x-points in the future
+            (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
+                                                              self._spl_psi,
+                                                              r_lim, z_lim, self._psi_lcfs, self._x_points)
 
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
-        self._o_points = o_points[sortidx]
-        self._o_points[0] = self._mg_axis
+            self._x_point = xp1
+            self._x_point2 = xp2
 
-        # ------------------------------------------
-        # Recognize x-point plasma vs limiter plasma
-        # ------------------------------------------
-        if verbose:
-            print('--- Recognizing equilibrium type ---')
+            if xp1 is None:
+                self._psi_xp = None
+            else:
+                self._psi_xp = self._spl_psi(*xp1, grid=False)
 
-        # todo: use these two x-points in the future
-        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis, self._spl_psi,
-                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
+            self._x_points = x_points[sortidx]
+            if xp1 is not None:
+                self._x_points[0] = xp1
+            if xp2 is not None:
+                self._x_points[1] = xp2
 
-        self._x_point = xp1
-        self._x_point2 = xp2
+            limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
+                                                                           self._mg_axis, self._psi_axis,
+                                                                           self._spl_psi)
 
-        if xp1 is None:
-            self._psi_xp = None
-        else:
-            self._psi_xp = self._spl_psi(*xp1, grid=False)
+            self._limiter_plasma = limiter_plasma
+            self._limiter_point = limiter_point
 
-        self._x_points = x_points[sortidx]
-        if xp1 is not None:
-            self._x_points[0] = xp1
-        if xp2 is not None:
-            self._x_points[1] = xp2
+            if self._verbose:
+                if limiter_plasma:
+                    print(">> Limiter plasma found.")
+                else:
+                    print(">> X-point plasma found.")
 
-        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                       self._mg_axis, self._psi_axis, self._spl_psi)
+            self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
-        self._limiter_plasma = limiter_plasma
-        self._limiter_point = limiter_point
+            # -----------------------
+            # --- Plasma boundary ---
+            # -----------------------
 
-        if self._verbose:
+            rs = np.linspace(self.R_min, self.R_max, 700)
+            zs = np.linspace(self.Z_min, self.Z_max, 1200)
+
             if limiter_plasma:
-                print(">> Limiter plasma found.")
+                self._strike_points = self._limiter_point[np.newaxis, :]
+                self._contact_point = self._limiter_point
             else:
-                print(">> X-point plasma found.")
+                self._contact_point = None
+                if len(self._first_wall) < 4:
+                    self._strike_points = None
+                else:
+                    self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
+                                                                      self._first_wall)
 
-        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
+            if self._verbose:
+                print("--- Looking for LCFS: ---")
 
-        # -----------------------
-        # --- Plasma boundary ---
-        # -----------------------
+            # sometimes this close_lcfs is empty - investigate!
+            close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
+                                                  self._mg_axis, self._psi_axis)
 
-        rs = np.linspace(self.R_min, self.R_max, 700)
-        zs = np.linspace(self.Z_min, self.Z_max, 1200)
+            while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
+                close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 
-        if limiter_plasma:
-            self._strike_points = self._limiter_point[np.newaxis, :]
-            self._contact_point = self._limiter_point
-        else:
-            self._contact_point = None
-            if len(self._first_wall) < 4:
-                self._strike_points = None
+            if self._verbose:
+                print("Relative LCFS error: {}".format(
+                    surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs)))
+
+            if not limiter_plasma:
+                close_lcfs = surf.add_xpoint(xp1, close_lcfs, self._mg_axis)
+
+            self._lcfs = close_lcfs
+
+            # generate 1d profiles:
+            if self._psi_lcfs - self._psi_axis > 0:
+                self._psi_sign = +1
             else:
-                self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
-                                                                  self._first_wall)
+                self._psi_sign = -1
 
-        if self._verbose:
-            print("--- Looking for LCFS: ---")
+            Fprime = None
+            if FFprime is not None:
+                F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
+                Fprime = FFprime / F
 
-        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                              self._mg_axis, self._psi_axis)
+            if pprime is not None:
+                pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
 
-        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
-            close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
+            self.BvacR = self.F0
 
-        if self._verbose:
-            print("Relative LCFS error: {}".format(surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs)))
+            # if p and F are not define, run vacuum-like discharge:
+            self._vacuum = False
+            if pressure is None or F is None:
+                pressure = np.zeros_like(psi_n)
+                F = np.zeros_like(psi_n)
+                self._vacuum = True
 
-        if not limiter_plasma:
-            close_lcfs = surf.add_xpoint(xp1, close_lcfs, self._mg_axis)
+            if verbose:
+                print('--- Generate 1D splines ---')
+            self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
 
-        self._lcfs = close_lcfs
+            if FFprime is None:
+                self._df_dpsin_spl = self._fpol_spl.derivative()
+                Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+                FFprime = F * Fprime
 
-        # generate 1d profiles:
-        if self._psi_lcfs - self._psi_axis > 0:
-            self._psi_sign = +1
-        else:
-            self._psi_sign = -1
+            self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
 
-        Fprime = None
-        if FFprime is not None:
-            F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
-            Fprime = FFprime / F
+            if pprime is None:
+                self._dp_dpsin_spl = self._pressure_spl.derivative()
+                pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
 
-        if pprime is not None:
-            pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
+            self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
+            self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
+            self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=3, s=0)
 
-        self.BvacR = self.F0
+            self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
+            self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
 
-        # if p and F are not define, run vacuum-like discharge:
-        self._vacuum = False
-        if pressure is None or F is None:
-            pressure = np.zeros_like(psi_n)
-            F = np.zeros_like(psi_n)
-            self._vacuum = True
+            self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
+            self.fluxfuncs.add_flux_func('pprime', pprime, psi_n=psi_n)
 
-        if verbose:
-            print('--- Generate 1D splines ---')
-        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
+            if verbose:
+                print('--- Mapping midplane to psi_n ---')
+            self.__map_midplane2psi__()
 
-        if FFprime is None:
-            self._df_dpsin_spl = self._fpol_spl.derivative()
-            Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
-            FFprime = F * Fprime
+            if verbose:
+                print('--- Mapping pressure and f func to psi_n ---')
 
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
+        except:
 
-        if pprime is None:
-            self._dp_dpsin_spl = self._pressure_spl.derivative()
-            pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+            from pleque.utils.plotting import _plot_debug
+            import matplotlib.pyplot as plt
 
-        self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
-        self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
-        self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=3, s=0)
+            plt.figure()
+            _plot_debug(self)
+            plt.show()
 
-        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
-        self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
-
-        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
-        self.fluxfuncs.add_flux_func('pprime', pprime, psi_n=psi_n)
-
-        if verbose:
-            print('--- Mapping midplane to psi_n ---')
-        self.__map_midplane2psi__()
-
-        if verbose:
-            print('--- Mapping pressure and f func to psi_n ---')
+            raise
 
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """

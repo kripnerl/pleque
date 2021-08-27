@@ -72,7 +72,7 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     return res_point
 
 
-def find_extremes(rs, zs, psi_spl):
+def find_extremes(rs, zs, psi_spl, order=20):
     """
     Find the extremes on grid given by rs and zs.
     x-points: Candidates for x-point
@@ -80,6 +80,10 @@ def find_extremes(rs, zs, psi_spl):
 
     :param rs: array-like(n) R - major radius coordinate
     :param zs: array-like(m) Z - vertical coordinate
+    :param order: int, order used by scipy argrelmin function
+                  (https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.argrelmin.html)
+                  How many points on each side to use for the comparison to
+                  consider comparator(n, n+x) to be True
     :param psi_spl:
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
@@ -90,8 +94,8 @@ def find_extremes(rs, zs, psi_spl):
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=20))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=20))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=order))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=order))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
