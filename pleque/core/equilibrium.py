@@ -1186,7 +1186,7 @@ class Equilibrium(object):
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
     def shear(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
-        """Normalized magnetic shear parameter
+        r"""Normalized magnetic shear parameter
 
         .. math::
           \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
