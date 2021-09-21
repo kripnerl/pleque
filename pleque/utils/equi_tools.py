@@ -183,7 +183,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     if first_wall is not None and len(first_wall) > 2:
         mask_in = points_inside_curve(o_points, first_wall)
         op_in_first_wall[mask_in] = 1
-        op_in_first_wall[not mask_in] = 1e-3
+        op_in_first_wall[np.logical_not(mask_in)] = 1e-3
 
     sortidx = np.argsort(op_dist * op_psiscale * (1 - op_in_first_wall))
 
