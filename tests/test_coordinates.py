@@ -46,6 +46,15 @@ def compare_arrays(a1, a2):
     for i in np.arange(len(a1)):
         assert np.abs(a1[i] - a2[i]) < 1e-3
 
+def test_midplane(equilibrium):
+
+    axis = equilibrium.coordinates(psi_n = 0)
+    lcfs = equilibrium.coordinates(psi_n = 1)
+
+    np.testing.assert_almost_equal(axis.as_RZ_mid().R, equilibrium._mg_axis[0])
+    np.testing.assert_almost_equal(axis.as_RZ_mid().Z, equilibrium._mg_axis[1])
+    np.testing.assert_almost_equal(equilibrium._mg_axis[0] + lcfs.r_mid, lcfs.R_mid)
+
 
 def test_coordinates(equilibrium):
     # coord = eq.coordinates(eq._lcfs)
@@ -153,3 +162,14 @@ def test_coordinates(equilibrium):
     # 0d case
     xy = Coordinates(eq)
     assert xy.dim == 0
+
+
+def test_distances():
+
+        R = 2
+        N = 52
+
+        coord = Coordinates(None, R=np.ones(N) * R, Z=np.zeros(N), phi=np.linspace(0, 2 * np.pi, N))
+        calc_length = R * np.pi * 2
+
+        assert np.isclose(coord.length, calc_length, atol=1e-2, rtol=1e-2)

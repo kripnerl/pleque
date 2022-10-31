@@ -10,7 +10,8 @@ def read(equilibrium, file, time):
     Reads Metis simulation and returns FluxFunc object containing 1D profiles
     :param equilibrium: Pleque equilibrium object to connect to the metis profiles
     :param file: Metis output file saved as matlab hdf5 file
-    :param time: Discharge time specifying which profiles will be loaded. Currently only a single time is supported.
+    :param time: Discharge time specifying which profiles will be loaded. Currently only
+                 a single time is supported.
     :return: FluxFuncs instance of `equilibrium`
     """
     # TODO: Shall whe save 0D values from metis into the FluxFunc object?
@@ -32,7 +33,11 @@ def read(equilibrium, file, time):
         for name in prof.keys():
             if prof[name].size == times.size * xli.size:
                 da = xr.DataArray(np.array(prof[name]).squeeze(), coords=[xli, times], dims=["x", "time"])
-                ds[name] = da
+
+                if name not in fluxfun.keys():
+                    ds[name] = da
+                else:
+                    ds[f"{name}_metis"] = da
 
     toexp = ds.sel(time=time, method="nearest").drop("time")
     psi_axis = toexp.psi.values[np.argmin(np.abs(toexp.psi.values))]

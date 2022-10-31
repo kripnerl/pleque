@@ -1,7 +1,14 @@
+version: 2
+
+formats: all
 
 build:
   image: latest
 
 python:
   version: 3.6
-  setup_py_install: true
+  install:
+    - method: pip
+      path: .
+    - requirements: requirements.txt
+  system_packages: true

@@ -23,10 +23,9 @@ Coordinates
     :undoc-members:
     :show-inheritance:
 
-FluxFunction
-------------
-.. automodule:: pleque.core.fluxfunction
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+.. FluxFunctions
+.. -------------
+.. .. automodule:: pleque.core.fluxfunctions.FluxFunctions
+..     :members:
+..     :undoc-members:
+..     :show-inheritance:

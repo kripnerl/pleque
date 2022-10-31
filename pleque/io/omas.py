@@ -149,8 +149,7 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
         print("WARNING: unknown time unit ({}) is used. Seconds will be used insted for saving.".format(
             equilibrium.time_unit))
 
-    # shot info todo
-    ods["info"]["shot"] = equilibrium.shot
+    # ods["info"]["shot"] = equilibrium.shot
     ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot
 
     # fill the wall part

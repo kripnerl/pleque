@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='pleque',
-    version='0.0.3b5',
+    version='0.0.5',
     packages=find_packages(),  # ['pleque', 'pleque.test', 'pleque.io', 'pleque.utils'],
     package_data={'pleque': ['resources/*']},
     url='https://pleque.readthedocs.io',
@@ -21,9 +21,8 @@ setup(
         'numpy',
         'scipy',
         'shapely',
-        'scikit-image>=0.14.2',
         'xarray',
-        'pandas',
+        'scikit-image>=0.14.2',
         'h5py',
         'omas',
     ],

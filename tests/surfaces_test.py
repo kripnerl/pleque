@@ -16,6 +16,6 @@ def test_surfs():
 
     assert np.shape(i1) == (2, 2)
     assert np.shape(i2) == (1, 2)
-    assert i3 is None
+    assert i3 is None or i3.size == 0
 
     assert np.isclose(i2[0, 0], -1)
