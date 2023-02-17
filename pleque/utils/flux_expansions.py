@@ -155,7 +155,7 @@ def effective_poloidal_heat_flux_exp_coef(equilibrium: 'pleque.Equilibrium', coo
 
     .. math::
         f_\mathrm{pol, heat, eff} = \frac{B_\theta^\mathrm{u}}{B_\theta^\mathrm{t}}
-        \frac{1}{\sin \beta} = \frac{f_\mathrm{pol}}{\sin \beta}
+        \frac{1}{\sin \beta} = \frac{f_\mathrm{pol,heat}}{\sin \beta}
 
     Where :math:`\beta` is inclination angle of the poloidal magnetic field and the target plane.
 
@@ -214,7 +214,7 @@ def total_heat_flux_exp_coef(equilibrium: 'pleque.Equilibrium', coords: 'pleque.
         f_\mathrm{tot} = \frac{B^\mathrm{u}}{B^\mathrm{t}} \frac{1}{\sin \alpha} =
         \frac{f_\parallel}{\sin \alpha}
 
-    Where :math:`\alpha` is an inclination angle of the total magnetic field and the target plane.
+    Where :math:`\alpha` is an inclination angle between the total magnetic field and the target plane.
 
     .. important:: :math:`\alpha` is an inclination angle of the total magnetic field to the
                    target plate. Whereas :math:`\beta` is an inclination of poloidal components
