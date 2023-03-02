@@ -23,11 +23,11 @@ def incidence_angle_sin(coords: 'pleque.Coordinates', vecs):
 
 def impact_angle_sin(coords: 'pleque.Coordinates'):
     """
-    Impact angle calculation - dot product of PFC norm and local magnetic field direction.
+    Impact angle calculation - dot product of the PFC norm and local magnetic field direction.
     Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
     of the magnetic field.
 
-    :return: ``array`` of impact angles cosines
+    :return: ``array`` of the impact angles cosines
     """
 
     bvec = coords._eq.Bvec_norm(coords)
@@ -90,7 +90,7 @@ def effective_poloidal_mag_flux_exp_coef(equilibrium: 'pleque.Equilibrium', coor
         f_\mathrm{pol, eff} = \frac{B_\theta^\mathrm{u} R^\mathrm{u}}{B_\theta^\mathrm{t} R^\mathrm{t}}
         \frac{1}{\sin \beta} = \frac{f_\mathrm{pol}}{\sin \beta}
 
-    Where :math:`\beta` is inclination angle of the poloidal magnetic field and the target plane.
+    Where :math:`\beta` is the inclination angle beteween the poloidal magnetic field and the target plane.
 
     **Typical usage:**
 
@@ -155,9 +155,9 @@ def effective_poloidal_heat_flux_exp_coef(equilibrium: 'pleque.Equilibrium', coo
 
     .. math::
         f_\mathrm{pol, heat, eff} = \frac{B_\theta^\mathrm{u}}{B_\theta^\mathrm{t}}
-        \frac{1}{\sin \beta} = \frac{f_\mathrm{pol}}{\sin \beta}
+        \frac{1}{\sin \beta} = \frac{f_\mathrm{pol,heat}}{\sin \beta}
 
-    Where :math:`\beta` is inclination angle of the poloidal magnetic field and the target plane.
+    Where :math:`\beta` is the inclination angle between the poloidal magnetic field and the target plane.
 
     **Typical usage:**
 
@@ -214,7 +214,7 @@ def total_heat_flux_exp_coef(equilibrium: 'pleque.Equilibrium', coords: 'pleque.
         f_\mathrm{tot} = \frac{B^\mathrm{u}}{B^\mathrm{t}} \frac{1}{\sin \alpha} =
         \frac{f_\parallel}{\sin \alpha}
 
-    Where :math:`\alpha` is an inclination angle of the total magnetic field and the target plane.
+    Where :math:`\alpha` is the inclination angle between the total magnetic field and the target plane.
 
     .. important:: :math:`\alpha` is an inclination angle of the total magnetic field to the
                    target plate. Whereas :math:`\beta` is an inclination of poloidal components
