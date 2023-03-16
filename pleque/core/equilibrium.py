@@ -182,73 +182,73 @@ class Equilibrium(object):
             if 'pressure' in basedata:
                 pressure = basedata.pressure.values
 
-        self.F0 = None
-        # Try to find F0 in basedata:
-        if 'F0' in basedata:
-            self.F0 = basedata['F0']
-            if isinstance(self.F0, xarray.DataArray):
-                self.F0 = np.asarray(self.F0.values).item()
-        elif 'F0' in basedata.attrs:
-            self.F0 = basedata.attrs['F0']
+            self.F0 = None
+            # Try to find F0 in basedata:
+            if 'F0' in basedata:
+                self.F0 = basedata['F0']
+                if isinstance(self.F0, xarray.DataArray):
+                    self.F0 = np.asarray(self.F0.values).item()
+            elif 'F0' in basedata.attrs:
+                self.F0 = basedata.attrs['F0']
 
-            F = None
-            FFprime = None
+                F = None
+                FFprime = None
 
-            if 'FFprime' in basedata:
-                FFprime = basedata.FFprime.values
-            if 'F' in basedata:
-                F = basedata.F.values
+                if 'FFprime' in basedata:
+                    FFprime = basedata.FFprime.values
+                if 'F' in basedata:
+                    F = basedata.F.values
 
-            # Other attempts to identify F0:
-            if self.F0 is None:
-                if F is not None:
-                    self.F0 = F[-1]
+                # Other attempts to identify F0:
+                if self.F0 is None:
+                    if F is not None:
+                        self.F0 = F[-1]
 
-                elif 'B0' in basedata and 'R0' in basedata:
-                    self.F0 = basedata['B0'] * basedata['R0']
-                elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
-                    self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+                    elif 'B0' in basedata and 'R0' in basedata:
+                        self.F0 = basedata['B0'] * basedata['R0']
+                    elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
+                        self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
 
-            # ---------------------------
-            # --- Generate psi spline ---
-            # ---------------------------
-            if verbose:
-                print('--- Generate 2D spline ---')
+                # ---------------------------
+                # --- Generate psi spline ---
+                # ---------------------------
+                if verbose:
+                    print('--- Generate 2D spline ---')
 
-            spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
-                                      s=spline_smooth)
-            self._spl_psi = spl
+                spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
+                                        s=spline_smooth)
+                self._spl_psi = spl
 
-            # -------------------------------
-            # ---- Find critical points -----
-            # -------------------------------
-            if verbose:
-                print('--- Looking for critical points ---')
+                # -------------------------------
+                # ---- Find critical points -----
+                # -------------------------------
+                if verbose:
+                    print('--- Looking for critical points ---')
 
-            x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
+                x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
 
-            # TODO: Raise warning if no o_point was found!
+                # TODO: Raise warning if no o_point was found!
 
-            r_lim = (self.R_min, self.R_max)
-            z_lim = (self.Z_min, self.Z_max)
+                r_lim = (self.R_min, self.R_max)
+                z_lim = (self.Z_min, self.Z_max)
 
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
-                                                                first_wall=self._first_wall,
-                                                                mg_axis_candidate=self._mg_axis)
-        self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
-        self._o_points = o_points[sortidx]
-        self._o_points[0] = self._mg_axis
+            self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
+                                                                    first_wall=self._first_wall,
+                                                                    mg_axis_candidate=self._mg_axis)
+            self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
+            self._o_points = o_points[sortidx]
+            self._o_points[0] = self._mg_axis
 
-            # ------------------------------------------
-            # Recognize x-point plasma vs limiter plasma
-            # ------------------------------------------
+                # ------------------------------------------
+                # Recognize x-point plasma vs limiter plasma
+                # ------------------------------------------
             if verbose:
                 print('--- Recognizing equilibrium type ---')
 
             # todo: use these two x-points in the future
             (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
-                                                              self._spl_psi,
-                                                              r_lim, z_lim, self._psi_lcfs, self._x_points)
+                                                            self._spl_psi,
+                                                            r_lim, z_lim, self._psi_lcfs, self._x_points)
 
             self._x_point = xp1
             self._x_point2 = xp2
@@ -265,8 +265,8 @@ class Equilibrium(object):
                 self._x_points[1] = xp2
 
             limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                           self._mg_axis, self._psi_axis,
-                                                                           self._spl_psi)
+                                                                        self._mg_axis, self._psi_axis,
+                                                                        self._spl_psi)
 
             self._limiter_plasma = limiter_plasma
             self._limiter_point = limiter_point
@@ -295,14 +295,14 @@ class Equilibrium(object):
                     self._strike_points = None
                 else:
                     self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
-                                                                      self._first_wall)
+                                                                    self._first_wall)
 
             if self._verbose:
                 print("--- Looking for LCFS: ---")
 
             # sometimes this close_lcfs is empty - investigate!
             close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                                  self._mg_axis, self._psi_axis)
+                                                self._mg_axis, self._psi_axis)
 
             while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
                 close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
