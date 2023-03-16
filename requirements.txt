@@ -8,3 +8,4 @@ omas
 ipykernel
 nbsphinx
 nbsphinx-link
+typer
