@@ -209,28 +209,28 @@ class Equilibrium(object):
                     elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
                         self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
 
-                # ---------------------------
-                # --- Generate psi spline ---
-                # ---------------------------
-                if verbose:
-                    print('--- Generate 2D spline ---')
+            # ---------------------------
+            # --- Generate psi spline ---
+            # ---------------------------
+            if verbose:
+                print('--- Generate 2D spline ---')
 
-                spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
-                                        s=spline_smooth)
-                self._spl_psi = spl
+            spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
+                                    s=spline_smooth)
+            self._spl_psi = spl
 
-                # -------------------------------
-                # ---- Find critical points -----
-                # -------------------------------
-                if verbose:
-                    print('--- Looking for critical points ---')
+            # -------------------------------
+            # ---- Find critical points -----
+            # -------------------------------
+            if verbose:
+                print('--- Looking for critical points ---')
 
-                x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
+            x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
 
-                # TODO: Raise warning if no o_point was found!
+            # TODO: Raise warning if no o_point was found!
 
-                r_lim = (self.R_min, self.R_max)
-                z_lim = (self.Z_min, self.Z_max)
+            r_lim = (self.R_min, self.R_max)
+            z_lim = (self.Z_min, self.Z_max)
 
             self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
                                                                     first_wall=self._first_wall,
