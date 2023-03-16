@@ -42,6 +42,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
             dZdphi = R * BZ / Bphi
             return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
+
     return dphi_func
 
 
