@@ -151,7 +151,7 @@ def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelc
                 contour[i]):
             isinside = measure.points_in_poly(magaxis, contour[i])
             # surface inside lcfs has to be enclosing magnetic axis
-            if insidelcfs and np.asscalar(isinside):
+            if insidelcfs and np.asarray(isinside).item():
                 fluxsurface.append(contour[i])
     return fluxsurface
 

@@ -168,7 +168,7 @@ class Equilibrium(object):
         if 'F0' in basedata:
             self.F0 = basedata['F0']
             if isinstance(self.F0, xarray.DataArray):
-                self.F0 = np.asscalar(self.F0.values)
+                self.F0 = np.asarray(self.F0.values).item()
         elif 'F0' in basedata.attrs:
             self.F0 = basedata.attrs['F0']
 
@@ -216,7 +216,7 @@ class Equilibrium(object):
         z_lim = (self.Z_min, self.Z_max)
 
         self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim, self._mg_axis)
-        self._psi_axis = np.asscalar(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False))
+        self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
         self._o_points = o_points[sortidx]
         self._o_points[0] = self._mg_axis
 
