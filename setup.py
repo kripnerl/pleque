@@ -20,7 +20,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'shapely',
+        'shapely<2.0.0',
         'xarray',
         'scikit-image>=0.14.2',
         'h5py',

@@ -11,7 +11,7 @@ dependencies:
   - omas
   - notebook
   - matplotlib
-  - shapely
+  - shapely<2.0.0
   - scikit-image>=0.14.2
   - xarray
   - pytest
