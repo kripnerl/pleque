@@ -191,23 +191,23 @@ class Equilibrium(object):
             elif 'F0' in basedata.attrs:
                 self.F0 = basedata.attrs['F0']
 
-                F = None
-                FFprime = None
+            F = None
+            FFprime = None
 
-                if 'FFprime' in basedata:
-                    FFprime = basedata.FFprime.values
-                if 'F' in basedata:
-                    F = basedata.F.values
+            if 'FFprime' in basedata:
+                FFprime = basedata.FFprime.values
+            if 'F' in basedata:
+                F = basedata.F.values
 
-                # Other attempts to identify F0:
-                if self.F0 is None:
-                    if F is not None:
-                        self.F0 = F[-1]
+            # Other attempts to identify F0:
+            if self.F0 is None:
+                if F is not None:
+                    self.F0 = F[-1]
 
-                    elif 'B0' in basedata and 'R0' in basedata:
-                        self.F0 = basedata['B0'] * basedata['R0']
-                    elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
-                        self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+                elif 'B0' in basedata and 'R0' in basedata:
+                    self.F0 = basedata['B0'] * basedata['R0']
+                elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
+                    self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
 
             # ---------------------------
             # --- Generate psi spline ---
@@ -216,7 +216,7 @@ class Equilibrium(object):
                 print('--- Generate 2D spline ---')
 
             spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
-                                    s=spline_smooth)
+                                      s=spline_smooth)
             self._spl_psi = spl
 
             # -------------------------------
@@ -233,22 +233,22 @@ class Equilibrium(object):
             z_lim = (self.Z_min, self.Z_max)
 
             self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
-                                                                    first_wall=self._first_wall,
-                                                                    mg_axis_candidate=self._mg_axis)
+                                                                first_wall=self._first_wall,
+                                                                mg_axis_candidate=self._mg_axis)
             self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
             self._o_points = o_points[sortidx]
             self._o_points[0] = self._mg_axis
 
-                # ------------------------------------------
-                # Recognize x-point plasma vs limiter plasma
-                # ------------------------------------------
+            # ------------------------------------------
+            # Recognize x-point plasma vs limiter plasma
+            # ------------------------------------------
             if verbose:
                 print('--- Recognizing equilibrium type ---')
 
             # todo: use these two x-points in the future
             (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
-                                                            self._spl_psi,
-                                                            r_lim, z_lim, self._psi_lcfs, self._x_points)
+                                                              self._spl_psi,
+                                                              r_lim, z_lim, self._psi_lcfs, self._x_points)
 
             self._x_point = xp1
             self._x_point2 = xp2
@@ -265,8 +265,8 @@ class Equilibrium(object):
                 self._x_points[1] = xp2
 
             limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                        self._mg_axis, self._psi_axis,
-                                                                        self._spl_psi)
+                                                                           self._mg_axis, self._psi_axis,
+                                                                           self._spl_psi)
 
             self._limiter_plasma = limiter_plasma
             self._limiter_point = limiter_point
@@ -295,7 +295,7 @@ class Equilibrium(object):
                     self._strike_points = None
                 else:
                     self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
-                                                                    self._first_wall)
+                                                                      self._first_wall)
 
             if self._verbose:
                 print("--- Looking for LCFS: ---")
@@ -854,8 +854,8 @@ class Equilibrium(object):
                 'nobody is allowed to use it! It has been or will be replaced by the new functions.')
     def outter_parallel_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
-        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
-        midplane. 
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
+        midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         #print(coord.r_mid)
