@@ -1,9 +1,7 @@
 import numpy as np
 
-from pleque import Equilibrium
 
-
-def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
+def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -11,7 +9,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     
     Parameters
     ----------
-    BR_func, BZ_func, Bphi_func : 
+    BR_func, BZ_func, Bphi_func: Functions of R and Z.
     :param direction: if positive trace field line in/cons the direction of magnetic field.
 
     Returns
@@ -25,14 +23,24 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
 
-    def dphi_func(phi, x):
-        R, Z = x
-        BR = BR_func(R, Z)
-        BZ = BZ_func(R, Z)
-        Bphi = Bphi_func(R, Z)
-        dRdphi = R * BR / Bphi
-        dZdphi = R * BZ / Bphi
-        return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+    if BR_pert_func and BR_pert_func:
+        def dphi_func(phi, x):
+            R, Z = x
+            BR = BR_func(R, Z) + BR_pert_func(R, Z, phi)
+            BZ = BZ_func(R, Z) + BZ_pert_func(R, Z, phi)
+            Bphi = Bphi_func(R, Z)
+            dRdphi = R * BR / Bphi
+            dZdphi = R * BZ / Bphi
+            return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+    else:
+        def dphi_func(phi, x):
+            R, Z = x
+            BR = BR_func(R, Z)
+            BZ = BZ_func(R, Z)
+            Bphi = Bphi_func(R, Z)
+            dRdphi = R * BR / Bphi
+            dZdphi = R * BZ / Bphi
+            return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return dphi_func
 
