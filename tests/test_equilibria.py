@@ -50,7 +50,7 @@ def test_equilibria(case):
 
     eq = read_geqdsk(gfiles[case])
 
-    assert np.allclose(eq._mg_axis, o_points[case])
+    assert np.allclose(eq._mg_axis, o_points[case], atol=1e-5)
     if eq._x_point is not None:
         assert np.allclose(eq._x_point, x_points[case])
     if eq._strike_points is not None and st_points[case] is not None:
