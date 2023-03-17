@@ -5,7 +5,7 @@ from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
 
 
-def read(file, cocos=3):
+def read(file, cocos=3, first_wall=None):
     """
     Read the eqdsk file and open it as `Equilibrium`.
 
@@ -14,7 +14,7 @@ def read(file, cocos=3):
     :return:
     """
     with open(file, 'r') as f:
-        eq = read_as_equilibrium(f, cocos)
+        eq = read_as_equilibrium(f, cocos, first_wall=first_wall)
 
     return eq
 
@@ -202,6 +202,7 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     r0 = (equilibrium.R_max + equilibrium.R_min) / 2
 
     if use_basedata:
+        # todo: test it and put some warining if not proper data!
         data = basedata_to_dict(equilibrium, cocos_out)
     else:
         data['nx'] = nx

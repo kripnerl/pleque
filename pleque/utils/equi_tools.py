@@ -1,10 +1,29 @@
+from collections import Iterable
+
 from scipy.signal import argrelmin
-from scipy.optimize import minimize
+from scipy.optimize import minimize, brentq
 from scipy.integrate import trapz, cumtrapz
+
+import pleque
 import pleque.utils.surfaces as surf
 from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
+
+
+def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
+    # todo: brentq method is probably not the fastest.
+    if not (np.abs(eq.q(0)) < q < np.abs(eq.q(max_psi_n))):
+        return None
+
+    psi_n = brentq(lambda psi_n: np.abs(eq.q(psi_n)) - q, 0, 0.99)
+    return psi_n
+
+
+def get_psi_n_on_q(eq, q, max_psi_n=0.95):
+    if isinstance(q, Iterable):
+        return [_get_psi_n_on_q(eq, _q, max_psi_n=max_psi_n) for _q in q]
+    return _get_psi_n_on_q(eq, q, max_psi_n=max_psi_n)
 
 
 def is_monotonic(f, x0, x1, n_test=10):
@@ -53,7 +72,7 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     return res_point
 
 
-def find_extremes(rs, zs, psi_spl):
+def find_extremes(rs, zs, psi_spl, order=20):
     """
     Find the extremes on grid given by rs and zs.
     x-points: Candidates for x-point
@@ -61,18 +80,22 @@ def find_extremes(rs, zs, psi_spl):
 
     :param rs: array-like(n) R - major radius coordinate
     :param zs: array-like(m) Z - vertical coordinate
+    :param order: int, order used by scipy argrelmin function
+                  (https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.argrelmin.html)
+                  How many points on each side to use for the comparison to
+                  consider comparator(n, n+x) to be True
     :param psi_spl:
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
 
-    psi = psi_spl(rs, zs)
+    # psi = psi_spl(rs, zs)
     psi_x = psi_spl(rs, zs, dx=1, dy=0)
     psi_y = psi_spl(rs, zs, dx=0, dy=1)
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=order))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=order))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
@@ -87,6 +110,13 @@ def find_extremes(rs, zs, psi_spl):
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
                + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
+    def psi_2nd_derivatives(r_coord, z_coord):
+        _psi_xx = (psi_spl(r_coord, z_coord, dx=2, dy=0, grid=False))
+        _psi_yy = (psi_spl(r_coord, z_coord, dx=0, dy=2, grid=False))
+        _psi_xy = (psi_spl(r_coord, z_coord, dx=1, dy=1, grid=False)) ** 2
+
+        return _psi_xx, _psi_yy, _psi_xy
+
     x_points = []
     o_points = []
 
@@ -100,9 +130,7 @@ def find_extremes(rs, zs, psi_spl):
                 if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
                     continue
 
-                psi_xx = (psi_spl(r_ex, z_ex, dx=2, dy=0, grid=False))
-                psi_yy = (psi_spl(r_ex, z_ex, dx=0, dy=2, grid=False))
-                psi_xy = (psi_spl(r_ex, z_ex, dx=1, dy=1, grid=False)) ** 2
+                psi_xx, psi_yy, psi_xy = psi_2nd_derivatives(r_ex, z_ex)
 
                 D = psi_xx * psi_yy - psi_xy
 
@@ -155,7 +183,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     if first_wall is not None and len(first_wall) > 2:
         mask_in = points_inside_curve(o_points, first_wall)
         op_in_first_wall[mask_in] = 1
-        op_in_first_wall[not mask_in] = 1e-3
+        op_in_first_wall[np.logical_not(mask_in)] = 1e-3
 
     sortidx = np.argsort(op_dist * op_psiscale * (1 - op_in_first_wall))
 
@@ -215,7 +243,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     sortidx = np.argsort(psi_diff * monotonic * len_diff)
     xp1 = x_points[sortidx[0]]
 
-    if len(x_points) < 1:
+    if len(x_points) > 1:
         xp2 = x_points[sortidx[1]]
 
         if psi_diff[sortidx[0]] > psi_diff[sortidx[1]]:
@@ -257,6 +285,7 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, 50)):
         i += 1
+
     if i == len(idxs_wall):
         iwall_min = -1
         wall_min_diff = np.inf
@@ -266,7 +295,8 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     limiter_plasma = True
     limiter_point = first_wall[idxs_wall[iwall_min]]
-    if x_point is not None and (len(first_wall) < 4 or points_inside_curve([x_point], first_wall)[0]):
+    if x_point is not None and (len(first_wall) < 4 or
+                                points_inside_curve([x_point], first_wall)[0]):
         diff_psi_xp = np.abs(psi_spl(*x_point, grid=False) - psi_axis)
         if diff_psi_xp < wall_min_diff or iwall_min == -1:
             limiter_plasma = False
