@@ -1514,6 +1514,130 @@ class Equilibrium(object):
 
         return dists, lines
 
+    def trace_field_line_toroidal(self, *coordinates, R: np.array = None, Z: np.array = None,
+                         coord_type=None, in_first_wall=True, phi_end = None, phi_eval = None, **coords):
+        """
+        Return traced field lines starting from the given set of at least 2d coordinates.
+        No stopper method are used here, the toroidal angle interval is specified by the user.
+        :param coordinates: coordinates at the start of the field lines. If 2D dimensionned, start at phi = 0
+        :param R:
+        :param Z:
+        :param coord_type: 
+        :param direction: if positive trace field line in/cons the direction of magnetic field.
+        :param in_first_wall: if True the only inner part of field line is returned.
+        :param phi_end : toroidal angle value at wich to stop the integration. 
+        :param phi_eval : optional, allow to choose the values of the toroidal angle returned 
+            along the integration of the magnetic field line. 
+            Must be contained in the range [phi_start, phi_end], the minimum and maximum value of the toroidal angle.
+            If none specified, allow the solver to choose these values. 
+        :param coords:
+        :return: list of coordinates 
+        """
+
+
+        coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
+
+        res = []
+
+        # XXXNOW
+        coords_rz = coords.as_array(dim=2)
+
+
+
+        dphifunc = flt.dphi_tracer_factory(self.B_R, self.B_Z, self.B_tor)
+
+        r_lims = [np.min(self.first_wall.R), np.max(self.first_wall.R)]
+        z_lims = [np.min(self.first_wall.Z), np.max(self.first_wall.Z)]
+
+        for i in np.arange(len(coords)):
+
+            if 1: #i==0 or i==len(coords)-1 or i == np.int(len(coords)/2):
+                y0 = coords_rz[i]
+                if coords.dim == 2:
+                    phi_start = 0
+                else:
+                    phi_start = coords.phi[i]
+
+                if phi_end is None:
+                    phi_end = phi_start 
+
+                atol = 1e-6
+                if self.is_xpoint_plasma:
+                    xp = self._x_point
+                    xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
+                    atol = np.minimum(xp_dist * 1e-3, atol)
+
+                if self._verbose:
+                    print('>>> tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi_start))
+                    print('>>> atol = {}'.format(atol))
+
+                # todo: define somehow sufficient tolerances
+                sol = solve_ivp(dphifunc,
+                                (phi_start, phi_end),
+                                y0,
+                                #                            method='RK45',
+                                method='LSODA',
+                                max_step=1e-2,  # we want high phi resolution
+                                atol=atol,
+                                rtol=1e-8,
+                                t_eval = phi_eval
+                                )
+
+                if self._verbose:
+                    print("{}, {}".format(sol.message, sol.nfev))
+
+                phi = sol.t
+                R, Z = sol.y
+
+                fl = self.coordinates(R, Z, phi)
+
+                # XXX add condirtion to stopper
+                if in_first_wall:
+                    mask = self.in_first_wall(fl)
+
+                    imask = mask.astype(int)
+                    in_idxs = np.where(imask[:-1] - imask[1:] == 1)[0]
+
+                    last_idx = False
+                    if len(in_idxs) >= 1:
+                        # Last point is still in (+1)
+                        last_idx = in_idxs[0]
+                        mask[last_idx + 1:] = False
+
+                    Rs = fl.R[mask]
+                    Zs = fl.Z[mask]
+                    phis = fl.phi[mask]
+
+                    intersec = self.first_wall.intersection(fl, dim=2)
+                    if intersec is not None and len(in_idxs) >= 1:
+                        R_last = Rs[-1]
+                        Z_last = Zs[-1]
+
+                        inter_idx = np.argmin((intersec.R - R_last) ** 2 + (intersec.Z - Z_last) ** 2)
+
+                        Rx = intersec.R[inter_idx]
+                        Zx = intersec.Z[inter_idx]
+                        # last_idx = len(phis) - 1
+
+                        coef = np.sqrt((Rx - fl.R[last_idx]) ** 2 + (Zx - fl.Z[last_idx]) ** 2 /
+                                       (fl.R[last_idx + 1] - fl.R[last_idx]) ** 2 +
+                                       (fl.Z[last_idx + 1] - fl.Z[last_idx]) ** 2)
+
+                        phix = fl.phi[last_idx] + coef * (fl.phi[last_idx + 1] - fl.phi[last_idx])
+
+                        Rs = np.append(Rs, Rx)
+                        Zs = np.append(Zs, Zx)
+                        phis = np.append(phis, phix)
+
+                    fl = self.coordinates(Rs, Zs, phis)
+
+                res.append(fl)
+
+
+        return res
+
+    
+    
     def trace_field_line(self, *coordinates, R: np.array = None, Z: np.array = None,
                          coord_type=None, direction=1, stopper_method=None, in_first_wall=False, **coords):
         """
