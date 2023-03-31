@@ -91,7 +91,7 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 
 ## Version
 
-0.0.6
+0.0.7
 
 ## Authors
 

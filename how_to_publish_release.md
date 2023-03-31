@@ -4,20 +4,21 @@
     - `release_number` format: `major.minor.subminor` (e.g. 0.1.2) for main versions, or
     - `major.minor.subminor.patchnumber` if needed, or
     - `major.minor.subminorbbetaversion` (e.g. 0.1.1b3) for testing release 
-1. Set release number 
-    1. in `README.md`,
-    1. in `pleque/__init__.py`,
-    1. minor release number in `docs/source/conf.py` (e. g. 0.1)
-1. Create push request to master/develop on GitLab.
-1. Wait for the approval.
-1. Tag the commit as `v[release_number]`
-1. Upload the release to pip: 
+2. Set release number 
+   1. in `README.md`,
+   2. in `pleque/__init__.py`,
+   3. minor release number in `docs/source/conf.py` (e. g. 0.1)
+   4. in `setup.py`
+3. Create push request to master/develop on GitLab.
+4. Wait for the approval.
+5. Tag the commit as `v[release_number]`
+6. Upload the release to pip: 
     1. run `bash` in `pleque` home (checkout to master/develop)
-    1. Prepare distribution in `dist` directory:
+    2. Prepare distribution in `dist` directory:
         ```bash
         python setup.py sdist bdist_wheel 
         ```  
-    1. Upload the distribution to PyPI (in dist/ directory must be only one release):
+    3. Upload the distribution to PyPI (in dist/ directory must be only one release):
         1. Standard distribution:
         ```bash
         twine upload dist/*
@@ -26,6 +27,6 @@
         ```bash
         twine upload --repository-url https://test.pypi.org/legacy/ dist/*
         ```
-    1. Try to download it and install it via `pip`.
-1. Check whether the documentation on `readthedocs` is build without error. 
-1. Breath normally. 
+    4. Try to download it and install it via `pip`.
+7. Check whether the documentation on `readthedocs` is build without error. 
+8. Breath normally. 
