@@ -1,10 +1,29 @@
+from collections import Iterable
+
 from scipy.signal import argrelmin
-from scipy.optimize import minimize
+from scipy.optimize import minimize, brentq
 from scipy.integrate import trapz, cumtrapz
+
+import pleque
 import pleque.utils.surfaces as surf
 from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
+
+
+def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
+    # todo: brentq method is probably not the fastest.
+    if not (np.abs(eq.q(0)) < q < np.abs(eq.q(max_psi_n))):
+        return None
+
+    psi_n = brentq(lambda psi_n: np.abs(eq.q(psi_n)) - q, 0, 0.99)
+    return psi_n
+
+
+def get_psi_n_on_q(eq, q, max_psi_n=0.95):
+    if isinstance(q, Iterable):
+        return [_get_psi_n_on_q(eq, _q, max_psi_n=max_psi_n) for _q in q]
+    return _get_psi_n_on_q(eq, q, max_psi_n=max_psi_n)
 
 
 def is_monotonic(f, x0, x1, n_test=10):
@@ -53,7 +72,7 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     return res_point
 
 
-def find_extremes(rs, zs, psi_spl):
+def find_extremes(rs, zs, psi_spl, order=20):
     """
     Find the extremes on grid given by rs and zs.
     x-points: Candidates for x-point
@@ -61,6 +80,10 @@ def find_extremes(rs, zs, psi_spl):
 
     :param rs: array-like(n) R - major radius coordinate
     :param zs: array-like(m) Z - vertical coordinate
+    :param order: int, order used by scipy argrelmin function
+                  (https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.argrelmin.html)
+                  How many points on each side to use for the comparison to
+                  consider comparator(n, n+x) to be True
     :param psi_spl:
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
@@ -71,8 +94,8 @@ def find_extremes(rs, zs, psi_spl):
     psi_xysq = psi_x ** 2 + psi_y ** 2
 
     # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=20))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=20))
+    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=order))
+    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=order))
 
     # use these values to define psi_xysq_func threshold
     # psi_diff = (np.max(psi) - np.min(psi)) ** 2
@@ -160,7 +183,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     if first_wall is not None and len(first_wall) > 2:
         mask_in = points_inside_curve(o_points, first_wall)
         op_in_first_wall[mask_in] = 1
-        op_in_first_wall[not mask_in] = 1e-3
+        op_in_first_wall[np.logical_not(mask_in)] = 1e-3
 
     sortidx = np.argsort(op_dist * op_psiscale * (1 - op_in_first_wall))
 
