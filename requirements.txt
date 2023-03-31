@@ -1,6 +1,6 @@
 scipy
 numpy
-shapely
+shapely<2.0.0
 scikit-image
 xarray
 h5py

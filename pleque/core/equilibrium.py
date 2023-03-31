@@ -187,7 +187,7 @@ class Equilibrium(object):
             if 'F0' in basedata:
                 self.F0 = basedata['F0']
                 if isinstance(self.F0, xarray.DataArray):
-                    self.F0 = np.asscalar(self.F0.values)
+                    self.F0 = np.asarray(self.F0.values).item()
             elif 'F0' in basedata.attrs:
                 self.F0 = basedata.attrs['F0']
 
@@ -235,8 +235,7 @@ class Equilibrium(object):
             self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
                                                                 first_wall=self._first_wall,
                                                                 mg_axis_candidate=self._mg_axis)
-
-            self._psi_axis = self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False).item()
+            self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
             self._o_points = o_points[sortidx]
             self._o_points[0] = self._mg_axis
 
@@ -303,7 +302,7 @@ class Equilibrium(object):
 
             # sometimes this close_lcfs is empty - investigate!
             close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                                  self._mg_axis, self._psi_axis)
+                                                self._mg_axis, self._psi_axis)
 
             while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
                 close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
@@ -855,8 +854,8 @@ class Equilibrium(object):
                 'nobody is allowed to use it! It has been or will be replaced by the new functions.')
     def outter_parallel_fl_expansion_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
-        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer 
-        midplane. 
+        WIP:Calculate parallel expansion coefitient of the given coordinates with respect to positon on the outer
+        midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         #print(coord.r_mid)
