@@ -1,7 +1,7 @@
 if __name__ == '__main__':
     from pleque.io import _geqdsk, _readgeqdsk
     from pleque.tests.utils import get_test_equilibria_filenames
-    from collections import *
+    from collections.abc import *
 
     eqdsk_file = get_test_equilibria_filenames()[0]
 

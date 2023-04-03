@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections.abc import Iterable
 
 from scipy.signal import argrelmin
 from scipy.optimize import minimize, brentq
