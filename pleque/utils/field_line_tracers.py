@@ -1,77 +1,7 @@
 import numpy as np
 
-from pleque import Equilibrium
 
-
-def _trace_field_line_first_attempt(eq: Equilibrium, *coordinates, coord_type=None, sign=1, step=5e-1, t_max=150,
-                                    **coords):
-    """Deprecated.
-    :param coordinates:
-    :param coord_type:
-    :param coords:
-    :return:
-    """
-    # from numba import autojit
-    from scipy.integrate import ode
-    crds = eq.coordinates(*coordinates, coord_type=coord_type, grid=False, **coords)
-
-    def b_norm(t, y):
-        # todo: as soon as it will be implemented properly implement as
-        # crd = eq.coordinates(y[0], y[1], grid=False)
-        # ... it should bring significant acceleration
-        B = [eq.B_R(R=y[0], Z=y[1], grid=False),
-             eq.B_Z(R=y[0], Z=y[1], grid=False),
-             eq.B_tor(R=y[0], Z=y[1], grid=False) / y[0]]
-        B = sign * B / np.linalg.norm(B)
-        return B
-
-    def do_step(r, z):
-        times = []
-        pos = []
-        y0 = [r, z, 0]
-        t0 = 0.
-        pos.append(y0)
-        times.append(t0)
-
-        integrator = ode(b_norm).set_integrator('dopri5')
-        integrator.set_initial_value(y0, t0)
-        while integrator.successful() and integrator.t < t_max:
-            t = integrator.t + step
-            p = integrator.integrate(integrator.t + step)
-            times.append(t)
-            pos.append(p)
-        return (times, pos)
-
-    ret = []
-    rs = crds.R
-    zs = crds.Z
-    for r, z in crds:
-        # for i in range(len(rs)):
-        #     r = rs[i]
-        #     z = zs[i]
-        times = []
-        pos = []
-        y0 = [r, z, 0]
-        t0 = 0.
-        pos.append(y0)
-        times.append(t0)
-
-        integrator = ode(b_norm).set_integrator('dopri5')
-        integrator.set_initial_value(y0, t0)
-        while integrator.successful() and integrator.t < t_max:
-            t = integrator.t + step
-            p = integrator.integrate(integrator.t + step)
-            times.append(t)
-            pos.append(p)
-        foo = do_step(r, z)
-        ret.append(foo)
-    # pool = multiprocessing.Pool(3)
-    # ret = zip(*pool.map(do_step, [(r, z) for (r, z) in crds]))
-
-    return ret
-
-
-def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
+def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -79,7 +9,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     
     Parameters
     ----------
-    BR_func, BZ_func, Bphi_func : 
+    BR_func, BZ_func, Bphi_func: Functions of R and Z.
     :param direction: if positive trace field line in/cons the direction of magnetic field.
 
     Returns
@@ -93,14 +23,25 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
 
-    def dphi_func(phi, x):
-        R, Z = x
-        BR = BR_func(R, Z)
-        BZ = BZ_func(R, Z)
-        Bphi = Bphi_func(R, Z)
-        dRdphi = R * BR / Bphi
-        dZdphi = R * BZ / Bphi
-        return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+    if BR_pert_func and BR_pert_func:
+        def dphi_func(phi, x):
+            R, Z = x
+            BR = BR_func(R, Z) + BR_pert_func(R, Z, phi)
+            BZ = BZ_func(R, Z) + BZ_pert_func(R, Z, phi)
+            Bphi = Bphi_func(R, Z)
+            dRdphi = R * BR / Bphi
+            dZdphi = R * BZ / Bphi
+            return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+    else:
+        def dphi_func(phi, x):
+            R, Z = x
+            BR = BR_func(R, Z)
+            BZ = BZ_func(R, Z)
+            Bphi = Bphi_func(R, Z)
+            dRdphi = R * BR / Bphi
+            dZdphi = R * BZ / Bphi
+            return np.sign(direction)*np.reshape([dRdphi, dZdphi], (2,))  # TODO HOTFIX required when functions return 1d arrays
+
 
     return dphi_func
 
