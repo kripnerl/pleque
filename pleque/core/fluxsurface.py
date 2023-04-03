@@ -158,7 +158,7 @@ class FluxSurface(Surface):
 
             h = 1 / self.R ** 2
 
-            izero = np.asscalar(np.argmin(np.mod(self.theta, 2 * np.pi)))
+            izero = np.asarray(np.argmin(np.mod(self.theta, 2 * np.pi))).item()
 
             avg = self.surface_average(h)
             cum_avg = self.cumsum_surface_average(h, roll=izero)
@@ -168,7 +168,7 @@ class FluxSurface(Surface):
             # generate splines:
             theta4spl = np.mod(self.theta, 2 * np.pi)
             th_st4spl = theta_star
-            amin = np.asscalar(np.argmin(theta4spl))
+            amin = np.asarray(np.argmin(theta4spl)).item()
 
             theta4spl = np.roll(theta4spl, -amin)
             th_st4spl = np.roll(th_st4spl, -amin)

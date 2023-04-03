@@ -1,4 +1,5 @@
 import pytest
+
 pycdb = pytest.importorskip('pyCDB')
 
 import numpy as np
@@ -7,11 +8,21 @@ import tempfile
 
 os.environ['CDB_PATH'] = os.getenv('CDB_PATH', '/home/kripner/Projects/CDB/src')
 
+
+def test_cdb_variations():
+    from pleque.io.compass import cdb
+
+    eq = cdb(21267, 1400, variant="V4_std_O")
+
+    import matplotlib.pyplot as plt
+    eq.plot_overview()
+    plt.show()
+
+
 def test_cdb():
     from pleque.io.compass import read_efithdf5
     from pleque.io.compass import cdb
     from os.path import expanduser
-
 
     eq = cdb(17636, 1125)
     eq = cdb(17854, 1000)
