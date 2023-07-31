@@ -35,7 +35,7 @@ def impact_angle_sin(coords: 'pleque.Coordinates'):
     return incidence_angle_sin(coords, bvec)
 
 
-def impact_angle_cos_pol_projection(coords: 'pleque.Coordinates'):
+def impact_angle_sin_pol_projection(coords: 'pleque.Coordinates'):
     """
     Impact angle calculation - dot product of PFC norm and local magnetic field direction
     poloidal projection only.
@@ -46,7 +46,7 @@ def impact_angle_cos_pol_projection(coords: 'pleque.Coordinates'):
     """
 
     bvec = coords._eq.Bvec(coords)
-    bvec[2, :] = 0  # set Z component to be zero
+    bvec[2, :] = 0  # set phi component to be zero
 
     return incidence_angle_sin(coords, bvec)
 

@@ -452,7 +452,7 @@ class Coordinates(object):
         :return: array of impact angles cosines
         """
 
-        return flux_expansion.impact_angle_cos_pol_projection(self)
+        return flux_expansion.impact_angle_sin_pol_projection(self)
 
     def impact_angle_sin_pol_projection(self):
         """
@@ -464,7 +464,7 @@ class Coordinates(object):
         :return: array of impact angles cosines
         """
 
-        return flux_expansion.impact_angle_cos_pol_projection(self)
+        return flux_expansion.impact_angle_sin_pol_projection(self)
 
     @property
     def dists(self):
