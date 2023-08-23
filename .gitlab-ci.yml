@@ -1,8 +1,9 @@
-image: continuumio/miniconda3
+image: python:3.9
 
 before_script:
-  - conda env create -f environment.yml
-  - source activate pleque
+  - curl -sSL https://install.python-poetry.org | python3 -
+  - poetry config virtualenvs.create false
+  - poetry install
 
 test:pytest:
   script:
