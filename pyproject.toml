@@ -2,7 +2,7 @@
 name = "pleque"
 version = "0.1.0b0"
 description = "PLEQUE is a Python module allowing simple visualisation and manipulation of tokamak plasma equilibria."
-authors = ["Lukaáš Kripner <kripner@ipp.cas.cz>"]
+authors = ["Lukáš Kripner <kripner@ipp.cas.cz>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/kripnerl/pleque"
@@ -16,7 +16,6 @@ shapely = "^1.8.5"
 netcdf4 = "^1.6.3"
 h5py = "^3.8.0"
 scikit-image = "^0.20.0"
-omas = {version = "^0.91.0", optional = false}
 matplotlib = {version = "^3.7.1", optional = false}
 
 [tool.poetry.group.dev.dependencies]
@@ -25,6 +24,10 @@ pytest = "^7.2.2"
 pylint = "^2.17.1"
 flake8 = "^6.0.0"
 setuptools = "^67.6.1"
+
+[tool.poetry.group.omas.dependencies]
+omas = "^0.91.0"
+
 
 [build-system]
 requires = ["poetry-core"]
