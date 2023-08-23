@@ -1,7 +1,8 @@
 image: python:3.9
 
 before_script:
-  - curl -sSL https://install.python-poetry.org | python3 -
+  - curl -sSL https://install.python-poetry.org | POETRY_HOME=/etc/poetry python3 -
+  - export PATH="/etc/poetry/bin:$PATH"
   - poetry config virtualenvs.create false
   - poetry install
 
