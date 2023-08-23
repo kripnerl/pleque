@@ -1,11 +1,5 @@
-#from collections.abc import Sequence
-#import itertools
-
 import numpy as np
 import types
-#import xarray
-
-#from pleque.utils.decorators import deprecated
 
 
 class FluxFunctions:

@@ -512,7 +512,7 @@ class Coordinates(object):
         return self._cum_length[-1]
 
     def _evaluate_input(self, *coordinates, coord_type=None, **coords):
-        from collections import Iterable
+        from collections.abc import Iterable
 
         if len(coordinates) == 0:
             # todo:

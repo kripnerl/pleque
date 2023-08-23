@@ -109,7 +109,7 @@ class Equilibrium(object):
 
             if first_wall is None:
                 if 'first_wall' in basedata:
-                    self._first_wall = basedata["first_wall"]
+                    self._first_wall = basedata["first_wall"].values
                 elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
                     self._first_wall = np.array([basedata.R_first_wall.values,
                                                  basedata.Z_first_wall.values]).T
