@@ -11,8 +11,7 @@ documentation = ""
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
 xarray = "^2023.3.0"
-pandas = "^1.5.3"
-shapely = "^1.8.5"
+shapely = "^2.0.1"
 netcdf4 = "^1.6.3"
 h5py = "^3.8.0"
 scikit-image = "^0.20.0"
@@ -25,9 +24,15 @@ pylint = "^2.17.1"
 flake8 = "^6.0.0"
 setuptools = "^67.6.1"
 
+[tool.poetry.group.omas]
+optional = true
+
 [tool.poetry.group.omas.dependencies]
 omas = "^0.91.0"
 botocore = "^1.29.0"
+
+[tool.poetry.group.compass]
+optional = true
 
 [tool.poetry.group.compass.dependencies]
 pycdb = { git = "https://repo.tok.ipp.cas.cz/compass-tokamak/CDB.git" }
