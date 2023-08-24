@@ -3,6 +3,7 @@ from collections.abc import Sequence
 import numpy as np
 import xarray
 from scipy.constants import mu_0
+from shapely import Polygon, Point
 
 from pleque.utils.decorators import deprecated
 
@@ -1374,12 +1375,16 @@ class Equilibrium(object):
             cnt += 1
             separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
 
-            for j in separatrix:
+            for flux_surf in separatrix:
                 # todo: this is not separatrix... for example in limiter plasma and without first wall
-                intersection = np.array(self.first_wall._string.intersection(j._string))
+                intersection = self.first_wall.intersection(flux_surf)
                 if len(intersection) > 0:
-                    self._separatrix = j.as_array(("R", "Z"))
-                    found = True
+                    poly = Polygon(flux_surf._string)
+                    o_point = Point(self.magnetic_axis.R[0], self.magnetic_axis.Z[0])
+                    if poly.contains(o_point):
+                        self._separatrix = flux_surf.as_array(("R", "Z"))
+                        found = True
+                        break
 
         return self._separatrix
 

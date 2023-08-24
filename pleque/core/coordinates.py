@@ -314,7 +314,7 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def intersection(self, coords2, dim=None):
+    def intersection(self, coords2, dim=2):
         """
         input: 2 sets of coordinates
         crossection of two lines (2 sets of coordinates)
@@ -333,11 +333,13 @@ class Coordinates(object):
         intersec = coor1.intersection(coor2)
         if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
             return None
-        elif intersec is not None:
-            intersec = np.array(intersec).T
-            return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
+        elif isinstance(intersec, geometry.MultiPoint):
+            intersec = np.asarray([np.asarray(geom.coords).squeeze() for geom in intersec.geoms]).T
+        elif isinstance(intersec, geometry.Point):
+            intersec = np.atleast_2d(intersec.coords).T
         else:
             return None
+        return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
 
     def as_array(self, dim=None, coord_type=None):
         """
