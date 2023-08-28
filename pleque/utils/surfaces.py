@@ -46,12 +46,15 @@ def intersection(line1, line2):
     l1 = geo.LineString(line1)
     l2 = geo.LineString(line2)
 
-    intersec = l1.intersection(l2)
 
-    if hasattr(intersec, 'geoms'):
-        intersec = np.array([np.array(g.coords).squeeze() for g in intersec.geoms])
+    if l1.intersects(l2):
+        intersec = l1.intersection(l2)
+        if hasattr(intersec, 'geoms'):
+            intersec = np.array([np.array(g.coords).squeeze() for g in intersec.geoms])
+        else:
+            intersec = np.atleast_2d(intersec.coords)
     else:
-        intersec = np.atleast_2d(intersec.coords)
+        intersec = np.array([]).reshape((0, 2))
 
     return intersec
 

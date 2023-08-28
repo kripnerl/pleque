@@ -23,6 +23,9 @@ pytest = "^7.2.2"
 pylint = "^2.17.1"
 flake8 = "^6.0.0"
 setuptools = "^67.6.1"
+jupyter = "^1.0.0"
+pyqt5 = "^5.15.9"
+tk = "^0.1.0"
 
 [tool.poetry.group.omas]
 optional = true

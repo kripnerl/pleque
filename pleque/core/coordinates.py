@@ -328,17 +328,22 @@ class Coordinates(object):
 
         if self.grid:
             raise ValueError("grid ")
-        coor1 = geometry.linestring.LineString(self.as_array(dim=dim_))
-        coor2 = geometry.linestring.LineString(coords2.as_array(dim=dim_))
-        intersec = coor1.intersection(coor2)
-        if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
-            return None
-        elif isinstance(intersec, geometry.MultiPoint):
-            intersec = np.asarray([np.asarray(geom.coords).squeeze() for geom in intersec.geoms]).T
-        elif isinstance(intersec, geometry.Point):
-            intersec = np.atleast_2d(intersec.coords).T
+        coor1 = geometry.LineString(self.as_array(dim=dim_))
+        coor2 = geometry.LineString(coords2.as_array(dim=dim_))
+        if coor1.intersects(coor2):
+            intersec = coor1.intersection(coor2)
+            if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
+                # Note: Actually I don't know when this could happen. Probably when the lines are overlapping.
+                # It would be lovely to check that.
+                intersec = None
+            elif isinstance(intersec, geometry.MultiPoint):
+                intersec = np.asarray([np.asarray(geom.coords).squeeze() for geom in intersec.geoms]).T
+            elif isinstance(intersec, geometry.Point):
+                intersec = np.atleast_2d(intersec.coords).T
         else:
-            return None
+            intersec = None
+        if intersec is None:
+            return self._eq.coordinates(R=np.array(()), Z=np.array(()), coord_type=["R", "Z"])
         return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
 
     def as_array(self, dim=None, coord_type=None):
