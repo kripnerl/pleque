@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 import itertools
+from typing import Union
 
 import numpy as np
 import xarray
@@ -8,7 +9,6 @@ from pleque.utils.decorators import deprecated
 import pleque.utils.flux_expansions as flux_expansion
 from .cocos import cocos_coefs
 from scipy.interpolate import splprep, splev
-
 
 
 class Coordinates(object):
@@ -276,12 +276,12 @@ class Coordinates(object):
 
         eq = self._eq
 
-        dists=self.cum_length
+        dists = self.cum_length
 
-        tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
-        t=np.linspace(np.amin(u),np.amax(u),npoints)
-        rs,zs = splev(t, tck)
-        new_coords=Coordinates(eq, rs, zs)
+        tck, u = splprep([self.R, self.Z], u=dists, k=1, s=0)
+        t = np.linspace(np.amin(u), np.amax(u), npoints)
+        rs, zs = splev(t, tck)
+        new_coords = Coordinates(eq, rs, zs)
 
         return new_coords
 
@@ -314,13 +314,13 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def intersection(self, coords2, dim=2):
+    def intersection(self, coords2, dim=2) -> Union["Coordinates", None]:
         """
         input: 2 sets of coordinates
         crossection of two lines (2 sets of coordinates)
 
         :param dim: reduce number of dimension in which is the intersection searched
-        :return:
+        :return: Coordinates object with intersection points or None if no intersection.
         """
         from shapely import geometry
 
@@ -376,7 +376,7 @@ class Coordinates(object):
         :param first_wall: interpolated first wall
         :return: array (3, N_vecs) of limiter elements normals of the same
         """
-        
+
         ### TODO: deal with different coordinate systems and dimensions
 
         # There will be used first order derivation in the edges and second order derivative elsewhere
@@ -390,8 +390,8 @@ class Coordinates(object):
 
         lim_vec = np.vstack((dR, dZ, np.zeros(np.shape(dR))))
 
-        pol = lim_vec/np.linalg.norm(lim_vec, axis=0)
-    
+        pol = lim_vec / np.linalg.norm(lim_vec, axis=0)
+
         tor = [0, 0, 1]
 
         normal = np.cross(pol, tor, axis=0)
@@ -486,7 +486,7 @@ class Coordinates(object):
             elif self.dim == 2:
                 self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
             elif self.dim == 3:
-                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 + 
+                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 +
                                       (self.Y[1:] - self.Y[:-1]) ** 2 +
                                       (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dists

@@ -167,6 +167,7 @@ def test_intersections(equilibrium):
     # One point
     coord1 = equilibrium.coordinates(R=[-1, 1], Z=[0, 0])
     coord2 = equilibrium.coordinates(R=[0, 0], Z=[-1, 1])
+
     intersections = coord1.intersection(coord2)
 
     assert len(intersections) == 1
@@ -181,6 +182,15 @@ def test_intersections(equilibrium):
     assert len(intersections) == 2
     assert np.isclose(intersections.R[0], -0.5) or np.isclose(intersections.R[0], 0.5)
     assert np.isclose(intersections.Z[0], 0)
+
+    # No intersection
+    coord1 = equilibrium.coordinates(R=[-1, 1], Z=[0, 0])
+    coord2 = equilibrium.coordinates(R=[-1, 1], Z=[1, 1])
+    intersections = coord1.intersection(coord2)
+
+    assert intersections is None
+
+
 def test_distances():
 
         R = 2
