@@ -7,21 +7,19 @@ variables:
 test:compass-modules:
   script:
     - module purge
-    - module load pleque/master
-    - sleep 5s
+    - module load pleque/${COMPASS_MODULE}
+    - cd $PLEQUE_HOME
+    - pwd
     - pytest tests/test_cdb.py
-    - sleep 5s
-    - module purge
-    - module load pleque/develop
-    - pytest tests/test_cdb.py
-    - module purge
-    - module load pleque/unstable
-    - pytest tests/test_cdb.py
-    - module purge
-    - module load pleque/sumtraic2023
-    - module purge
+
   tags:
     - soroban-node-01
+  parallel:
+    matrix:
+      - COMPASS_MODULE: master
+      - COMPASS_MODULE: develop
+      - COMPASS_MODULE: unstable
+      - COMPASS_MODULE: sumtraic2023
 
 test:pytest:
   script:
