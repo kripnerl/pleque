@@ -11,13 +11,14 @@ test:compass-modules:
     - module list
     - cd $PLEQUE_PATH
     - pwd
-    - pytest tests/test_cdb.py --junitxml=${CI_BUILDS_DIR}/report.xml
-    - ls $CI_BUILDS_DIR
+    - echo $CI_PROJECT_DIR
+    - pytest tests/test_cdb.py --junitxml=${$CI_PROJECT_DIR}/report.xml
+    - ls $CI_PROJECT_DIR
     - sleep 5
   artifacts:
     when: always
     reports:
-      junit: ${CI_BUILDS_DIR}/report.xml
+      junit: ${$CI_PROJECT_DIR}/report.xml
 
   tags:
     - soroban-node-01
