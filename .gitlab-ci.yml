@@ -12,10 +12,11 @@ test:compass-modules:
     - cd $PLEQUE_PATH
     - pwd
     - echo $CI_PROJECT_DIR
-    - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
+    # Run CDB tests
+    - pytest tests/test_cdb.py::test_cdb tests/test_cdb.py::test_cudb --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
     - if [ $? -ne 0 ]; then has_failed=true; fi
-    - sleep 5
-    - if [ "$has_failed" = true ]; then exit 1; fi
+    - sleep 2
+    - if [ $has_failed -eq 1 ]; then exit 1; fi
   artifacts:
     when: on_failure
     paths:
