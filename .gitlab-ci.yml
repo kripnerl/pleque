@@ -8,7 +8,7 @@ test:compass-modules:
   script:
     - module purge
     - module load pleque/${COMPASS_MODULE}
-    - cd $PLEQUE_HOME
+    - cd $PLEQUE_PATH
     - pwd
     - pytest tests/test_cdb.py
 
