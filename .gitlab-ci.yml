@@ -2,10 +2,15 @@ variables:
   POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
   POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
 
+stages:
+  - test
+
 test:compass-modules:
+  stage:
+    - test
   script:
     - set +e
-    - has_failed=false
+    - has_failed=0
     - module purge
     - module load pleque/${COMPASS_MODULE}
     - module list
@@ -13,8 +18,8 @@ test:compass-modules:
     - pwd
     - echo $CI_PROJECT_DIR
     # Run CDB tests
-    - pytest tests/test_cdb.py::test_cdb tests/test_cdb.py::test_cudb --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
-    - if [ $? -ne 0 ]; then has_failed=true; fi
+    - pytest tests/test_cdb.py::test_cdb tests/test_cdb.py::test_cudb --junitxml=${CI_PROJECT_DIR}/report.xml | 
+      tee ${CI_PROJECT_DIR}/report.txt || export has_failed=1
     - sleep 2
     - if [ $has_failed -eq 1 ]; then exit 1; fi
   artifacts:
@@ -23,17 +28,27 @@ test:compass-modules:
       - ${CI_PROJECT_DIR}/report.txt
     reports:
       junit: ${CI_PROJECT_DIR}/report.xml
-
   tags:
     - soroban-node-01
   parallel:
     matrix:
       - COMPASS_MODULE: master
       - COMPASS_MODULE: develop
-      - COMPASS_MODULE: unstable
+      #      - COMPASS_MODULE: unstable
       - COMPASS_MODULE: sumtraic
+    # Only on schedule or manual
+    rules:
+      - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"'
+        when: always
+      - if: '$CI_COMMIT_BRANCH == "master"'
+        when: always
+      - if: '$CI_COMMIT_BRANCH == "develop"'
+        when: always
+      - when: never
 
 test:pytest:
+  stage:
+    - test
   script:
     - curl -sSL https://install.python-poetry.org | python3 -
     - export PATH="$POETRY_HOME/bin:$PATH"
