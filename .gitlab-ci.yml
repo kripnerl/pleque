@@ -19,9 +19,9 @@ test:compass-modules-single:
   artifacts:
     when: always
     paths:
-      - ${$CI_PROJECT_DIR}/report.txt
+      - ${CI_PROJECT_DIR}/report.txt
     reports:
-      junit: ${$CI_PROJECT_DIR}/report.xml
+      junit: ${CI_PROJECT_DIR}/report.xml
   variables:
     COMPASS_MODULE: master
 
@@ -40,9 +40,9 @@ test:compass-modules-single:
 #  artifacts:
 #    when: always
 #    paths:
-#      - ${$CI_PROJECT_DIR}/report.txt
+#      - ${CI_PROJECT_DIR}/report.txt
 #    reports:
-#      junit: ${$CI_PROJECT_DIR}/report.xml
+#      junit: ${CI_PROJECT_DIR}/report.xml
 #
 #  tags:
 #    - soroban-node-01
