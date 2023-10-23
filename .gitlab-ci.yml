@@ -2,58 +2,35 @@ variables:
   POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
   POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
 
-test:compass-modules-single:
+test:compass-modules:
   script:
     - set +e
+    - has_failed=false
     - module purge
     - module load pleque/${COMPASS_MODULE}
     - module list
     - cd $PLEQUE_PATH
     - pwd
     - echo $CI_PROJECT_DIR
-    - sleep 2
     - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
-    - read -p "Press enter to continue..."
-    - ls $CI_PROJECT_DIR
+    - if [ $? -ne 0 ]; then has_failed=true; fi
     - sleep 5
+    - if [ "$has_failed" = true ]; then exit 1; fi
   artifacts:
-    when: always
+    when: on_failure
     paths:
       - ${CI_PROJECT_DIR}/report.txt
     reports:
       junit: ${CI_PROJECT_DIR}/report.xml
-  variables:
-    COMPASS_MODULE: master
+
   tags:
     - soroban-node-01
-
-#test:compass-modules:
-#  script:
-#    - module purge
-#    - module load pleque/${COMPASS_MODULE}
-#    - module list
-#    - cd $PLEQUE_PATH
-#    - pwd
-#    - echo $CI_PROJECT_DIR
-#    - sleep 5
-#    - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
-#    - ls $CI_PROJECT_DIR
-#    - sleep 5
-#  artifacts:
-#    when: always
-#    paths:
-#      - ${CI_PROJECT_DIR}/report.txt
-#    reports:
-#      junit: ${CI_PROJECT_DIR}/report.xml
-#
-#  tags:
-#    - soroban-node-01
-#  parallel:
-#    matrix:
-#      - COMPASS_MODULE: master
-#      - COMPASS_MODULE: develop
-#      - COMPASS_MODULE: unstable
-#      - COMPASS_MODULE: sumtraic
+  parallel:
+    matrix:
+      - COMPASS_MODULE: master
+      - COMPASS_MODULE: develop
+      - COMPASS_MODULE: unstable
+      - COMPASS_MODULE: sumtraic
 
 test:pytest:
   script:
