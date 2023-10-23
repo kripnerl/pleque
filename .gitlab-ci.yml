@@ -43,6 +43,7 @@ test:compass-modules:
       when: always
     - if: '$CI_COMMIT_BRANCH == "develop"'
       when: always
+    - when: manual
     - when: never
 
 test:pytest:
