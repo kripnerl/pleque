@@ -12,6 +12,7 @@ test:compass-modules:
     - cd $PLEQUE_PATH
     - pwd
     - echo $CI_PROJECT_DIR
+    - sleep 5
     - pytest tests/test_cdb.py --junitxml=${$CI_PROJECT_DIR}/report.xml > ${$CI_PROJECT_DIR}/report.txt
     - ls $CI_PROJECT_DIR
     - sleep 5
