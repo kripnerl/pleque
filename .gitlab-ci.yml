@@ -1,18 +1,16 @@
-image: python:3.9
-
 variables:
   POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
   POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
 
-cache:
-  paths:
-    - .poetry
-    - .cache/pypoetry
+
 
 test:compass-modules:
   script:
+    - module purge
     - module load pleque/master
+    - sleep 5s
     - pytest tests/test_cdb.py
+    - sleep 5s
     - module purge
     - module load pleque/develop
     - pytest tests/test_cdb.py
@@ -32,3 +30,8 @@ test:pytest:
     - poetry config virtualenvs.create false
     - poetry install --without compass --with omas
     - pytest
+  cache:
+    paths:
+      - .poetry
+      - .cache/pypoetry
+  image: python:3.9
