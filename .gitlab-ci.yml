@@ -6,8 +6,7 @@ stages:
   - test
 
 test:compass-modules:
-  stage:
-    - test
+  stage: test
   script:
     - set +e
     - has_failed=0
@@ -47,8 +46,7 @@ test:compass-modules:
     - when: never
 
 test:pytest:
-  stage:
-    - test
+  stage: test
   script:
     - curl -sSL https://install.python-poetry.org | python3 -
     - export PATH="$POETRY_HOME/bin:$PATH"
