@@ -24,6 +24,8 @@ test:compass-modules-single:
       junit: ${CI_PROJECT_DIR}/report.xml
   variables:
     COMPASS_MODULE: master
+  tags:
+    - soroban-node-01
 
 #test:compass-modules:
 #  script:
