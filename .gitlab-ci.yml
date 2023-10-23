@@ -8,9 +8,11 @@ test:compass-modules:
   script:
     - module purge
     - module load pleque/${COMPASS_MODULE}
+    - module list
     - cd $PLEQUE_PATH
     - pwd
     - pytest tests/test_cdb.py
+    - sleep 5
 
   tags:
     - soroban-node-01
@@ -19,7 +21,7 @@ test:compass-modules:
       - COMPASS_MODULE: master
       - COMPASS_MODULE: develop
       - COMPASS_MODULE: unstable
-      - COMPASS_MODULE: sumtraic2023
+      - COMPASS_MODULE: sumtraic
 
 test:pytest:
   script:
