@@ -2,18 +2,18 @@ variables:
   POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
   POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
 
-
-
-test:compass-modules:
+test:compass-modules-single:
   script:
+    - set +e
     - module purge
     - module load pleque/${COMPASS_MODULE}
     - module list
     - cd $PLEQUE_PATH
     - pwd
     - echo $CI_PROJECT_DIR
-    - sleep 5
-    - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml > ${CI_PROJECT_DIR}/report.txt
+    - sleep 2
+    - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
+    - read -p "Press enter to continue..."
     - ls $CI_PROJECT_DIR
     - sleep 5
   artifacts:
@@ -22,15 +22,36 @@ test:compass-modules:
       - ${$CI_PROJECT_DIR}/report.txt
     reports:
       junit: ${$CI_PROJECT_DIR}/report.xml
+  variables:
+    COMPASS_MODULE: master
 
-  tags:
-    - soroban-node-01
-  parallel:
-    matrix:
-      - COMPASS_MODULE: master
-      - COMPASS_MODULE: develop
-      - COMPASS_MODULE: unstable
-      - COMPASS_MODULE: sumtraic
+#test:compass-modules:
+#  script:
+#    - module purge
+#    - module load pleque/${COMPASS_MODULE}
+#    - module list
+#    - cd $PLEQUE_PATH
+#    - pwd
+#    - echo $CI_PROJECT_DIR
+#    - sleep 5
+#    - pytest tests/test_cdb.py --junitxml=${CI_PROJECT_DIR}/report.xml | tee ${CI_PROJECT_DIR}/report.txt
+#    - ls $CI_PROJECT_DIR
+#    - sleep 5
+#  artifacts:
+#    when: always
+#    paths:
+#      - ${$CI_PROJECT_DIR}/report.txt
+#    reports:
+#      junit: ${$CI_PROJECT_DIR}/report.xml
+#
+#  tags:
+#    - soroban-node-01
+#  parallel:
+#    matrix:
+#      - COMPASS_MODULE: master
+#      - COMPASS_MODULE: develop
+#      - COMPASS_MODULE: unstable
+#      - COMPASS_MODULE: sumtraic
 
 test:pytest:
   script:
