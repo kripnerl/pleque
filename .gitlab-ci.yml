@@ -12,11 +12,13 @@ test:compass-modules:
     - cd $PLEQUE_PATH
     - pwd
     - echo $CI_PROJECT_DIR
-    - pytest tests/test_cdb.py --junitxml=${$CI_PROJECT_DIR}/report.xml
+    - pytest tests/test_cdb.py --junitxml=${$CI_PROJECT_DIR}/report.xml > ${$CI_PROJECT_DIR}/report.txt
     - ls $CI_PROJECT_DIR
     - sleep 5
   artifacts:
     when: always
+    paths:
+      - ${$CI_PROJECT_DIR}/report.txt
     reports:
       junit: ${$CI_PROJECT_DIR}/report.xml
 
