@@ -19,7 +19,7 @@ test:compass-modules:
     # Run CDB tests
     - pytest tests/test_cdb.py::test_cdb tests/test_cdb.py::test_cudb --junitxml=${CI_PROJECT_DIR}/report.xml | 
       tee ${CI_PROJECT_DIR}/report.txt || export has_failed=1
-    - sleep 2
+    - sleep 5
     - if [ $has_failed -eq 1 ]; then exit 1; fi
   artifacts:
     when: on_failure
@@ -59,3 +59,5 @@ test:pytest:
       - .poetry
       - .cache/pypoetry
   image: python:3.9
+  except:
+    - schedules
