@@ -87,8 +87,8 @@ def test_cudb():
     # assert np.all(currents < 3.0e6)
     # assert np.all(currents > 0.2e6)
 
-
-def test_cudb_to_gfile():
+@pytest.mark.parametrize("use_basedata", [True, False])
+def test_cudb_to_gfile(use_basedata):
     from pleque.io import compass, readers
 
     eq = compass.cudb(6400, 2.0)
@@ -96,7 +96,7 @@ def test_cudb_to_gfile():
     tmp_dir = tempfile.gettempdir()
 
     file = tmp_dir + '/cubd_eqdsk'
-    eq.to_geqdsk(file)
+    eq.to_geqdsk(file, use_basedata=use_basedata)
     eq_gfile = readers.read_geqdsk(file)
 
     assert np.isclose(eq.I_plasma, eq_gfile.I_plasma, atol=1e6, rtol=1e-2)
