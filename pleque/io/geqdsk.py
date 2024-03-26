@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 import pleque
@@ -17,6 +19,19 @@ def read(file, cocos=3, first_wall=None):
         eq = read_as_equilibrium(f, cocos, first_wall=first_wall)
 
     return eq
+
+
+def _is_1dprofile_in_basedata(basedata, name, nx):
+    """Check if 1d profile is in basedata and has proper length and dimension.
+    """
+    if name in basedata:
+        if basedata[name].shape[0] == nx and basedata[name].ndim == 1:
+            return True
+        logging.info(f"Basedata {name} has wrong shape or dimension.\n"
+                     f"Shape: {basedata[name].shape}, expected: ({nx},), "
+                     f"ndim: {basedata[name].ndim}, expected: 1.")
+    logging.info(f"Basedata {name} not found.")
+    return False
 
 
 def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
@@ -104,27 +119,27 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
     data["zbdry"] = bnd_z
 
     # 1d profiles:
-    if "F" in basedata:
+    if _is_1dprofile_in_basedata(basedata, "F", nx):
         data['F'] = basedata.F.values
     else:
         data['F'] = equilibrium.F(grid_1d, grid=False)
 
-    if "FFprime" in basedata:
+    if _is_1dprofile_in_basedata(basedata, "FFprime", nx):
         data["FFprime"] = basedata.FFprime.values / psi_factor
     else:
         data['FFprime'] = equilibrium.FFprime(grid_1d, grid=False) / psi_factor
 
-    if 'pressure' in basedata:
+    if _is_1dprofile_in_basedata(basedata, "pressure", nx):
         data['pres'] = basedata.pressure.values
     else:
         data['pres'] = equilibrium.pressure(grid_1d, grid=False)
 
-    if "pprime" in basedata:
+    if _is_1dprofile_in_basedata(basedata, "pprime", nx):
         data['pprime'] = basedata.pprime.values / psi_factor
     else:
         data['pprime'] = equilibrium.pprime(grid_1d, grid=False) / psi_factor
 
-    if "q" in basedata:
+    if _is_1dprofile_in_basedata(basedata, "q", nx):
         data['q'] = basedata.q.values
     else:
         data['q'] = equilibrium.abs_q(grid_1d, grid=False)
