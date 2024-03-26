@@ -6,7 +6,7 @@ authors = ["Lukáš Kripner <kripner@ipp.cas.cz>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/kripnerl/pleque"
-documentation = ""
+documentation = "https://github.com/kripnerl/pleque"
 
 [tool.poetry.dependencies]
 python = ">=3.9, <3.12"
