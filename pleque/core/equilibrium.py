@@ -1378,7 +1378,8 @@ class Equilibrium(object):
             for flux_surf in separatrix:
                 # todo: this is not separatrix... for example in limiter plasma and without first wall
                 intersection = self.first_wall.intersection(flux_surf)
-                if len(intersection) > 0:
+                # The behaviour of intersetion function changed. This condition should catch both empty list and None:
+                if intersection and len(intersection) > 0:
                     poly = Polygon(flux_surf._string)
                     o_point = Point(self.magnetic_axis.R[0], self.magnetic_axis.Z[0])
                     if poly.contains(o_point):
