@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 
 def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
@@ -22,6 +23,9 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
     ----
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
+    if direction < 0:
+        logging.warning("Tracing field lines in the opposite direction of the magnetic field.")
+
 
     if BR_pert_func and BR_pert_func:
         def dphi_func(phi, x):
@@ -46,7 +50,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
     return dphi_func
 
 
-def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
+def ds_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/ds=f(s, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -75,7 +79,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         B = np.sqrt(np.sum(np.square([BR, BZ, Bphi])))
         dRds = BR / B
         dZds = BZ / B
-        return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
+        return np.sign(direction)*np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return ds_func
 

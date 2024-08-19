@@ -1647,7 +1647,8 @@ class Equilibrium(object):
                     print('dphidtheta: {}'.format(dphidtheta))
 
                     stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                                 dphidtheta * direction)
+                                                                 dphidtheta * direction,
+                                                                 stop_res=np.pi/1024)
                 else:
                     if self._verbose:
                         print('>>> z-lim stopper is used')
@@ -1662,7 +1663,8 @@ class Equilibrium(object):
 
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
-                                                             dphidtheta * direction)
+                                                             dphidtheta * direction,
+                                                             stop_res=np.pi/1024)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
