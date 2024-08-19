@@ -1,4 +1,5 @@
 import numpy as np
+import logging
 
 from pleque import Equilibrium
 
@@ -92,6 +93,9 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     ----
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
+    if direction < 0:
+        logging.warning("Tracing field lines in the opposite direction of the magnetic field.")
+
 
     def dphi_func(phi, x):
         R, Z = x
@@ -105,7 +109,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     return dphi_func
 
 
-def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
+def ds_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/ds=f(s, [R,Z])$
     
     The created function is suitable for use in an ODE integrator
@@ -134,7 +138,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func):
         B = np.sqrt(np.sum(np.square([BR, BZ, Bphi])))
         dRds = BR / B
         dZds = BZ / B
-        return np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
+        return np.sign(direction)*np.reshape([dRds, dZds], (2,))  # TODO HOTFIX required when functions return 1d arrays
 
     return ds_func
 

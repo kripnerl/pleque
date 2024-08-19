@@ -219,6 +219,31 @@ class Coordinates(object):
             raise TypeError('mesh can be returned only for 2d grid coordinates.')
         return np.meshgrid(self.x1, self.x2)
 
+    def _get_cum_theta(self):
+        diff_theta = np.diff(self.theta)
+
+        # disable formation
+        # fmt: off
+        diff_theta[np.abs(diff_theta) > np.pi] = (
+                -np.sign(diff_theta[np.abs(diff_theta) > np.pi]) *
+                (2 * np.pi - np.abs(diff_theta[np.abs(diff_theta) > np.pi]))
+        )
+        # fmt: on
+
+        cum_theta = np.concatenate([[0], np.cumsum(diff_theta)]) + self.theta[0]
+        return cum_theta
+
+    @property
+    def cum_theta(self):
+        """
+        Cumulative angle along the coordinate points.
+
+        :return: array(N)
+        """
+        if not hasattr(self, '_cum_theta'):
+            self._cum_theta = self._get_cum_theta()
+        return self._cum_theta
+
     def resample(self, multiple=None):
         """
         Return new, resampled instance of `pleque.Coordinates`
