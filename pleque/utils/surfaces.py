@@ -210,7 +210,7 @@ def point_in_first_wall(equilibrium, points):
 
 def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
     """
-    Tracing one of two separatrix branches (switched by `vect_no`) which are goes around magnetic axis
+    Tracing one of two separa   trix branches (switched by `vect_no`) which are goes around magnetic axis
     for `direction = 1` or in the opposite direction for `direction = -1`.
 
     :param equilibrium:
