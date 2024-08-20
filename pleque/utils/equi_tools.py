@@ -88,27 +88,15 @@ def find_extremes(rs, zs, psi_spl, order=20):
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
 
-    # psi = psi_spl(rs, zs)
-    psi_x = psi_spl(rs, zs, dx=1, dy=0)
-    psi_y = psi_spl(rs, zs, dx=0, dy=1)
-    psi_xysq = psi_x ** 2 + psi_y ** 2
-
-    # this find extremes along first and second dimension
-    mins0 = tuple(argrelmin(psi_xysq, axis=0, order=order))
-    mins1 = tuple(argrelmin(psi_xysq, axis=1, order=order))
-
-    # use these values to define psi_xysq_func threshold
-    # psi_diff = (np.max(psi) - np.min(psi)) ** 2
-    # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
     def psi_xysq_func(x):
         """
         Return sum of squre of gradients of psi spline in R a Z direction.
-        
+
         return: array
         """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+            + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
 
     def psi_2nd_derivatives(r_coord, z_coord):
         _psi_xx = (psi_spl(r_coord, z_coord, dx=2, dy=0, grid=False))
@@ -117,27 +105,68 @@ def find_extremes(rs, zs, psi_spl, order=20):
 
         return _psi_xx, _psi_yy, _psi_xy
 
-    x_points = []
+
+    # I use a little heuristic to find correct order parameter
     o_points = []
+    x_points = []
 
-    for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-        for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
-            if ar == br and az == bz:
-                r_ex = rs[ar]
-                z_ex = zs[az]
+    iteration = 0
+    while len(o_points) == 0 and order > 0 and iteration < 10:
 
-                # XXX Remove bad candidates for the extreme (this is potentional trouble point):
-                if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
-                    continue
+        iteration += 1
+        o_points = []
+        x_points = []
 
-                psi_xx, psi_yy, psi_xy = psi_2nd_derivatives(r_ex, z_ex)
+        # psi = psi_spl(rs, zs)
+        psi_x = psi_spl(rs, zs, dx=1, dy=0)
+        psi_y = psi_spl(rs, zs, dx=0, dy=1)
+        psi_xysq = psi_x ** 2 + psi_y ** 2
 
-                D = psi_xx * psi_yy - psi_xy
+        # this find extremes along first and second dimension
+        mins0 = tuple(argrelmin(psi_xysq, axis=0, order=order))
+        mins1 = tuple(argrelmin(psi_xysq, axis=1, order=order))
 
-                if D > 0:
-                    o_points.append((r_ex, z_ex))
-                else:
-                    x_points.append((r_ex, z_ex))
+        # use these values to define psi_xysq_func threshold
+        # psi_diff = (np.max(psi) - np.min(psi)) ** 2
+        # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
+
+        for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
+            for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
+                if ar == br and az == bz:
+                    r_ex = rs[ar]
+                    z_ex = zs[az]
+
+                    # XXX Remove bad candidates for the extreme (this is potentional trouble point):
+                    if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
+                        continue
+
+                    psi_xx, psi_yy, psi_xy2 = psi_2nd_derivatives(r_ex, z_ex)
+
+                    det = psi_xx * psi_yy - psi_xy2
+
+                    if det > 0:
+                        o_points.append((r_ex, z_ex))
+                    else:
+                        x_points.append((r_ex, z_ex))
+
+
+        print(f"Found {len(o_points)} o-points and {len(x_points)} x-points with order {order}")
+        order = order // 2
+
+        if len(o_points) == 0 and order == 0:
+
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            ax.contourf(rs, zs, psi_xysq.T)
+            ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
+            ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
+            ax.set_aspect('equal')
+            ax.set_title(f"DEBUG plot of d2psi_dxdy with argrelmin order {order}")
+            ax.set_xlabel('R')
+            ax.set_ylabel('Z')
+
+            plt.show()
+
 
     o_points = np.array(o_points)
     x_points = np.array(x_points)
