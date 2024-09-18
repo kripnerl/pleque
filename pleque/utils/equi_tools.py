@@ -2,7 +2,11 @@ from collections.abc import Iterable
 
 from scipy.signal import argrelmin
 from scipy.optimize import minimize, brentq
-from scipy.integrate import trapz, cumtrapz
+
+try:
+    from scipy.integrate import cumulative_trapezoid
+except ModuleNotFoundError:
+    from scipy.integrate import cumtrapz as cumulative_trapezoid
 
 import pleque
 import pleque.utils.surfaces as surf
@@ -420,7 +424,7 @@ def pprime2p(pprime, psi_ax, psi_bnd):
     else:
         psi_n = np.linspace(0, 1, len(pprime), endpoint=True)
 
-    p = coef * cumtrapz(pprime, psi_n, initial=0)
+    p = coef * cumulative_trapezoid(pprime, psi_n, initial=0)
 
     p = p - p[-1]
 
@@ -438,7 +442,7 @@ def ffprime2f(ffprime, psi_ax, psi_bnd, f0):
     else:
         psi_n = np.linspace(0, 1, len(ffprime), endpoint=True)
 
-    f_sq = 2 * coef * cumtrapz(ffprime, psi_n, initial=0)
+    f_sq = 2 * coef * cumulative_trapezoid(ffprime, psi_n, initial=0)
 
     f = np.sign(f0) * np.sqrt(f_sq - f_sq[-1] + f0**2)
 
