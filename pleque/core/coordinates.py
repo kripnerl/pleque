@@ -791,12 +791,16 @@ class Coordinates(object):
         """
         func = /oint F(x,y) dl
         :param func: self - func(X, Y), Union[ndarray, int, float] or function values or 2D spline
-        :param method: str, ['sum', 'trapz', 'simps']
+        :param method: str, ['sum', 'trapezoid', 'simps']
         :return:
         """
         import inspect
         import numpy as np
-        from scipy.integrate import trapz, simps, quad
+        try:
+            from scipy.integrate import trapezoid, simpson
+        except ModuleNotFoundError:
+            from scipy.integrate import trapz as trapezoid
+            from scipy.integrate import simps as simpson
 
         #
         dx = np.hstack((0, np.cumsum(self.dists)))
@@ -825,8 +829,8 @@ class Coordinates(object):
 
             if method == 'sum':
                 line_integral = np.sum(func_val * self.dists)
-            elif method == 'trapz':
-                line_integral = trapz(func_val, dx)
+            elif method in ['trapz', 'trapezoid']:
+                line_integral = trapezoid(func_val, dx)
             elif method == 'simps':
                 line_integral = simps(func_val, dx)
             else:
@@ -856,11 +860,11 @@ class Coordinates(object):
 
             if method == 'sum':
                 line_integral = np.sum(func_val * self.dists)
-            elif method == 'trapz':
+            elif method in ['trapz', 'trapezoid']:
                 if func_val.ndim == 1:
-                    line_integral = trapz(func_val, dx)
+                    line_integral = trapezoid(func_val, dx)
                 else:
-                    line_integral = trapz(trapz(func_val, x1), x2)
+                    line_integral = trapezoid(trapezoid(func_val, x1), x2)
             elif method == 'simps':
                 if func_val.ndim == 1:
                     line_integral = simps(func_val, dx)
