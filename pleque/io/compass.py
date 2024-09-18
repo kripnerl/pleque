@@ -11,7 +11,7 @@ from pleque.utils.surfaces import add_xpoint
 import logging
 
 logger = (logging.getLogger(__name__))
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 def cdb(shot=None, time=1060, revision=1, variant=''):
     """
