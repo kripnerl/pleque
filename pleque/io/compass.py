@@ -122,6 +122,10 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     Bphi = cdb.get_signal('Bphi/Fiesta_OUT:' + strid_postfix)  # 2D
     q = cdb.get_signal('q/Fiesta_OUT:' + strid_postfix)
 
+    loaded_revision = psi.ref.get('revision')
+    loaded_variant = psi.ref.get('variant')
+    loaded_record_number = psi.ref.get('record_number')
+    loaded_timestamp = psi.ref.get('timestamp')
 
     # todo: Check with database and Martin
     pprime_data = pprime.data / (2 * np.pi)
@@ -189,6 +193,10 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
     dst.attrs["cocos"] = 13
+    dst.attrs["record_number"] = loaded_record_number
+    dst.attrs["revision"] = loaded_revision
+    dst.attrs["variant"] = loaded_variant
+    dst.attrs["timestamp"] = loaded_timestamp
 
     return dst
 
