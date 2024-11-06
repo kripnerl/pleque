@@ -273,7 +273,8 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
         monotonic[i] = is_monotonic(psi_spl, mg_axis, xpoint, 10)
         monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
 
-    sortidx = np.argsort(psi_diff * monotonic * len_diff)
+    # The monotonic points are preferred (addition of 1e-3 is to avoid zero difference)
+    sortidx = np.argsort((psi_diff + 1e-3) * monotonic * len_diff)
     xp1 = x_points[sortidx[0]]
 
     if len(x_points) > 1:
