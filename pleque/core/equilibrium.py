@@ -1048,8 +1048,8 @@ class Equilibrium(object):
         if resolution is None:
             if not hasattr(self, '_default_grid'):
                 # TODO THIS is slow now. Decrease resolution and then use find_fluxsurface_step (!!!)
-                R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), 1000)
-                Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), 2000)
+                R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), 1000)
+                Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), 2000)
                 self._default_grid = self.coordinates(R=R, Z=Z, grid=True)
             return self._default_grid
         else:
@@ -1066,18 +1066,18 @@ class Equilibrium(object):
                 if res_R is None:
                     R = self._basedata.R.values
                 elif dim[0] == "step":
-                    R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                    R = np.arange(self._basedata.R.min().item(), self._basedata.R.max().item(), res_R)
                 elif dim[0] == "size":
-                    R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_Z)
+                    R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), res_Z)
                 else:
                     raise ValueError("Wrong dim[0] value passed")
 
                 if res_Z is None:
                     Z = self._basedata.Z.values
                 elif dim[1] == "step":
-                    Z = np.arange(self._basedata.Z.min(), self._basedata.R.max(), res_R)
+                    Z = np.arange(self._basedata.Z.min().item(), self._basedata.R.max().item(), res_R)
                 elif dim[1] == "size":
-                    Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                    Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), res_Z)
                 else:
                     raise ValueError("Wrong dim[1] value passed")
             elif isinstance(dim, str):
@@ -1085,20 +1085,20 @@ class Equilibrium(object):
                     if res_R is None:
                         R = self._basedata.R.values
                     else:
-                        R = np.arange(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                        R = np.arange(self._basedata.R.min().item(), self._basedata.R.max().item(), res_R)
                     if res_Z is None:
                         Z = self._basedata.Z.values
                     else:
-                        Z = np.arange(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                        Z = np.arange(self._basedata.Z.min().item(), self._basedata.Z.max().item(), res_Z)
                 elif dim == "size":
                     if res_R is None:
                         R = self._basedata.R.values
                     else:
-                        R = np.linspace(self._basedata.R.min(), self._basedata.R.max(), res_R)
+                        R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), res_R)
                     if res_Z is None:
                         Z = self._basedata.Z.values
                     else:
-                        Z = np.linspace(self._basedata.Z.min(), self._basedata.Z.max(), res_Z)
+                        Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), res_Z)
                 else:
                     raise ValueError("Wrong dim value passed")
             else:
