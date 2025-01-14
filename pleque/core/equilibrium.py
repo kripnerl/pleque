@@ -1791,14 +1791,18 @@ class Equilibrium(object):
 
     def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3):
         """
-        Write a GEQDSK equilibrium file.
+        Write a GEQDSK/g-file equilibrium file.
 
         :param file: str, file name
-        :param nx: int, number radial radial points and profiles points
+        :param nx: int, number radial points and profiles points
         :param ny: int, number of vertical points
         :param use_basedata: The original basedata of equilibrium are used instead of interpolation splines.
+                             If this option is chosen, the nx and ny parameters are ignored.
         :param q_positive: Save q value always positive.
-        :param cocos_out: Number of output cocos.
+        :param cocos_out: Number of output cocos. `None` if not changed.
+
+        Warning: `cocos_out` parameter only perform 2 pi normalization at the moment.
+        Default value is 3, which corresponds to standard eqdsk EFIT output.
         """
         import pleque.io.geqdsk as geqdsk
 
