@@ -1227,6 +1227,31 @@ class Equilibrium(object):
         s = coord.r_mid / q * dq_dpsi * dpsi_dr
         return s
 
+    def pol_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
+        """
+        Return poloidal flux in Wb which is not normalized by 2pi defiend as:
+
+        .. math::
+            \psi_\mathrm{pol} = - \rho_{Bp} \int B \mathrm{d}S
+
+        the result is obtained by normalization of the reference poloidal flux `psi`
+        with respect to current value of the COCOS:
+
+        .. math::
+            \psi_\mathrm{pol} = (2 \pi)^{1 - e_{Bp}} \psi_\mathrm{ref}
+
+        :param coordinates:
+        :param R:
+        :param Z:
+        :param coord_type:
+        :param grid:
+        :param coords:
+        :return:
+        """
+
+        cc = 2 * np.pi if self._cocosdic['exp_Bp'] == 0 else 1
+        return cc * self.psi(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
+
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Calculate toroidal magnetic flux :math:`\Phi` from:
@@ -1245,7 +1270,7 @@ class Equilibrium(object):
 
         if not hasattr(self, '_q_anideriv_spl'):
             self._init_q()
-        cc = self._cocosdic['sigma_Bp'] * self._cocosdic['sigma_pol'] / ((2 * np.pi) ** (1 - self._cocosdic['exp_Bp']))
+        cc = self._cocosdic['sigma_Bp'] * self._cocosdic['sigma_pol'] * ((2 * np.pi) ** (1 - self._cocosdic['exp_Bp']))
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
