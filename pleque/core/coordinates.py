@@ -748,7 +748,7 @@ class Coordinates(object):
                 self.x1 = self._x1_input ** 2
             else:
                 raise ValueError('This should not happen.')
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x1 = np.asarray(self.x1)
 
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
@@ -761,8 +761,8 @@ class Coordinates(object):
                 cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+            self.x1 = np.asarray(self.x1)
+            self.x2 = np.asarray(self.x2)
 
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
@@ -782,9 +782,9 @@ class Coordinates(object):
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
 
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
-            self.x3 = np.array(self.x3, copy=False, ndmin=1)
+            self.x1 = np.asarray(self.x1)
+            self.x2 = np.asarray(self.x2)
+            self.x3 = np.asarray(self.x3)
 
     @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
