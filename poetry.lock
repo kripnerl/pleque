@@ -1949,6 +1949,16 @@ machine = ["fortranformat", "omfit_classes", "pexpect", "pygacode"]
 uda = ["pyuda"]
 
 [[package]]
+name = "omfit-classes"
+version = "3.2025.3.2"
+description = "Classes of OMFIT (One Modeling Framework For Integrated Tasks)"
+optional = true
+python-versions = "*"
+files = [
+    {file = "omfit_classes-3.2025.3.2.tar.gz", hash = "sha256:9646ec766ff9ab5a8520a4c0e19b5372d49aace083b1805c6d004b73c6ea3bba"},
+]
+
+[[package]]
 name = "packaging"
 version = "24.2"
 description = "Core utilities for Python packages"
@@ -3464,4 +3474,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.12"
-content-hash = "15184639f8f976bb83e023ab45ee09c8292bcd622ba775d52e316a42230f0593"
+content-hash = "5f9a1df01d0fdcae3c66b796da64cd434deab2133a37098ce5580002cd89316c"

@@ -39,6 +39,9 @@ pycdb-compass = { git = "https://repo.tok.ipp.cas.cz/compass-tokamak/CDB.git" }
 # pymysql = "^1.1.0"
 decorator = "^5.1.1"
 
+[tool.poetry.group.omfit-test.dependencies]
+omfit-classes = {version = "^3.2025.3.2", optional = true}
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
