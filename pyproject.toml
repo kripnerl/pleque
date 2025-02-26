@@ -9,7 +9,8 @@ repository = "https://github.com/kripnerl/pleque"
 documentation = "https://github.com/kripnerl/pleque"
 
 [tool.poetry.dependencies]
-python = ">=3.9, <3.12"
+#python = ">=3.9, <3.12"
+python = "^3.10"
 xarray = "^2023.3.0"
 shapely = "^2.0.1"
 netcdf4 = "^1.6.3"
@@ -24,12 +25,14 @@ pylint = "^2.17.1"
 flake8 = "^6.0.0"
 # setuptools = "^67.6.1"
 
-[tool.poetry.group.omas]
-optional = true
+#[tool.poetry.group.omas]
+#optional = true
 
-[tool.poetry.group.omas.dependencies]
-omas = "^0.91.0"
-botocore = "1.29.0"
+#[tool.poetry.group.omas.dependencies]
+#omas = "^0.91.0"
+#botocore = "1.29.0"
+ipython = "^8.31.0"
+cython = "^3.0.11"
 
 [tool.poetry.group.compass]
 optional = true
@@ -41,6 +44,8 @@ decorator = "^5.1.1"
 
 [tool.poetry.group.omfit-test.dependencies]
 omfit-classes = {version = "^3.2025.3.2", optional = true}
+uncertainties = "^3.2.2"
+contourpy = {path = "/home/kripner/Projects/external/omas"}
 
 [build-system]
 requires = ["poetry-core"]

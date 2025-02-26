@@ -305,3 +305,17 @@ def test_cocos_consistency(geqdsk_file, cocos):
     )
 
     # todo test poloidal current direction (!!!)
+@pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4]])  # , [5], [6], [7], [8]])
+def test_poloidal_flux_normalization(geqdsk_file, cocos):
+
+    eq = read_geqdsk(geqdsk_file, cocos=cocos)
+
+    if cocos > 10:
+        factor = 1
+    else:
+        factor = 2 * np.pi
+
+    psi_n = np.linspace(0, 1, 10)
+
+    psi_ref = eq.psi(psi_n=psi_n)
+    psi_pol = eq.pol_flux(psi_n=psi_n)
