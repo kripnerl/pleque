@@ -748,7 +748,7 @@ class Coordinates(object):
                 self.x1 = self._x1_input ** 2
             else:
                 raise ValueError('This should not happen.')
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x1 = np.atleast_1d(self.x1)
 
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
@@ -761,16 +761,16 @@ class Coordinates(object):
                 cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+            self.x1 = np.atleast_1d(self.x1)
+            self.x2 = np.atleast_1d(self.x2)
 
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
             # if self._coord_type_input == ('R', 'Z', 'phi'):
             if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
-                self.x1 = np.asanyarray(self._x1_input)
-                self.x2 = np.asanyarray(self._x2_input)
-                self.x3 = np.asanyarray(self._x3_input)
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+                self.x3 = self._x3_input
             # elif self._coord_type_input == ('X', 'Y', 'Z'):
             elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
@@ -782,9 +782,9 @@ class Coordinates(object):
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
 
-            self.x1 = np.asarray(self.x1)
-            self.x2 = np.asarray(self.x2)
-            self.x3 = np.asarray(self.x3)
+            self.x1 = np.atleast_1d(self.x1)
+            self.x2 = np.atleast_1d(self.x2)
+            self.x3 = np.atleast_1d(self.x3)
 
     @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
@@ -832,7 +832,7 @@ class Coordinates(object):
             elif method in ['trapz', 'trapezoid']:
                 line_integral = trapezoid(func_val, dx)
             elif method == 'simps':
-                line_integral = simps(func_val, dx)
+                line_integral = simpson(func_val, dx)
             else:
                 line_integral = None
 
@@ -867,9 +867,9 @@ class Coordinates(object):
                     line_integral = trapezoid(trapezoid(func_val, x1), x2)
             elif method == 'simps':
                 if func_val.ndim == 1:
-                    line_integral = simps(func_val, dx)
+                    line_integral = simpson(func_val, dx)
                 else:
-                    line_integral = simps(simps(func_val, x1), x2)
+                    line_integral = simpson(simpson(func_val, x1), x2)
             else:
                 line_integral = None
 
