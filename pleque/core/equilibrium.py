@@ -1,3 +1,4 @@
+import copy
 from collections.abc import Sequence
 
 import numpy as np
@@ -5,6 +6,7 @@ import xarray
 from scipy.constants import mu_0
 from shapely import Polygon, Point
 
+import pleque
 from pleque.utils.decorators import deprecated
 
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
@@ -303,7 +305,7 @@ class Equilibrium(object):
 
             # sometimes this close_lcfs is empty - investigate!
             close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                                self._mg_axis, self._psi_axis)
+                                                  self._mg_axis, self._psi_axis)
 
             while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
                 close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
@@ -484,7 +486,7 @@ class Equilibrium(object):
     def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
-        return self.FFprime(coord) / mu_0**2
+        return self.FFprime(coord) / mu_0 ** 2
 
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -859,12 +861,11 @@ class Equilibrium(object):
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        #print(coord.r_mid)
+        # print(coord.r_mid)
         B_midplane = self.B_abs(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_abs(target)
 
         return B_coord / B_midplane
-
 
     @deprecated('This function was not written correctly and with the state of the knowlige and'
                 'nobody is allowed to use it! It has been or will be replaced by the new functions.')
@@ -874,12 +875,11 @@ class Equilibrium(object):
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        #print(coord.r_mid)
+        # print(coord.r_mid)
         B_midplane = self.B_pol(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_pol(target)
 
         return B_coord / B_midplane
-
 
     def _get_surface(self, *coordinates, R=None, Z=None, level=0.5, norm=True, coord_type=None, **coords):
         """
@@ -901,7 +901,7 @@ class Equilibrium(object):
 
         return contour
 
-    def plot_geometry(self, axs = None, **kwargs):
+    def plot_geometry(self, axs=None, **kwargs):
         """
         Plots the the directions of angles, current and magnetic field.
 
@@ -982,7 +982,6 @@ class Equilibrium(object):
         theta_dir_bpol = self.coordinates(r=pos1.r[0], theta=pos1.theta[0] + sig_bpol * np.pi / 8)
         theta_dir_jpol = self.coordinates(r=pos2.r[0], theta=pos2.theta[0] + sig_jpol * np.pi / 8)
 
-
         ax2 = axs[1]
         ax2.set_title("Poloidal cross section")
         ax2.plot(fw.R, fw.Z, 'k-')
@@ -1028,6 +1027,92 @@ class Equilibrium(object):
         from pleque.utils.plotting import plot_equilibrium
         # plt.figure()
         return plot_equilibrium(self, ax=ax, **kwargs)
+
+    def invert_equilibrium(self, vertically: bool = False, first_wall: bool = False, toroidal_field: bool = False,
+                           current: bool = False) -> 'Equilibrium':
+        """ Return a new instance of the `pleque.Equilibrium` with opposite value of selected property/quantity.
+
+        Parameters
+        ----------
+        vertically : bool, optional
+            If True, invert the psi map vertically (flip along Z axis). Default is False.
+        first_wall : bool, optional
+            If True, invert the first wall vertically. Default is False.
+        toroidal_field : bool, optional
+            If True, invert the toroidal field. Default is False.
+        current : bool, optional
+            If True, invert the current. Default is False.
+
+        Note
+        ----
+        To study the effect of the inverted equilibrium to the upper divertor, to keep the (un)favourable drifts,
+        one has to invert all `vertically`, `toroidal_field` and `current` quantities. `
+
+        Returns
+        -------
+        pleque.Equilibrium
+            A new instance of Equilibrium with inverted properties.
+        """
+        # Create a deep copy of the basedata
+        new_basedata = copy.deepcopy(self._basedata)
+
+        # Invert psi map vertically if requested
+        if vertically:
+            # Flip the psi values along the Z dimension using xarray indexing
+            new_z = - new_basedata.Z.values[::-1]
+            new_basedata.coords["Z"] = xarray.DataArray(new_z, dims=("Z",))
+            new_psi = new_basedata.psi.transpose("R", "Z").values[:, ::-1]
+            new_basedata["psi"] = xarray.DataArray(new_psi, dims=("R", "Z"))
+
+        # Handle the first wall inversion if requested
+        new_first_wall = None
+        if first_wall and hasattr(self, '_first_wall') and self._first_wall is not None:
+            # Create a copy of the first wall
+            new_first_wall = np.copy(self._first_wall)
+            # Invert the Z coordinates (second column)
+            z_min = self._basedata.Z.min().item()
+            z_max = self._basedata.Z.max().item()
+            new_first_wall[:, 1] = z_max + z_min - new_first_wall[:, 1]
+
+        # Invert toroidal field if requested
+        if toroidal_field:
+            # The toroidal field is determined by the F function and F0
+            # Invert the F function in the basedata before creating the new Equilibrium
+            if 'F' in new_basedata:
+                new_basedata['F'] = -new_basedata['F']
+            # Also invert F0 if it exists
+            if 'F0' in new_basedata:
+                new_basedata['F0'] = -new_basedata['F0']
+            elif 'F0' in new_basedata.attrs:
+                new_basedata.attrs['F0'] = -new_basedata.attrs['F0']
+            # if "FFprime" in new_basedata:
+            #     new_basedata["FFprime"] = -new_basedata["FFprime"]
+
+        # Invert current if requested
+        if current:
+            # The current is determined by the derivatives of psi and F
+            # Invert the pprime and FFprime functions if they exist
+            new_basedata["psi"] = -new_basedata["psi"]
+            if 'pprime' in new_basedata:
+                new_basedata['pprime'] = -new_basedata['pprime']
+            if 'FFprime' in new_basedata:
+                new_basedata['FFprime'] = -new_basedata['FFprime']
+
+        # Create a new Equilibrium with the modified basedata
+        new_equi = Equilibrium(
+            basedata=new_basedata,
+            first_wall=new_first_wall if first_wall else self._first_wall,
+            mg_axis=self._mg_axis,
+            psi_lcfs=self._psi_lcfs,
+            x_points=self._x_points,
+            strike_points=self._strike_points,
+            init_method=self._init_method,
+            spline_order=self._spline_order,
+            cocos=self._cocos,
+            verbose=self._verbose
+        )
+
+        return new_equi
 
     def grid(self, resolution=None, dim="step"):
         """
@@ -1287,7 +1372,7 @@ class Equilibrium(object):
         if coord.grid:
             dpsi_dZ = dpsi_dZ.T
 
-        return - cc *self.Fprime(coord) / (coord.R * mu_0) * dpsi_dZ
+        return - cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dZ
 
     def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from scipy.constants import mu_0
@@ -1474,7 +1559,7 @@ class Equilibrium(object):
             # first wall should be a closed contour
             # todo: this should be chacked in init
             if not surf.curve_is_closed(first_wall):
-                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis = 0)
+                first_wall = np.concatenate((first_wall, first_wall[0, :][None, :]), axis=0)
             return Surface(self, first_wall)
 
     @property
@@ -1556,7 +1641,7 @@ class Equilibrium(object):
         return mask_in
 
     def connection_length(self, *coordinates, R: np.array = None, Z: np.array = None,
-                          coord_type=None, direction = 1, **coords):
+                          coord_type=None, direction=1, **coords):
         """
         Calculate connection length from given coordinates to first wall
 
@@ -1573,7 +1658,7 @@ class Equilibrium(object):
         :return:
         """
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
-        traces = self.trace_field_line(coords, direction = direction)
+        traces = self.trace_field_line(coords, direction=direction)
         dists = []
         lines = []
 
@@ -1583,7 +1668,7 @@ class Equilibrium(object):
                 mask_in = self.in_first_wall(t)
                 rzp = t.as_array()[mask_in, :]
 
-                #todo: add intersection point!
+                # todo: add intersection point!
 
                 line_in = self.coordinates(rzp)
                 dist = line_in.length
@@ -1673,7 +1758,7 @@ class Equilibrium(object):
 
                     stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                                  dphidtheta * direction,
-                                                                 stop_res=np.pi/1024)
+                                                                 stop_res=np.pi / 1024)
                 else:
                     if self._verbose:
                         print('>>> z-lim stopper is used')
@@ -1689,7 +1774,7 @@ class Equilibrium(object):
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                              dphidtheta * direction,
-                                                             stop_res=np.pi/1024)
+                                                             stop_res=np.pi / 1024)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
@@ -1755,7 +1840,6 @@ class Equilibrium(object):
 
         return res
 
-
     def trace_flux_surface(self, *coordinates, s_resolution=1e-3, R=None,
                            Z=None, psi_n=None, coord_type=None, **coords):
         """
@@ -1779,16 +1863,16 @@ class Equilibrium(object):
 
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
         if coords.dim == 1:
-            coords = self.coordinates(R=self.magnetic_axis.R+coords.r_mid, Z=0)
+            coords = self.coordinates(R=self.magnetic_axis.R + coords.r_mid, Z=0)
         y0 = np.reshape([coords.R, coords.Z], (2,))
 
         ds_func = flt.ds_grad_psi_tracer_factory(self._spl_psi)
         # atol is square of s_resolution to offset the square distance
         stopper = flt.rz_target_s_min_stopper_factory(y0, coords.r_mid,
-                                                      atol=s_resolution**2)
+                                                      atol=s_resolution ** 2)
 
         sol = solve_ivp(ds_func,
-                        (0, coords.r_mid*2*np.pi*4),
+                        (0, coords.r_mid * 2 * np.pi * 4),
                         y0,
                         method='LSODA',
                         events=stopper,
@@ -1796,11 +1880,10 @@ class Equilibrium(object):
                         vectorized=True,
                         # rtol=1e-8,
                         )
-        fs = self._as_fluxsurface(R=np.hstack([sol.y[0], sol.y[0,0]]),
-                                  Z=np.hstack([sol.y[1], sol.y[1,0]]))
-        fs._cum_length = np.hstack([sol.t, sol.t[-1]+s_resolution])  # TODO use some setter
+        fs = self._as_fluxsurface(R=np.hstack([sol.y[0], sol.y[0, 0]]),
+                                  Z=np.hstack([sol.y[1], sol.y[1, 0]]))
+        fs._cum_length = np.hstack([sol.t, sol.t[-1] + s_resolution])  # TODO use some setter
         return fs
-
 
     @property
     def fluxfuncs(self):
@@ -1833,7 +1916,6 @@ class Equilibrium(object):
 
         geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata,
                      cocos_out=cocos_out)
-
 
     @property
     def cocos(self):
