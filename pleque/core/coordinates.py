@@ -782,9 +782,9 @@ class Coordinates(object):
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
 
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
-            self.x3 = np.array(self.x3, copy=False, ndmin=1)
+            self.x1 = np.asarray(self.x1)
+            self.x2 = np.asarray(self.x2)
+            self.x3 = np.asarray(self.x3)
 
     @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):

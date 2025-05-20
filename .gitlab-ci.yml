@@ -1,4 +1,5 @@
-image: python:3.9
+#image: python:3.9
+image: python:3.10
 
 variables:
   POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
@@ -13,7 +14,7 @@ before_script:
   - curl -sSL https://install.python-poetry.org | python3 -
   - export PATH="$POETRY_HOME/bin:$PATH"
   - poetry config virtualenvs.create false
-  - poetry install --without compass --with omas
+  - poetry install --without compass # --with omas # omas is temporarily skipped due to the complicated dependencies
 
 test:pytest:
   script:

@@ -1,3 +1,5 @@
+from typing import TypedDict
+
 import numpy as np
 
 
@@ -11,12 +13,13 @@ sign_q
 sign_pprime
 """
 
+CocosInfo = TypedDict('CocosInfo', {'exp_Bp': int, 'sigma_Bp': int, 'sigma_cyl': int, 'sigma_pol': int, 'sign_q': int, 'sign_pprime': int})
 
-def cocos_coefs(cocos_idx):
+def cocos_coefs(cocos_idx) -> CocosInfo:
     """
     Define COCOS coefficients.
 
-    For more details see Table 1 in O. Sauer, et al., Comp. Phys. Comm. 184 (2013), p. 296
+    For more details see Table 1 in O. Sauter, et al., Comp. Phys. Comm. 184 (2013), p. 296
 
     :param cocos_idx: int, COCOS index
     :return: dict with COCOS coefficients

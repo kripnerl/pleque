@@ -12,7 +12,7 @@ def read(file, cocos=3, first_wall=None):
     Read the eqdsk file and open it as `Equilibrium`.
 
     :param file: str, name of file with equilibrium.
-    :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
+    :param cocos: Tokamak coordinates convention. Default cocos = 3 (EFIT).
     :return:
     """
     with open(file, 'r') as f:
@@ -35,6 +35,11 @@ def _is_1dprofile_in_basedata(basedata, name, nx):
 
 
 def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
+    """
+    Convert `basedata` Dataset of `Equilibrium` to dictionary with GEQDSK data.
+
+    See description of `write` function for more details.
+    """
     data = dict.fromkeys(['nx', 'ny', 'rdim', 'zdim', 'rcentr', 'bcentr', 'rleft', 'zmid', 'rmagx', 'zmagx',
                           'simagx', 'sibdry', 'cpasma', 'F', 'pres', 'q', 'psi'])
 
