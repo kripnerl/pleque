@@ -192,11 +192,11 @@ def test_multiple_inversions():
     assert np.isclose(B_R_orig, B_R_inv)
 
     psi_n_test = np.linspace(0.0, 1.0, 10)
-    import matplotlib.pyplot as plt
-    plt.plot(psi_n_test, eq.F(psi_n=psi_n_test), label="F")
-    plt.plot(psi_n_test, eq_inv.F(psi_n=psi_n_test), label="F_inv")
-    plt.legend()
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.plot(psi_n_test, eq.F(psi_n=psi_n_test), label="F")
+    # plt.plot(psi_n_test, eq_inv.F(psi_n=psi_n_test), label="F_inv")
+    # plt.legend()
+    # plt.show()
 
     assert np.isclose(eq.F0, -eq_inv.F0)
 
