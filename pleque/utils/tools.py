@@ -38,6 +38,25 @@ def lis(seq):
     """Returns the Longest Increasing Subsequence in the Given List/Array"""
     return [seq[i] for i in arglis(seq)]
 
+def arg_longest_increasing_subsequence(seq):
+    """Returns the indices of the Longest Increasing Subsequence in the Given List/Array"""
+    return arglis(seq)
+
+def longest_increasing_subsequence(seq):
+    """Returns the Longest Increasing Subsequence in the Given List/Array"""
+    return lis(seq)
+
+def arg_longest_monotonic_subsequence(seq):
+    """Returns the indices of the Longest Monotonic Subsequence in the Given List/Array"""
+    arglms_p = arglis(seq)
+    arglms_n = arglis(seq[::-1])
+    return arglms_p if len(arglms_p) > len(arglms_n) else arglms_n[::-1]
+
+def longest_monotonic_subsequence(seq):
+    """Returns the Longest Monotonic Subsequence in the Given List/Array"""
+    return [seq[i] for i in arg_longest_monotonic_subsequence(seq)]
+
+
 
 def hessian(spln : BivariateSpline, R, Z, grid=False):
     """

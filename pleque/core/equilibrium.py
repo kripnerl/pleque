@@ -1210,6 +1210,10 @@ class Equilibrium(object):
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
 
+    def B_R_rz(self, R, Z):
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * self._spl_psi(R, Z, dy=1, grid=False).T / R * self._Bpol_sign
+
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
@@ -1225,6 +1229,11 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+
+    def B_Z_rz(self, R, Z):
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return - cc_norm * self._spl_psi(R, Z, dx=1, grid=False).T / R * self._Bpol_sign
+
 
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
@@ -1258,6 +1267,16 @@ class Equilibrium(object):
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.F(coord) / coord.R
+
+    def B_tor_rz(self, R, Z):
+
+        psi = self._spl_psi(R, Z, grid=False)
+        psi_n = (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
+
+        mask_out = psi_n > 1
+        F = self._fpol_spl(psi_n)
+        F[mask_out] = self.BvacR
+        return F / R
 
     def abs_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
@@ -1565,6 +1584,22 @@ class Equilibrium(object):
     @property
     def magnetic_axis(self):
         return self.coordinates(self._mg_axis[0], self._mg_axis[1])
+
+    @property
+    def geometrical_axis(self):
+        """
+        Geometrical axis of the plasma defined as
+
+        :math
+            R_{ax} = (max(R_{lcfs}) + min(R_{lcfs})) / 2
+            Z_{ax} = (max(Z_{lcfs}) + min(Z_{lcfs})) / 2
+
+        """
+
+        r_ax = (self.lcfs.R.max() + self.lcfs.R.min()) / 2
+        z_ax = (self.lcfs.Z.max() + self.lcfs.Z.min()) / 2
+
+        return self.coordinates(r_ax, z_ax)
 
     @property
     def I_plasma(self):
