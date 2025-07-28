@@ -89,6 +89,12 @@ B = eq.B_abs(R, Z)
 
 Equilibria may be visualised in many different ways; they may be used for mapping or field line tracing; the possibilities are virtually endless. If there's a caveat you find missing from `pleque`, write to us! Further examples can be found as notebooks in the `notebooks` folder or in the `examples` directory. 
 
+## Array convention
+
+All functions which are returning arrays should return be transformed in the way that the dimension number is always last. 
+For example, the array of r, z coordinates of a line should have shape `[n_dim, n_elements,]`. When evaluating on grid, 
+the order should be inverse. E. g. `[n_dim, n_z, n_r]` or `[n_z, n_r]`.
+
 ## Version
 
 0.0.7

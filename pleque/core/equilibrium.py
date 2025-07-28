@@ -1,5 +1,6 @@
 import copy
 from collections.abc import Sequence
+from typing import Optional
 
 import numpy as np
 import xarray
@@ -7,7 +8,7 @@ from scipy.constants import mu_0
 from shapely import Polygon, Point
 
 import pleque
-from pleque.utils.decorators import deprecated
+from pleque.utils.decorators import deprecated, scalar_function, vector_function
 
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
@@ -18,7 +19,6 @@ from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 import pleque.utils.flux_expansions as flux_expansion
-
 
 class Equilibrium(object):
     """
@@ -385,6 +385,7 @@ class Equilibrium(object):
 
             raise
 
+    @scalar_function
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
         Psi value
@@ -401,9 +402,27 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
+    @vector_function(ndim=2)
+    def nabla_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords) -> np.ndarray:
+        """
+        Return the value of :math:`\nabla \psi`.
+        
+        :return: Array of shape (2, ...) containing the gradient components [dψ/dR, dψ/dZ].
+                If grid=True, the shape will be (2, nR, nZ).
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        dpsi_dr = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1).T
+        dpsi_dz = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1).T
+
+        nabla_psi = np.stack((dpsi_dr, dpsi_dz))
+
+        return nabla_psi
+        
+
+    @scalar_function
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""
-        Return the value of :math:`\nabla \psi`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
+        Return the value of :math:`\pm|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
         :param coordinates:
         :param R:
@@ -422,10 +441,12 @@ class Equilibrium(object):
             ret = ret.T
         return ret
 
+    @scalar_function
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
 
+    @scalar_function
     def r_mid(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo: map the r_mid to psi_n
@@ -439,23 +460,28 @@ class Equilibrium(object):
         """
         return 1 / (self._psi_lcfs - self._psi_axis)
 
+    @scalar_function
     def rho(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return np.sqrt(coord.psi_n)
 
+    @scalar_function
     def pressure(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pressure_spl(coord.psi_n)
 
+    @scalar_function
     def pprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pprime_spl(coord.psi_n)
 
+    @scalar_function
     def f(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
         return self.F(coord) / mu_0
 
+    @scalar_function
     def F(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo use in_plasma
@@ -464,6 +490,7 @@ class Equilibrium(object):
         F[mask_out] = self.BvacR
         return F
 
+    @scalar_function
     def Fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         '''
 
@@ -483,11 +510,13 @@ class Equilibrium(object):
         Fprime[mask_out] = 0
         return Fprime
 
+    @scalar_function
     def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
         return self.FFprime(coord) / mu_0 ** 2
 
+    @scalar_function
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
@@ -495,6 +524,7 @@ class Equilibrium(object):
         FFprime[mask_out] = 0
         return FFprime
 
+    @scalar_function
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
@@ -515,6 +545,7 @@ class Equilibrium(object):
 
         return B_abs
 
+    @vector_function(ndim=3)
     def Bvec(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector
 
@@ -541,6 +572,7 @@ class Equilibrium(object):
         else:
             return np.moveaxis(bvec, 0, -1)
 
+    @vector_function(ndim=3)
     def Bvec_norm(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector, normalised
 
@@ -666,6 +698,7 @@ class Equilibrium(object):
 
         return fluxsurface
 
+    @scalar_function
     def poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Poloidal magnetic flux expansion coefficient.**
@@ -695,6 +728,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_mag_flux_exp_coef(self, coords)
 
+    @scalar_function
     def effective_poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal magnetic flux expansion coefficient**
@@ -728,6 +762,7 @@ class Equilibrium(object):
 
         return flux_expansion.effective_poloidal_mag_flux_exp_coef(self, coords)
 
+    @scalar_function
     def poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Poloidal heat flux expansion coefficient**
@@ -757,6 +792,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_heat_flux_exp_coef(self, coords)
 
+    @scalar_function
     def effective_poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal heat flux expansion coefficient**
@@ -790,6 +826,7 @@ class Equilibrium(object):
 
         return flux_expansion.effective_poloidal_heat_flux_exp_coef(self, coords)
 
+    @scalar_function
     def parallel_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Parallel heat flux expansion coefficient**
@@ -820,6 +857,7 @@ class Equilibrium(object):
 
         return flux_expansion.parallel_heat_flux_exp_coef(self, coords)
 
+    @scalar_function
     def total_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Total heat flux expansion coefficient**
@@ -1193,7 +1231,7 @@ class Equilibrium(object):
 
         return coords
 
-    # todo: resolve the grids
+    @scalar_function
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
@@ -1208,12 +1246,13 @@ class Equilibrium(object):
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R.T * self._Bpol_sign
 
     def B_R_rz(self, R, Z):
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return cc_norm * self._spl_psi(R, Z, dy=1, grid=False).T / R * self._Bpol_sign
 
+    @scalar_function
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
@@ -1228,13 +1267,14 @@ class Equilibrium(object):
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R.T * self._Bpol_sign
 
     def B_Z_rz(self, R, Z):
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return - cc_norm * self._spl_psi(R, Z, dx=1, grid=False).T / R * self._Bpol_sign
 
 
+    @scalar_function
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
@@ -1253,6 +1293,7 @@ class Equilibrium(object):
         B_pol = np.sqrt(B_R ** 2 + B_Z ** 2)
         return B_pol
 
+    @scalar_function
     def B_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         """
         Toroidal value of magnetic field in Tesla.
@@ -1278,6 +1319,7 @@ class Equilibrium(object):
         F[mask_out] = self.BvacR
         return F / R
 
+    @scalar_function
     def abs_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Absolute value of q.
@@ -1292,12 +1334,14 @@ class Equilibrium(object):
         """
         return np.abs(self.q(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords))
 
+    @scalar_function
     def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_spl'):
             self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_spl(coord.psi_n)
 
+    @scalar_function
     def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         """
 
@@ -1316,6 +1360,7 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
+    @scalar_function
     def shear(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""Normalized magnetic shear parameter
 
@@ -1331,6 +1376,7 @@ class Equilibrium(object):
         s = coord.r_mid / q * dq_dpsi * dpsi_dr
         return s
 
+    @scalar_function
     def pol_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Return poloidal flux in Wb which is not normalized by 2pi defiend as:
@@ -1356,6 +1402,7 @@ class Equilibrium(object):
         cc = 2 * np.pi if self._cocosdic['exp_Bp'] == 0 else 1
         return cc * self.psi(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
+    @scalar_function
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Calculate toroidal magnetic flux :math:`\Phi` from:
@@ -1378,6 +1425,7 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
+    @scalar_function
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         # todo test cocos here!
         # todo: test grid
@@ -1393,6 +1441,7 @@ class Equilibrium(object):
 
         return - cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dZ
 
+    @scalar_function
     def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         from scipy.constants import mu_0
 
@@ -1405,6 +1454,7 @@ class Equilibrium(object):
 
         return cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dR
 
+    @scalar_function
     def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         r"""
         Poloidal component of the current density.
@@ -1427,6 +1477,7 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.Fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
+    @scalar_function
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
         todo: to be tested
@@ -1551,7 +1602,7 @@ class Equilibrium(object):
         return self.coordinates(self._limiter_point[0], self._limiter_point[1])
 
     @property
-    def x_point(self):
+    def x_point(self) -> Optional[Coordinates]:
         """
         Return x-point closest in psi to mg-axis if presented on grid. None otherwise.
 
@@ -1561,6 +1612,16 @@ class Equilibrium(object):
             return None
         else:
             return self.coordinates(*self._x_point)
+
+    @property
+    def secondary_x_point(self) -> Optional[Coordinates]:
+        """
+        Returns the second closest (in units of psi) x-point to magnetic axis. None otherwise.
+        """
+        if self._x_point2 is None:
+            return None
+        else:
+            return self.coordinates(*self._x_point2)
 
     @property
     def first_wall(self):

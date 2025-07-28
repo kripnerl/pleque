@@ -160,8 +160,8 @@ def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
     return cl
 
 
-def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", lw=0.7, ls="solid"):
-    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 6), theta=np.zeros(5), grid=False)
+def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", dr:float = 2e-3, lw=0.7, ls="solid"):
+    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + dr * np.arange(1, 6), theta=np.zeros(5), grid=False)
     coords = eq.grid((400, 600), 'size')
 
     ax.contour(coords.R, coords.Z, coords.psi, np.sort(np.squeeze(contour_out.psi)), colors=colors,
@@ -169,7 +169,7 @@ def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", lw=0.7, ls=
                linestyles=ls)
 
 
-def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, **kwargs):
+def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, dr_sol:float = 2e-3, **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -185,7 +185,7 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
     if colorbar:
         plt.colorbar(cl, ax=ax)
 
-    plot_near_sol(eq, ax)
+    plot_near_sol(eq, ax, dr=dr_sol)
 
     #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")

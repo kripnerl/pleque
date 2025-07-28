@@ -76,3 +76,33 @@ def deprecated(reason):
 
     else:
         raise TypeError(repr(type(reason)))
+
+
+def scalar_function(func):
+    """
+    Serves to register class functions of Equilibrium class as scalar functions.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+
+    wrapper._scalar_function = True
+
+    return wrapper
+
+def vector_function(ndim):
+    """
+    Serves to register class functions of Equilibrium class as vector functions.
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            return func(self, *args, **kwargs)
+        wrapper._vector_function = True
+        wrapper._vector_ndim = ndim
+        return wrapper
+
+    return decorator
+
