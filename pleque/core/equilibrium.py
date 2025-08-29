@@ -12,13 +12,14 @@ from pleque.utils.decorators import deprecated, scalar_function, vector_function
 
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
-from pleque.utils.tools import arglis
+from pleque.utils.tools import arglis, xp_sections
 from pleque.core import FluxFunctions, Surface  # , FluxSurface
 from pleque.core import SurfaceFunctions
 from pleque.core import cocos as cc
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 import pleque.utils.flux_expansions as flux_expansion
+from pleque.utils.surfaces import track_plasma_boundary
 
 class Equilibrium(object):
     """
@@ -1673,6 +1674,23 @@ class Equilibrium(object):
             self._Ip = self.lcfs.tor_current
         return self._Ip
 
+
+    def xp_section(self, length: float = 0.15) -> tuple["Coordinates"]:
+        """
+        Return poloidal cross-sections of the planes of the x-point section (Σ_s).
+
+        Args:
+            length (float): Length around the X-point for computing sections. Defaults to 0.15.
+
+        Returns:
+            tuple[Coordinates]: Tuple of `Coordinates` objects representing each plane.
+            The order of x-point planes directions (with respect to x-point) (lfs, in-plasma, hfs, out) is preserved.
+        """
+        secs = xp_sections(self._spl_psi, self._x_point[0], self._x_point[1], length=length)
+
+        secs_coords = tuple((self.coordinates(sec) for sec in secs))
+        return secs_coords
+
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
         Return instance of Coordinates. If instances of coordinates is already on the input, just pass it through.
@@ -1935,6 +1953,27 @@ class Equilibrium(object):
             res.append(fl)
 
         return res
+
+    def lcfs_field_line(self, vect_no=0, xp_shift=1e-6, phi0: float = 0.0):
+        """
+        Computes (some) field line laying on last closed flux surface.
+
+        Parameters:
+        vect_no: int
+            Index of eigenvector determing the direction of integration. Default is 0.
+        xp_shift: float
+            A small positional adjustment for the x-point in the plasma boundary tracking.
+            Default is 1e-6.
+        phi0: float
+            Toroidal angle on which is field line initiated.
+
+        Returns:
+        list
+            A representation of the LCFS field line as a result of the plasma boundary
+            tracking method.
+        """
+        lcfs = track_plasma_boundary(self, self._x_point, vect_no=0, xp_shift=1e-6, phi_0=phi0)
+        return lcfs
 
     def trace_flux_surface(self, *coordinates, s_resolution=1e-3, R=None,
                            Z=None, psi_n=None, coord_type=None, **coords):

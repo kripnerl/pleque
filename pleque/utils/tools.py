@@ -53,6 +53,15 @@ def arg_longest_monotonic_subsequence(seq):
     """Returns the indices of the Longest Monotonic Subsequence in the Given List/Array"""
     arglms_p = arglis(seq)
     arglms_n = arglis(seq[::-1])
+
+    # import matplotlib.pyplot as plt
+    # fig,ax = plt.subplots()
+    # x_ax = np.arange(len(seq))
+    # ax.plot(x_ax, seq)
+    # ax.plot(x_ax[arglms_p], seq[arglms_p], color="green", linestyle="--")
+    # ax.plot(x_ax[arglms_n], seq[arglms_n], color="red", linestyle="--")
+    # plt.show()
+
     return arglms_p if len(arglms_p) > len(arglms_n) else arglms_n[::-1]
 
 
