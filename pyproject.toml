@@ -11,7 +11,7 @@ documentation = "https://github.com/kripnerl/pleque"
 [tool.poetry.dependencies]
 #python = ">=3.9, <3.12"
 python = "^3.10"
-xarray = "^2023.3.0"
+xarray = ">=2023.3.0"
 shapely = "^2.0.1"
 netcdf4 = "^1.6.3"
 h5py = "^3.8.0"
