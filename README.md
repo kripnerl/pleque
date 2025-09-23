@@ -100,6 +100,12 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 
 See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
 
+## Reference
+
+If you deem it appropriate, please refer to the PLEQUE package using the following publication:
+
+* [Kripner, L., Tomeš, M., Urban, J., Grover, O., Ficker, O., Macúšová, E., Peterka, M., Krbec, J., Jaulmes, F., Cerovský, J., Fridrich, D., 2019. Towards the integrated analysis of tokamak plasma equilibria: PLEQUE, in: 46th EPS Conference on Plasma Physics, EPS 2019. European Physical Society.](https://lac913.epfl.ch/epsppd3/2019/pdf/P4.1033.pdf)
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
