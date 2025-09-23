@@ -295,10 +295,10 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
 
 def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
     """
-    Recognize whether the plasma is limited or with x-point and find point which limit the plasma (limiter point).
-    In case of limiter plasma it is contact point, in case of x-point the plasma is limited by x-point.
+    Recognize whether the plasma is limited or with x-point and find the point which limit the plasma (limiter point).
+    In the case of limiter plasma it is the contact point, in the case of x-point the plasma is limited by x-point.
 
-    :param x_point: (R, Z) position of point suspected to by x-point or `None` if there is any.
+    :param x_point: (R, Z) position of point suspected to be an x-point or `None` if there is any.
     :param first_wall: array(N, 2) Points which may limit the plasma.
     :param mg_axis: (R, Z) position of the magnetic axis of plasma.
     :param psi_axis: psi on axis

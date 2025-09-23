@@ -105,6 +105,11 @@ class Equilibrium(object):
         # todo: resolve this from input (for COCOS time) TODO TODO TODO
         self._Bpol_sign = 1
 
+        if self._verbose:
+            print(f"Equilibrium initialized with cocos={self._cocos} and init_method={self._init_method}")
+
+        self._flux_surfaces = None
+
         try:
 
             r = basedata.R.values
@@ -1368,7 +1373,7 @@ class Equilibrium(object):
         .. math::
           \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
 
-        where r_\mathrm{mid} is plasma radius on midplane.
+        where r_\mathrm{mid} is a plasma radius on the midplane.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         q = self.q(coord)
@@ -1386,7 +1391,7 @@ class Equilibrium(object):
             \psi_\mathrm{pol} = - \rho_{Bp} \int B \mathrm{d}S
 
         the result is obtained by normalization of the reference poloidal flux `psi`
-        with respect to current value of the COCOS:
+        with respect to the current value of the COCOS:
 
         .. math::
             \psi_\mathrm{pol} = (2 \pi)^{1 - e_{Bp}} \psi_\mathrm{ref}
