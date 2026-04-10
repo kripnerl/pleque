@@ -34,7 +34,13 @@ def _is_1dprofile_in_basedata(basedata, name, nx):
     return False
 
 
-def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
+def _reference_axis_values(equilibrium: pleque.Equilibrium):
+    rmagx = equilibrium.magnetic_axis.R[0]
+    bmagx = np.asarray(equilibrium.B_tor(equilibrium.magnetic_axis, grid=False)).item()
+    return rmagx, bmagx
+
+
+def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13, axis_ref=False):
     """
     Convert `basedata` Dataset of `Equilibrium` to dictionary with GEQDSK data.
 
@@ -56,8 +62,6 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
     R = basedata.R.values
     Z = basedata.Z.values
 
-    r0 = (np.max(R) + np.min(R)) / 2
-
     nx = len(R)
     ny = len(Z)
 
@@ -68,17 +72,7 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
 
     data['rdim'] = np.max(R) - np.min(R)
     data['zdim'] = np.max(Z) - np.min(Z)
-    data['rcentr'] = r0
 
-    if "F0" in basedata:
-        F0 = basedata.F0.values.item()
-    else:
-        try:
-            F0 = basedata.F.values[-1]
-        except AttributeError:
-            F0 = equilibrium.F0
-
-    data['bcentr'] = F0 / r0
     data['rleft'] = np.min(R)
     data['zmid'] = (np.max(Z) + np.min(Z)) / 2
 
@@ -88,6 +82,20 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
     else:
         data['rmagx'] = equilibrium.magnetic_axis.R[0]
         data['zmagx'] = equilibrium.magnetic_axis.Z[0]
+
+    if axis_ref:
+        data['rcentr'], data['bcentr'] = _reference_axis_values(equilibrium)
+    else:
+        r0 = (np.max(R) + np.min(R)) / 2
+        data['rcentr'] = r0
+        if "F0" in basedata:
+            F0 = basedata.F0.values.item()
+        else:
+            try:
+                F0 = basedata.F.values[-1]
+            except AttributeError:
+                F0 = equilibrium.F0
+        data['bcentr'] = F0 / r0
 
     if "psi_axis" in basedata:
         data['simagx'] = basedata.psi_axis.values.item() * psi_factor
@@ -164,7 +172,7 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
 
 
 def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label=None, cocos_out=3,
-          q_positive=True, use_basedata=False):
+          q_positive=True, use_basedata=False, axis_ref=False):
     """
     Write a GEQDSK equilibrium file.
 
@@ -179,6 +187,8 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     :param cocos_out: At the moment only perform 2pi normalization (!) (TODO)
     :param q_positive: always save q positive
     :param use_basedata: if True input quantities are used. If False splines and calculated values are used.
+    :param axis_ref: if True, save `rcentr` and `bcentr` using the magnetic axis radius and toroidal
+                     magnetic field instead of the grid center.
     :return:
     """
 
@@ -217,26 +227,29 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
     elif cocos > 10 > cocos_out:
         psi_factor = 1 / (2 * np.pi)
 
-    # Using center of the computational region as a geometrical center
-    # Todo: use center rmin rmax of limiter instead?
-    r0 = (equilibrium.R_max + equilibrium.R_min) / 2
-
     if use_basedata:
         # todo: test it and put some warining if not proper data!
-        data = basedata_to_dict(equilibrium, cocos_out)
+        data = basedata_to_dict(equilibrium, cocos_out, axis_ref=axis_ref)
     else:
         data['nx'] = nx
         data['ny'] = ny
 
         data['rdim'] = equilibrium.R_max - equilibrium.R_min
         data['zdim'] = equilibrium.Z_max - equilibrium.Z_min
-        data['rcentr'] = r0
-        data['bcentr'] = equilibrium.F0 / r0
         data['rleft'] = equilibrium.R_min
         data['zmid'] = (equilibrium.Z_max + equilibrium.Z_min) / 2
 
         data['rmagx'] = equilibrium.magnetic_axis.R[0]
         data['zmagx'] = equilibrium.magnetic_axis.Z[0]
+
+        if axis_ref:
+            data['rcentr'], data['bcentr'] = _reference_axis_values(equilibrium)
+        else:
+            # Using center of the computational region as a geometrical center
+            # Todo: use center rmin rmax of limiter instead?
+            r0 = (equilibrium.R_max + equilibrium.R_min) / 2
+            data['rcentr'] = r0
+            data['bcentr'] = equilibrium.F0 / r0
 
         data['simagx'] = equilibrium._psi_axis * psi_factor
         data['sibdry'] = equilibrium._psi_lcfs * psi_factor

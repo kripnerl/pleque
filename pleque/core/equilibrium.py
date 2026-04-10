@@ -1897,7 +1897,8 @@ class Equilibrium(object):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3):
+    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3,
+                  axis_ref=False):
         """
         Write a GEQDSK/g-file equilibrium file.
 
@@ -1908,6 +1909,8 @@ class Equilibrium(object):
                              If this option is chosen, the nx and ny parameters are ignored.
         :param q_positive: Save q value always positive.
         :param cocos_out: Number of output cocos. `None` if not changed.
+        :param axis_ref: Save `rcentr` and `bcentr` using the magnetic axis radius and toroidal
+                         field instead of the grid center.
 
         Warning: `cocos_out` parameter only perform 2 pi normalization at the moment.
         Default value is 3, which corresponds to standard eqdsk EFIT output.
@@ -1915,7 +1918,7 @@ class Equilibrium(object):
         import pleque.io.geqdsk as geqdsk
 
         geqdsk.write(self, file, nx=nx, ny=ny, q_positive=q_positive, use_basedata=use_basedata,
-                     cocos_out=cocos_out)
+                     cocos_out=cocos_out, axis_ref=axis_ref)
 
     @property
     def cocos(self):

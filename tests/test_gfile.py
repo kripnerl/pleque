@@ -54,6 +54,24 @@ def test_from_to_gfile(equilibrium):
     assert np.isclose(equilibrium.magnetic_axis.Z, eq2.magnetic_axis.Z, atol=1e-5, rtol=1e-4)
 
 
+def test_axis_ref_writes_axis_values(equilibrium):
+    tmp_dir = tempfile.TemporaryDirectory()
+    file_name = '{}/g{:d}.{:.0f}{}'.format(tmp_dir.name, equilibrium.shot, int(equilibrium.time), equilibrium.time_unit)
+
+    equilibrium.to_geqdsk(file_name, axis_ref=True)
+
+    with open(file_name, 'r') as f:
+        eq_dict = _geqdsk.read(f)
+
+    os.remove(file_name)
+
+    expected_rcentr = equilibrium.magnetic_axis.R[0]
+    expected_bcentr = np.asarray(equilibrium.B_tor(equilibrium.magnetic_axis, grid=False)).item()
+
+    assert np.isclose(eq_dict['rcentr'], expected_rcentr)
+    assert np.isclose(eq_dict['bcentr'], expected_bcentr)
+
+
 def test_fiesta_gfile_vs_database():
     tmp_dir = tempfile.TemporaryDirectory()
     file_name = '{}/g0000.0000'.format(tmp_dir.name)
