@@ -20,6 +20,8 @@ import pleque.utils.equi_tools as eq_tools
 import pleque.utils.surfaces as surf
 import pleque.utils.flux_expansions as flux_expansion
 from pleque.utils.surfaces import track_plasma_boundary
+from pleque.config.settings import get_settings
+settings = get_settings()
 
 class Equilibrium(object):
     """
@@ -375,7 +377,7 @@ class Equilibrium(object):
 
             if verbose:
                 print('--- Mapping midplane to psi_n ---')
-            self.__map_midplane2psi__()
+            self._map_midplane2psi()
 
             if verbose:
                 print('--- Mapping pressure and f func to psi_n ---')
@@ -2084,7 +2086,7 @@ class Equilibrium(object):
         """
         return self._limiter_plasma
 
-    def __map_midplane2psi__(self):
+    def _map_midplane2psi(self):
         from scipy.interpolate import UnivariateSpline
 
         r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
@@ -2101,6 +2103,26 @@ class Equilibrium(object):
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
         self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+
+    def _init_fluxsurfaces(self, npsi: Optional[int] = None, psi_n_levels: Optional[Sequence[float]] = None):
+
+        if psi_n_levels and npsi:
+            raise ValueError("npsi and psi_n_levels cannot be used simultaneously.")
+        if psi_n_levels is None:
+            psi0 = settings.psin0
+            if npsi is None:
+                npsi = settings.npsi_grid
+            psi_n_levels = np.linspace(psi0, 1, npsi)
+        else:
+            npsi = len(psi_n_levels)
+
+        # todo: Now I need to rewrite find_flux_surface function first to used multiple psi levels.
+        surfs = []
+        for psi_n in psi_n_levels:
+            surf = self.find_flux_surface(psi_n=psi_n)[0]
+            surfs.append(surf)
+
+        self._flux_surfaces = surfs
 
     def _init_q(self):
         psi_n = np.arange(0.01, 1, 0.005)

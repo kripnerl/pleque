@@ -316,7 +316,7 @@ class FluxSurface(Surface):
         elif method in ['trapz','trapezoid']:
             ret = trapezoid(Rs / diff_psi * func_val, l)
         elif method == 'simps':
-            ret = simps(Rs / diff_psi * func_val, l)
+            ret = simpson(Rs / diff_psi * func_val, l)
         else:
             ret = None
 
