@@ -181,7 +181,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         resource_package = 'pleque'
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall_path = resources.files(resource_package) / first_wall_resource
+        first_wall_path = resources.files(resource_package).joinpath(*first_wall_resource.split("/"))
         first_wall = np.loadtxt(str(first_wall_path))
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
@@ -299,10 +299,10 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall_path = resources.files(resource_package) / first_wall_resource
+        first_wall = str(resources.files(resource_package).joinpath(*first_wall_resource.split("/")))
 
     if isinstance(first_wall, str):
-        first_wall = np.loadtxt(first_wall_path)
+        first_wall = np.loadtxt(first_wall)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 

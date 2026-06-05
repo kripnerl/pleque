@@ -59,12 +59,13 @@ pip install --user .
 The following example shows how to load an equilibrium saved in the `eqdsk` format. The equilibrium used here comes from a FIESTA simulation of the COMPASS-Upgrade tokamak.
 
 ```python
+from importlib import resources
+
 from pleque.io import readers
-import pkg_resources
 import matplotlib as plt
 
 #Locate a test equilibrium
-filepath = pkg_resources.resource_filename('pleque', 'resources/baseline_eqdsk')
+filepath = resources.files('pleque').joinpath('resources', 'baseline_eqdsk')
 ```
 The heart of `pleque` is its `Equilibrium` class, which contains all the equilibrium information (and much more). Typically its instances are called `eq`.
 

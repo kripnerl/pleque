@@ -51,7 +51,7 @@ description = "Disable App Nap on macOS >= 10.9"
 optional = false
 python-versions = ">=3.6"
 groups = ["dev"]
-markers = "platform_system == \"Darwin\" or sys_platform == \"darwin\""
+markers = "sys_platform == \"darwin\" or platform_system == \"Darwin\""
 files = [
     {file = "appnope-0.1.4-py2.py3-none-any.whl", hash = "sha256:502575ee11cd7a28c0205f379b525beefebab9d161b7c964670864014ed7213c"},
     {file = "appnope-0.1.4.tar.gz", hash = "sha256:1de3860566df9caf38f01f86f65e0e13e379af54f9e4bee1e66b48f2efffd1ee"},
@@ -3603,7 +3603,7 @@ files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
-markers = {compass = "(implementation_name == \"pypy\" or platform_python_implementation != \"PyPy\") and implementation_name != \"PyPy\"", dev = "implementation_name != \"PyPy\""}
+markers = {compass = "(platform_python_implementation != \"PyPy\" or implementation_name == \"pypy\") and implementation_name != \"PyPy\"", dev = "implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -5630,4 +5630,4 @@ viz = ["matplotlib", "nc-time-axis", "seaborn"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "47a5001d4dfbb5d6997c152b5bde58a2a2e7a4947558f61ab860ebe903b6603a"
+content-hash = "2bb7a808c1d2039e3fb14004837b68160c71aa93203083efd8d18b5fae96b90a"
