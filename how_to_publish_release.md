@@ -16,7 +16,7 @@
     1. run `bash` in `pleque` home (checkout to master/develop)
     2. Prepare distribution in `dist` directory:
         ```bash
-        python setup.py sdist bdist_wheel 
+        poetry build
         ```  
     3. Upload the distribution to PyPI (in dist/ directory must be only one release):
         1. Standard distribution:
@@ -27,6 +27,7 @@
         ```bash
         twine upload --repository-url https://test.pypi.org/legacy/ dist/*
         ```
+       - Before the first release, auth poetry with `poetry config pypi-token.pypi 'pypi-YOUR_TOKEN_HERE'`
     4. Try to download it and install it via `pip`.
 7. Check whether the documentation on `readthedocs` is build without error. 
 8. Breath normally. 
