@@ -8,7 +8,7 @@ from scipy.constants import mu_0
 from shapely import Polygon, Point
 
 import pleque
-from pleque.utils.decorators import deprecated, scalar_function, vector_function
+from pleque.utils.decorators import deprecated, ordered_path_scalar_function, scalar_function, vector_function
 
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
 from pleque.core import Coordinates
@@ -27,6 +27,18 @@ class Equilibrium(object):
     """
     Equilibrium class ...
     """
+
+    @staticmethod
+    def _shape_spline_result(value, grid=False):
+        """
+        Convert SciPy spline grid output to PLEQUE's public grid layout.
+
+        RectBivariateSpline returns true grids as (n_R, n_Z). PLEQUE exposes
+        grid-shaped data as (n_Z, n_R), matching np.meshgrid(R, Z). For
+        grid=False SciPy evaluates elementwise and already preserves the input
+        array shape, so no transpose is applied.
+        """
+        return value.T if grid else value
 
     # def __init__(self,
     #              basedata: xarray.Dataset,
@@ -412,15 +424,15 @@ class Equilibrium(object):
 
     @vector_function(ndim=2)
     def nabla_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords) -> np.ndarray:
-        """
+        r"""
         Return the value of :math:`\nabla \psi`.
 
         :return: Array of shape (2, ...) containing the gradient components [dψ/dR, dψ/dZ].
-                If grid=True, the shape will be (2, nR, nZ).
+                If grid=True, the shape will be (2, nZ, nR).
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
-        dpsi_dr = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1).T
-        dpsi_dz = self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1).T
+        dpsi_dr = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1), coord.grid)
+        dpsi_dz = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1), coord.grid)
 
         nabla_psi = np.stack((dpsi_dr, dpsi_dz))
 
@@ -559,12 +571,14 @@ class Equilibrium(object):
 
         :param grid:
         :param coordinates:
-        :param swap_order: bool,
+        :param swap_order: If False, return component-first shape ``(3, ...)``.
+                           If True, move the component axis to the end for compatibility.
         :param R:
         :param Z:
         :param coord_type:
         :param coords:
-        :return: Magnetic field vector array (3, N) if swap_order is False.
+        :return: Magnetic field vector array. Component-first shape is ``(3, n_elements)``
+                 for paired points and ``(3, n_z, n_r)`` for grids.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -586,12 +600,14 @@ class Equilibrium(object):
 
         :param grid:
         :param coordinates:
-        :param swap_order:
+        :param swap_order: If False, return component-first shape ``(3, ...)``.
+                           If True, move the component axis to the end for compatibility.
         :param R:
         :param Z:
         :param coord_type:
         :param coords:
-        :return: Normalised magnetic field vector array (3, N) if swap_order is False.
+        :return: Normalised magnetic field vector array. Component-first shape is
+                 ``(3, n_elements)`` for paired points and ``(3, n_z, n_r)`` for grids.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -736,7 +752,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_mag_flux_exp_coef(self, coords)
 
-    @scalar_function
+    @ordered_path_scalar_function
     def effective_poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal magnetic flux expansion coefficient**
@@ -800,7 +816,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_heat_flux_exp_coef(self, coords)
 
-    @scalar_function
+    @ordered_path_scalar_function
     def effective_poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal heat flux expansion coefficient**
@@ -865,7 +881,7 @@ class Equilibrium(object):
 
         return flux_expansion.parallel_heat_flux_exp_coef(self, coords)
 
-    @scalar_function
+    @ordered_path_scalar_function
     def total_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Total heat flux expansion coefficient**
@@ -1250,15 +1266,18 @@ class Equilibrium(object):
         :param coord_type:
         :param grid:
         :param coords:
-        :return:
+        :return: Scalar array with shape ``(n_elements,)`` for paired points and
+                 ``(n_z, n_r)`` for grids.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R.T * self._Bpol_sign
+        dpsi_dz = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid), coord.grid)
+        R = self._shape_spline_result(coord.R, coord.grid)
+        return cc_norm * dpsi_dz / R * self._Bpol_sign
 
     def B_R_rz(self, R, Z):
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * self._spl_psi(R, Z, dy=1, grid=False).T / R * self._Bpol_sign
+        return cc_norm * self._spl_psi(R, Z, dy=1, grid=False) / R * self._Bpol_sign
 
     @scalar_function
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
@@ -1271,15 +1290,18 @@ class Equilibrium(object):
         :param Z:
         :param coord_type:
         :param coords:
-        :return:
+        :return: Scalar array with shape ``(n_elements,)`` for paired points and
+                 ``(n_z, n_r)`` for grids.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R.T * self._Bpol_sign
+        dpsi_dr = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid), coord.grid)
+        R = self._shape_spline_result(coord.R, coord.grid)
+        return - cc_norm * dpsi_dr / R * self._Bpol_sign
 
     def B_Z_rz(self, R, Z):
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return - cc_norm * self._spl_psi(R, Z, dx=1, grid=False).T / R * self._Bpol_sign
+        return - cc_norm * self._spl_psi(R, Z, dx=1, grid=False) / R * self._Bpol_sign
 
 
     @scalar_function

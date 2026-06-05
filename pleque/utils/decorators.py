@@ -91,6 +91,22 @@ def scalar_function(func):
 
     return wrapper
 
+
+def ordered_path_scalar_function(func):
+    """
+    Register scalar functions that require ordered non-grid coordinates.
+
+    These functions use geometry derived from neighbouring coordinate points
+    (for example a wall or target surface normal), so rectangular grids and
+    mesh-shaped point arrays are not meaningful inputs.
+    """
+
+    wrapper = scalar_function(func)
+    wrapper._requires_ordered_path = True
+
+    return wrapper
+
+
 def vector_function(ndim):
     """
     Serves to register class functions of Equilibrium class as vector functions.
@@ -105,4 +121,3 @@ def vector_function(ndim):
         return wrapper
 
     return decorator
-

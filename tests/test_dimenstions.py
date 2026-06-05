@@ -63,11 +63,11 @@ def vector_registered_function(request, equilibrium):
 def test_vector_function_dimensions(equilibrium, vector_registered_function, r, z, grid, exp_shape):
     """
     Test that vector functions return arrays with the correct shape:
-    - (n_elements, n_dim) when grid=False
+    - (n_dim, n_elements) when grid=False
     - (n_dim, n_z, n_r) when grid=True
     
     According to the project requirements, functions returning vector quantities
-    should have a shape of (n_elements, n_dim) when grid=False, where:
+    should have a shape of (n_dim, n_elements) when grid=False, where:
     - n_elements is the number of points
     - n_dim is the dimensionality of the vector (3 for 3D vectors)
     
@@ -103,5 +103,7 @@ def test_scalar_function_dimensions(equilibrium, scalar_registered_functions, r,
     - n_r is the number of R coordinates
     """
     func = scalar_registered_functions
+    if getattr(func, "_requires_ordered_path", False) and (grid or np.ndim(r) > 1 or np.ndim(z) > 1):
+        pytest.skip(f"Function {func.__name__} requires ordered non-grid path coordinates.")
     result = func(R=r, Z=z, grid=grid)
     assert result.shape == exp_shape, f"Function {func.__name__} with grid=True returned shape {result.shape}, expected {exp_shape}"

@@ -92,9 +92,15 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 
 ## Array convention
 
-All functions which are returning arrays should return be transformed in the way that the dimension number is always last. 
-For example, the array of r, z coordinates of a line should have shape `[n_dim, n_elements,]`. When evaluating on grid, 
-the order should be inverse. E. g. `[n_dim, n_z, n_r]` or `[n_z, n_r]`.
+Public evaluation functions use a component-first convention for vector quantities and
+the same spatial shape as the requested coordinates for scalar quantities.
+
+* Scalar functions evaluated at paired points return `[n_elements]`.
+* Scalar functions evaluated on a grid return `[n_z, n_r]`, matching `np.meshgrid(R, Z)`.
+* Vector functions return `[n_dim, ...]`, for example `[n_dim, n_elements]` for paired points
+  and `[n_dim, n_z, n_r]` for grids.
+* Passing mesh-shaped `R` and `Z` arrays with `grid=False` is treated as elementwise evaluation
+  and preserves the mesh shape.
 
 ## Version
 
