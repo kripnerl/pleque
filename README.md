@@ -91,7 +91,7 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 
 ## Version
 
-0.0.7
+0.0.8
 
 ## Authors
 
@@ -103,6 +103,15 @@ See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/co
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Old versions note
+
+Although the systematic development of the project was intended, it endup bit organic. From version > 0.1.0 the code will be updated with breaking changes. Here is the list of historical versions, which may be required in some codes.
+
+* 0.0.8 - Tagged master branch with the last change from 19-08-2024. 
+
+
+
 
 ## Related projects
 
