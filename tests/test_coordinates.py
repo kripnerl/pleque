@@ -55,6 +55,22 @@ def test_midplane(equilibrium):
     np.testing.assert_almost_equal(axis.as_RZ_mid().Z, equilibrium._mg_axis[1])
     np.testing.assert_almost_equal(equilibrium._mg_axis[0] + lcfs.r_mid, lcfs.R_mid)
 
+def test_scalar_point_coordinate(equilibrium):
+
+    coord = Coordinates(None, R=1, Z=2)
+    assert len(coord) == 1
+    assert coord.x1[0] == 1
+    assert coord.x2[0] == 2
+
+    coord = Coordinates(None, R=1, Z=2, phi=0)
+    assert len(coord) == 1
+    assert coord.x1[0] == 1
+    assert coord.x2[0] == 2
+
+    coord = equilibrium.coordinates(R=1, Z=2)
+    assert len(coord) == 1
+    assert coord.x1[0] == 1
+    assert coord.x2[0] == 2
 
 def test_coordinates(equilibrium):
     # coord = eq.coordinates(eq._lcfs)
@@ -162,6 +178,33 @@ def test_coordinates(equilibrium):
     # 0d case
     xy = Coordinates(eq)
     assert xy.dim == 0
+
+def test_intersections(equilibrium):
+    # One point
+    coord1 = equilibrium.coordinates(R=[-1, 1], Z=[0, 0])
+    coord2 = equilibrium.coordinates(R=[0, 0], Z=[-1, 1])
+
+    intersections = coord1.intersection(coord2)
+
+    assert len(intersections) == 1
+    assert np.isclose(intersections.R[0], 0)
+    assert np.isclose(intersections.Z[0], 0)
+
+    # Two points
+    coord1 = equilibrium.coordinates(R=[-1, 1], Z=[0, 0])
+    coord2 = equilibrium.coordinates(R=[-1, 0, 1], Z=[-1, 1, -1])
+    intersections = coord1.intersection(coord2)
+
+    assert len(intersections) == 2
+    assert np.isclose(intersections.R[0], -0.5) or np.isclose(intersections.R[0], 0.5)
+    assert np.isclose(intersections.Z[0], 0)
+
+    # No intersection
+    coord1 = equilibrium.coordinates(R=[-1, 1], Z=[0, 0])
+    coord2 = equilibrium.coordinates(R=[-1, 1], Z=[1, 1])
+    intersections = coord1.intersection(coord2)
+
+    assert intersections is None
 
 
 def test_distances():

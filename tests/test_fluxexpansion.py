@@ -39,7 +39,7 @@ def test_incidence_angle_sin():
 
     assert vecs.shape == (3, n_points)
 
-    inc_angls = line.incidence_angle_cos(vecs)
+    inc_angls = line.incidence_angle_sin(vecs)
 
     assert np.isclose(inc_angls[0], 1)
     assert np.isclose(inc_angls[-1], 0)

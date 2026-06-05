@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 import itertools
+from typing import Union
 
 import numpy as np
 import xarray
@@ -8,7 +9,6 @@ from pleque.utils.decorators import deprecated
 import pleque.utils.flux_expansions as flux_expansion
 from .cocos import cocos_coefs
 from scipy.interpolate import splprep, splev
-
 
 
 class Coordinates(object):
@@ -301,12 +301,12 @@ class Coordinates(object):
 
         eq = self._eq
 
-        dists=self.cum_length
+        dists = self.cum_length
 
-        tck, u = splprep([self.R, self.Z],u=dists,k=1,s=0)
-        t=np.linspace(np.amin(u),np.amax(u),npoints)
-        rs,zs = splev(t, tck)
-        new_coords=Coordinates(eq, rs, zs)
+        tck, u = splprep([self.R, self.Z], u=dists, k=1, s=0)
+        t = np.linspace(np.amin(u), np.amax(u), npoints)
+        rs, zs = splev(t, tck)
+        new_coords = Coordinates(eq, rs, zs)
 
         return new_coords
 
@@ -339,13 +339,13 @@ class Coordinates(object):
         else:
             ax.plot(self.R, self.Z, **kwargs)
 
-    def intersection(self, coords2, dim=None):
+    def intersection(self, coords2, dim=2) -> Union["Coordinates", None]:
         """
         input: 2 sets of coordinates
         crossection of two lines (2 sets of coordinates)
 
         :param dim: reduce number of dimension in which is the intersection searched
-        :return:
+        :return: Coordinates object with intersection points or None if no intersection.
         """
         from shapely import geometry
 
@@ -358,11 +358,13 @@ class Coordinates(object):
         intersec = coor1.intersection(coor2)
         if isinstance(intersec, geometry.MultiLineString) or intersec.is_empty:
             return None
-        elif intersec is not None:
-            intersec = np.array(intersec).T
-            return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
+        elif isinstance(intersec, geometry.MultiPoint):
+            intersec = np.asarray([np.asarray(geom.coords).squeeze() for geom in intersec.geoms]).T
+        elif isinstance(intersec, geometry.Point):
+            intersec = np.atleast_2d(intersec.coords).T
         else:
             return None
+        return self._eq.coordinates(R=intersec[0], Z=intersec[1], coord_type=["R", "Z"])
 
     def as_array(self, dim=None, coord_type=None):
         """
@@ -399,7 +401,7 @@ class Coordinates(object):
         :param first_wall: interpolated first wall
         :return: array (3, N_vecs) of limiter elements normals of the same
         """
-        
+
         ### TODO: deal with different coordinate systems and dimensions
 
         # There will be used first order derivation in the edges and second order derivative elsewhere
@@ -413,8 +415,8 @@ class Coordinates(object):
 
         lim_vec = np.vstack((dR, dZ, np.zeros(np.shape(dR))))
 
-        pol = lim_vec/np.linalg.norm(lim_vec, axis=0)
-    
+        pol = lim_vec / np.linalg.norm(lim_vec, axis=0)
+
         tor = [0, 0, 1]
 
         normal = np.cross(pol, tor, axis=0)
@@ -509,7 +511,7 @@ class Coordinates(object):
             elif self.dim == 2:
                 self._dists = np.sqrt((self.x1[1:] - self.x1[:-1]) ** 2 + (self.x2[1:] - self.x2[:-1]) ** 2)
             elif self.dim == 3:
-                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 + 
+                self._dists = np.sqrt((self.X[1:] - self.X[:-1]) ** 2 +
                                       (self.Y[1:] - self.Y[:-1]) ** 2 +
                                       (self.Z[1:] - self.Z[:-1]) ** 2)
         return self._dists
@@ -537,7 +539,7 @@ class Coordinates(object):
         return self._cum_length[-1]
 
     def _evaluate_input(self, *coordinates, coord_type=None, **coords):
-        from collections import Iterable
+        from collections.abc import Iterable
 
         if len(coordinates) == 0:
             # todo:
@@ -746,7 +748,7 @@ class Coordinates(object):
                 self.x1 = self._x1_input ** 2
             else:
                 raise ValueError('This should not happen.')
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
+            self.x1 = np.atleast_1d(self.x1)
 
         elif self.dim == 2:
             # only (R, Z) coordinates are implemented now
@@ -759,16 +761,16 @@ class Coordinates(object):
                 cc = - self.cocos_dict['sigma_pol'] * self.cocos_dict['sigma_cyl']
                 self.x1 = r_mgax + self._x1_input * np.cos(self._x2_input)
                 self.x2 = z_mgax + cc * self._x1_input * np.sin(self._x2_input)
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
+            self.x1 = np.atleast_1d(self.x1)
+            self.x2 = np.atleast_1d(self.x2)
 
         elif self.dim == 3:
             # only (R, Z) coordinates are implemented now
             # if self._coord_type_input == ('R', 'Z', 'phi'):
             if any([p == ('R', 'Z', 'phi') for p in itertools.permutations(self._coord_type_input)]):
-                self.x1 = np.asanyarray(self._x1_input)
-                self.x2 = np.asanyarray(self._x2_input)
-                self.x3 = np.asanyarray(self._x3_input)
+                self.x1 = self._x1_input
+                self.x2 = self._x2_input
+                self.x3 = self._x3_input
             # elif self._coord_type_input == ('X', 'Y', 'Z'):
             elif any([p == ('X', 'Y', 'Z') for p in itertools.permutations(self._coord_type_input)]):
                 # todo: COCOS
@@ -780,21 +782,25 @@ class Coordinates(object):
                 self.x2 = self._x3_input
                 self.x3 = np.arctan2(cc * self._x2_input, self._x1_input)
 
-            self.x1 = np.array(self.x1, copy=False, ndmin=1)
-            self.x2 = np.array(self.x2, copy=False, ndmin=1)
-            self.x3 = np.array(self.x3, copy=False, ndmin=1)
+            self.x1 = np.atleast_1d(self.x1)
+            self.x2 = np.atleast_1d(self.x2)
+            self.x3 = np.atleast_1d(self.x3)
 
     @deprecated('This function needs to be tested.')
     def line_integral(self, func, method='sum'):
         """
         func = /oint F(x,y) dl
         :param func: self - func(X, Y), Union[ndarray, int, float] or function values or 2D spline
-        :param method: str, ['sum', 'trapz', 'simps']
+        :param method: str, ['sum', 'trapezoid', 'simps']
         :return:
         """
         import inspect
         import numpy as np
-        from scipy.integrate import trapz, simps, quad
+        try:
+            from scipy.integrate import trapezoid, simpson
+        except ModuleNotFoundError:
+            from scipy.integrate import trapz as trapezoid
+            from scipy.integrate import simps as simpson
 
         #
         dx = np.hstack((0, np.cumsum(self.dists)))
@@ -823,10 +829,10 @@ class Coordinates(object):
 
             if method == 'sum':
                 line_integral = np.sum(func_val * self.dists)
-            elif method == 'trapz':
-                line_integral = trapz(func_val, dx)
+            elif method in ['trapz', 'trapezoid']:
+                line_integral = trapezoid(func_val, dx)
             elif method == 'simps':
-                line_integral = simps(func_val, dx)
+                line_integral = simpson(func_val, dx)
             else:
                 line_integral = None
 
@@ -854,16 +860,16 @@ class Coordinates(object):
 
             if method == 'sum':
                 line_integral = np.sum(func_val * self.dists)
-            elif method == 'trapz':
+            elif method in ['trapz', 'trapezoid']:
                 if func_val.ndim == 1:
-                    line_integral = trapz(func_val, dx)
+                    line_integral = trapezoid(func_val, dx)
                 else:
-                    line_integral = trapz(trapz(func_val, x1), x2)
+                    line_integral = trapezoid(trapezoid(func_val, x1), x2)
             elif method == 'simps':
                 if func_val.ndim == 1:
-                    line_integral = simps(func_val, dx)
+                    line_integral = simpson(func_val, dx)
                 else:
-                    line_integral = simps(simps(func_val, x1), x2)
+                    line_integral = simpson(simpson(func_val, x1), x2)
             else:
                 line_integral = None
 

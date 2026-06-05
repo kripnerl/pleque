@@ -305,3 +305,60 @@ def test_cocos_consistency(geqdsk_file, cocos):
     )
 
     # todo test poloidal current direction (!!!)
+@pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4], [11], [12], [13], [14]])  # , [5], [6], [7], [8]])
+def test_poloidal_flux_normalization(geqdsk_file, cocos):
+
+    eq = read_geqdsk(geqdsk_file, cocos=cocos)
+
+    if cocos > 10:
+        factor = 1
+    else:
+        factor = 2 * np.pi
+
+    psi_n = np.linspace(0, 1, 10)
+
+    psi_ref = eq.psi(psi_n=psi_n)
+    psi_pol = eq.pol_flux(psi_n=psi_n) / factor
+
+    np.testing.assert_allclose(psi_ref, psi_pol)
+
+
+@pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4], [5], [6], [7], [8]])
+def test_toroidal_flux_consistency(geqdsk_file, cocos):
+    """
+    Test that toroidal flux is consistent across different COCOS conventions.
+    The test loads equilibria with different COCOS conventions and verifies that
+    the toroidal flux values are consistent when normalized appropriately.
+    """
+    eq = read_geqdsk(geqdsk_file, cocos=cocos)
+
+    # Create a second equilibrium with a different COCOS convention
+    # If cocos < 10, create one with cocos + 10, otherwise with cocos - 10
+    cocos2 = cocos + 10 if cocos < 10 else cocos - 10
+    eq2 = read_geqdsk(geqdsk_file, cocos=cocos2)
+
+    # Define test points using normalized psi
+    psi_n_values = np.linspace(0.1, 0.9, 5)
+
+    # Calculate toroidal flux for both equilibria
+    tor_flux1 = np.array([eq.tor_flux(psi_n=psi_n) for psi_n in psi_n_values])
+    tor_flux2 = np.array([eq2.tor_flux(psi_n=psi_n) for psi_n in psi_n_values])
+
+    # Check that the sign of toroidal flux matches the sign of B0
+    sigma_B0 = np.sign(eq.F0)
+    assert np.all(np.sign(tor_flux1) == sigma_B0)
+
+    # Check that the absolute values are consistent between different COCOS conventions
+    # The values should be the same regardless of COCOS convention
+    np.testing.assert_allclose(np.abs(tor_flux1), np.abs(tor_flux2), rtol=1e-10)
+
+    # Test at specific R, Z coordinates
+    R_test = eq.magnetic_axis.R[0] + 0.1
+    Z_test = eq.magnetic_axis.Z[0]
+
+    tor_flux_RZ1 = eq.tor_flux(R=R_test, Z=Z_test)
+    tor_flux_RZ2 = eq2.tor_flux(R=R_test, Z=Z_test)
+
+    # Check consistency at R, Z coordinates
+    assert np.sign(tor_flux_RZ1) == sigma_B0
+    np.testing.assert_allclose(np.abs(tor_flux_RZ1), np.abs(tor_flux_RZ2), rtol=1e-10)

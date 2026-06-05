@@ -135,7 +135,7 @@ class FluxSurface(Surface):
         """
         Evaluete q usiong formula (5.35) from [Jardin, 2010: Computational methods in Plasma Physics]
 
-        :param method: str, ['sum', 'trapz', 'simps']
+        :param method: str, ['sum', 'trapezoid', 'simps']
         :return:
         """
         # psi_sign = self._eq._psi_sign
@@ -279,11 +279,15 @@ class FluxSurface(Surface):
           <func>(\psi) = \oint \frac{\mathrm{d}l R}{|\nabla \psi|}a(R, Z)
 
         :param func: func(X, Y), Union[ndarray, int, float]
-        :param method: str, ['sum', 'trapz', 'simps']
+        :param method: str, ['sum', 'trapezoid', 'simps']
         :return: 
         """
         import inspect
-        from scipy.integrate import trapz, simps
+        try:
+            from scipy.integrate import trapezoid, simpson
+        except ModuleNotFoundError:
+            from scipy.integrate import trapz as trapezoid
+            from scipy.integrate import simps as simpson
 
         if method == 'sum':
             Rs = (self.R[1:] + self.R[:-1]) / 2
@@ -309,8 +313,8 @@ class FluxSurface(Surface):
 
         if method == 'sum':
             ret = np.sum(self.dists * Rs / diff_psi * func_val)
-        elif method == 'trapz':
-            ret = trapz(Rs / diff_psi * func_val, l)
+        elif method in ['trapz','trapezoid']:
+            ret = trapezoid(Rs / diff_psi * func_val, l)
         elif method == 'simps':
             ret = simps(Rs / diff_psi * func_val, l)
         else:

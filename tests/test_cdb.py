@@ -9,25 +9,22 @@ import tempfile
 os.environ['CDB_PATH'] = os.getenv('CDB_PATH', '/home/kripner/Projects/CDB/src')
 
 
-def test_cdb_variations():
-    from pleque.io.compass import cdb
-
-    eq = cdb(21267, 1400, variant="V4_std_O")
-
-    import matplotlib.pyplot as plt
-    eq.plot_overview()
-    plt.show()
-
-
-def test_cdb():
+@pytest.mark.parametrize("shot,variant,revision,time",
+                         [(17636, '', -1, 1125),
+                          (17854, '', -1, 1000),
+                          (11399, 'v4_std_O', 1, 1060),
+                          (21267, 'V4_std_O', -1, 1400),
+                          (17588, 't1100_ZsepTS_285', 2, 1100)
+                          ])
+def test_cdb(shot, variant, revision, time):
     from pleque.io.compass import read_efithdf5
     from pleque.io.compass import cdb
     from os.path import expanduser
 
-    eq = cdb(17636, 1125)
-    eq = cdb(17854, 1000)
-    eq = cdb(11399, variant='v4_std_O', revision=1)
-    #eq = read_efithdf5(expanduser("~/EFIT/17636.1.h5"), time=1125)
+    eq = cdb(shot=shot, time=time, variant=variant, revision=revision)
+
+    assert eq is not None
+    # eq = read_efithdf5(expanduser("~/EFIT/17636.1.h5"), time=1125)
 
     print(eq)
 
@@ -67,25 +64,21 @@ def test_cdb_to_gfile():
     assert np.allclose(eq_gfile.magnetic_axis.as_array(), eq_gfile2.magnetic_axis.as_array(), rtol=1e-2)
 
 
-def test_cudb():
+@pytest.mark.parametrize("shot,variant,revision", [(3100, '', -1),
+                                                   (6400, '', -1),
+                                                   (24300, '', -1),
+                                                   (24300, 'nice_currents', -1),
+                                                   pytest.param(24300, '', -2,
+                                                                marks=pytest.mark.xfail(reason="Bug in CDB")),
+                                                   (7400, '', -1)])
+def test_cudb(shot, variant, revision, time=1.0):
     from pleque.io.compass import cudb
 
-    eq = cudb(6400, 2.0)
+    eq = cudb(shot=shot, time=time, variant=variant, revision=revision)
 
-    assert np.isclose(np.abs(eq.I_plasma), 2e6, atol=1e-2, rtol=1e-2)
+    # Check if the equilibrium is valid
+    assert 4.0e6 > np.abs(eq.I_plasma) > 0.1e6, f"Invalid plasma current: {eq.I_plasma} kA"
 
-    # shots = [3100, 3109, 3400, 4400, 6400, 6408, 6409, 6600, 7400]
-    # shot_time = 2.0
-    # currents = []
-    #
-    # for shot in shots:
-    #     eq = cudb(shot, shot_time)
-    #     currents.append(eq.I_plasma)
-    #
-    # currents = np.abs(currents)
-    #
-    # assert np.all(currents < 3.0e6)
-    # assert np.all(currents > 0.2e6)
 
 @pytest.mark.parametrize("use_basedata", [True, False])
 def test_cudb_to_gfile(use_basedata):

@@ -39,7 +39,7 @@ def read(equilibrium, file, time):
                 else:
                     ds[f"{name}_metis"] = da
 
-    toexp = ds.sel(time=time, method="nearest").drop("time")
+    toexp = ds.sel(time=time, method="nearest").drop_vars("time")
     psi_axis = toexp.psi.values[np.argmin(np.abs(toexp.psi.values))]
     psi_sep = toexp.psi.values[np.argmax(np.abs(toexp.psi.values))]
     psi_n = np.abs((toexp.psi.values - psi_axis) / (psi_sep - psi_axis))
@@ -48,8 +48,12 @@ def read(equilibrium, file, time):
 
     for name in list(toexp.variables.keys()):
         #todo: better handling of complex values
-        if np.all(np.isreal(toexp[name].values)):
-            fluxfun.add_flux_func(name, toexp[name].values, crds)
+
+        try:
+            if np.all(np.isreal(toexp[name].values)):
+                fluxfun.add_flux_func(name, toexp[name].values, crds)
+        except TypeError:
+            continue
 
     return fluxfun
 
