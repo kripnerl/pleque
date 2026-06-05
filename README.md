@@ -14,7 +14,7 @@ For more information see the documentation at https://pleque.readthedocs.io.
 The following packages are required to install `pleque`:
 
 ```
-python>=3.5
+python>=3.11
 numpy
 scipy
 shapely
