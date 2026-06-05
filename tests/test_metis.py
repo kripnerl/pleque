@@ -1,12 +1,11 @@
 # import matplotlib.pyplot as plt
 import numpy as np
-import pkg_resources
 
 from pleque.io import metis
-from pleque.tests.utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium, resource_path
 
 # plt.style.use('seaborn-talk')
-file = pkg_resources.resource_filename("pleque", "resources/metis.mat")
+file = resource_path("pleque", "resources/metis.mat")
 time = 1
 
 eq = load_testing_equilibrium()

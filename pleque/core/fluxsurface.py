@@ -316,7 +316,7 @@ class FluxSurface(Surface):
         elif method in ['trapz','trapezoid']:
             ret = trapezoid(Rs / diff_psi * func_val, l)
         elif method == 'simps':
-            ret = simps(Rs / diff_psi * func_val, l)
+            ret = simpson(Rs / diff_psi * func_val, l)
         else:
             ret = None
 
@@ -409,3 +409,15 @@ class FluxSurface(Surface):
         '''
         rep = (self.triangul_up + self.triangul_low) * 0.5
         return rep
+
+    def psi_n_error(self):
+        """
+        Calculate mean value of psi_n on the flux surface, and its mean relative error and absolute error as std.
+        :return: tuple(float, float, float) - mean_psi, mean_abs_err, mean_rel_err
+        """
+
+        mean_psi = self.psi_n.mean()
+        abs_err = np.std(self.psi_n)
+        rel_err = abs_err / mean_psi
+
+        return mean_psi, abs_err, rel_err

@@ -1,13 +1,19 @@
 
-import pkg_resources
+from importlib import resources
+
 import pleque.io.readers as readers
 import xarray as xr
 import numpy as np
 
 import pleque
 
+
+def resource_path(package, resource):
+    return str(resources.files(package).joinpath(*resource.split("/")))
+
+
 resource_package = "pleque"
-equilibria_files = [pkg_resources.resource_filename(resource_package, f) for f in
+equilibria_files = [resource_path(resource_package, f) for f in
                     ['resources/baseline_eqdsk',
                      'resources/scenario_1_baseline_upward_eqdsk',
                      'resources/DoubleNull_eqdsk',
@@ -68,9 +74,8 @@ def get_test_equilibria_filenames():
 
 
 def get_test_divertor():
-    import pkg_resources
     resource_package = "pleque"
 
     limiterfile = 'resources/limiter_v3_1_iba.dat'
-    limiter = [pkg_resources.resource_filename(resource_package, limiterfile)]
+    limiter = [resource_path(resource_package, limiterfile)]
     return limiter

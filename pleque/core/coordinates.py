@@ -368,7 +368,10 @@ class Coordinates(object):
 
     def as_array(self, dim=None, coord_type=None):
         """
-        Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+        Return coordinates as point rows with shape ``(N, dim)``.
+
+        For grid coordinates the mesh is flattened in ``np.meshgrid(R, Z)``
+        order, so each row is one ``(R, Z)`` point.
 
         :param dim: reduce the number of dimensions to dim (todo)
         :param coord_type: not effected at the moment (TODO)
