@@ -102,10 +102,6 @@ the same spatial shape as the requested coordinates for scalar quantities.
 * Passing mesh-shaped `R` and `Z` arrays with `grid=False` is treated as elementwise evaluation
   and preserves the mesh shape.
 
-## Version
-
-0.0.9
-
 ## Authors
 
 * **Lukáš Kripner** - [kripnerl](https://github.com/kripnerl)
@@ -129,6 +125,7 @@ Although the systematic development of the project was intended, it endup bit or
 
 * 0.0.8 - Tagged master branch with the last change from 19-08-2024.
 * 0.0.9 - Tagged develop branch with maintained back compatibility with 0.0.8. 
+* 0.0.10 All the phd-related work merged the master + update of array ordering. This version may thus introduce breaking changes! 
 
 
 ## Related projects
