@@ -14,7 +14,7 @@ For more information see the documentation at https://pleque.readthedocs.io.
 The following packages are required to install `pleque`:
 
 ```
-python>=3.5
+python>=3.11
 numpy
 scipy
 shapely
@@ -59,12 +59,13 @@ pip install --user .
 The following example shows how to load an equilibrium saved in the `eqdsk` format. The equilibrium used here comes from a FIESTA simulation of the COMPASS-Upgrade tokamak.
 
 ```python
+from importlib import resources
+
 from pleque.io import readers
-import pkg_resources
 import matplotlib as plt
 
 #Locate a test equilibrium
-filepath = pkg_resources.resource_filename('pleque', 'resources/baseline_eqdsk')
+filepath = resources.files('pleque').joinpath('resources', 'baseline_eqdsk')
 ```
 The heart of `pleque` is its `Equilibrium` class, which contains all the equilibrium information (and much more). Typically its instances are called `eq`.
 
@@ -88,6 +89,18 @@ B = eq.B_abs(R, Z)
 ```
 
 Equilibria may be visualised in many different ways; they may be used for mapping or field line tracing; the possibilities are virtually endless. If there's a caveat you find missing from `pleque`, write to us! Further examples can be found as notebooks in the `notebooks` folder or in the `examples` directory. 
+
+## Array convention
+
+Public evaluation functions use a component-first convention for vector quantities and
+the same spatial shape as the requested coordinates for scalar quantities.
+
+* Scalar functions evaluated at paired points return `[n_elements]`.
+* Scalar functions evaluated on a grid return `[n_z, n_r]`, matching `np.meshgrid(R, Z)`.
+* Vector functions return `[n_dim, ...]`, for example `[n_dim, n_elements]` for paired points
+  and `[n_dim, n_z, n_r]` for grids.
+* Passing mesh-shaped `R` and `Z` arrays with `grid=False` is treated as elementwise evaluation
+  and preserves the mesh shape.
 
 ## Version
 
