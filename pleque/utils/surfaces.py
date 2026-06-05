@@ -48,12 +48,10 @@ def intersection(line1, line2):
 
     intersec = l1.intersection(l2)
 
-    # later version of shapely has 'array_interface' for empty intersection.
-    # So instead of "None empty array is returned (array.size == 0)
-    if hasattr(intersec, "array_interface"):
-        intersec = np.atleast_2d(intersec)
+    if hasattr(intersec, 'geoms'):
+        intersec = np.array([np.array(g.coords).squeeze() for g in intersec.geoms])
     else:
-        intersec = np.array([])
+        intersec = np.atleast_2d(intersec.coords)
 
     return intersec
 

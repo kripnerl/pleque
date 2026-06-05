@@ -91,7 +91,7 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 
 ## Version
 
-0.0.8
+0.0.9
 
 ## Authors
 
@@ -99,6 +99,12 @@ Equilibria may be visualised in many different ways; they may be used for mappin
 * **Matěj Tomeš** - [Mateesek](https://github.com/MatejTomes)
 
 See also the list of [contributors](https://github.com/kripnerl/pleque/graphs/contributors) who participated in this project.
+
+## Reference
+
+If you deem it appropriate, please refer to the PLEQUE package using the following publication:
+
+* [Kripner, L., Tomeš, M., Urban, J., Grover, O., Ficker, O., Macúšová, E., Peterka, M., Krbec, J., Jaulmes, F., Cerovský, J., Fridrich, D., 2019. Towards the integrated analysis of tokamak plasma equilibria: PLEQUE, in: 46th EPS Conference on Plasma Physics, EPS 2019. European Physical Society.](https://lac913.epfl.ch/epsppd3/2019/pdf/P4.1033.pdf)
 
 ## License
 
@@ -108,9 +114,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Although the systematic development of the project was intended, it endup bit organic. From version > 0.1.0 the code will be updated with breaking changes. Here is the list of historical versions, which may be required in some codes.
 
-* 0.0.8 - Tagged master branch with the last change from 19-08-2024. 
-
-
+* 0.0.8 - Tagged master branch with the last change from 19-08-2024.
+* 0.0.9 - Tagged develop branch with maintained back compatibility with 0.0.8. 
 
 
 ## Related projects

@@ -1,13 +1,17 @@
 import h5py
 import numpy as np
 import os
-import pkg_resources
+from importlib import resources
 import xarray as xr
 
 from pleque.core import Equilibrium
 from pleque.io._geqdsk import read, data_as_ds
 from pleque.io.tools import EquilibriaTimeSlices
+from pleque.utils.surfaces import add_xpoint
+import logging
 
+logger = (logging.getLogger(__name__))
+# logging.basicConfig(level=logging.DEBUG)
 
 def cdb(shot=None, time=1060, revision=1, variant=''):
     """
@@ -43,7 +47,7 @@ def cdb(shot=None, time=1060, revision=1, variant=''):
 
 
 def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=None,
-                     cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
+         cdb_host='cudb.tok.ipp.cas.cz', cdb_data_root='/compass/CC19_COMPASS-U_data/'):
     """
 
     :param shot:
@@ -59,10 +63,10 @@ def cudb(shot, time=None, revision=-1, variant='', time_unit='s', first_wall=Non
 
     eq_time = time
     if time_unit == 'ms' and time is not None:
-        eq_time /= 1000 # convert time to seconds as they are used by cudb
+        eq_time /= 1000  # convert time to seconds as they are used by cudb
 
     dst = get_ds_from_cudb(shot, eq_time, revision, variant, time_unit, first_wall,
-                     cdb_host, cdb_data_root)
+                           cdb_host, cdb_data_root)
 
     eqts = EquilibriaTimeSlices(dst, cocos=13)
 
@@ -104,6 +108,11 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
 
+    log_msg = f'Loading data from CUDB for shot {shot}, time {time}, revision {revision}, ' \
+                f'variant {variant}, strid_postfix {strid_postfix}'
+
+    logger.debug(log_msg)
+
     psi = cdb.get_signal("psi/Fiesta_OUT:" + strid_postfix)
     pressure = cdb.get_signal("p/Fiesta_OUT:" + strid_postfix)  # 2D (!)
     pprime = cdb.get_signal("pprime/Fiesta_OUT:" + strid_postfix)  # 1D
@@ -112,6 +121,11 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     Bvac = cdb.get_signal('Bphi_vac/Fiesta_OUT:' + strid_postfix)  # 2D
     Bphi = cdb.get_signal('Bphi/Fiesta_OUT:' + strid_postfix)  # 2D
     q = cdb.get_signal('q/Fiesta_OUT:' + strid_postfix)
+
+    loaded_revision = psi.ref.get('revision')
+    loaded_variant = psi.ref.get('variant')
+    loaded_record_number = psi.ref.get('record_number')
+    loaded_timestamp = psi.ref.get('timestamp')
 
     # todo: Check with database and Martin
     pprime_data = pprime.data / (2 * np.pi)
@@ -128,7 +142,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'Bphi': (['time', 'R', 'Z'], Bphi.data),
             'q': (['time', 'psi_n'], q.data),
         }, coords={
-            'time' : psi.time_axis.data,
+            'time': psi.time_axis.data,
             'R': psi.axis1.data,
             'Z': psi.axis2.data,
             'psi_n': pprime.axis1.data,
@@ -144,7 +158,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
             'Bphi': (['time', 'R', 'Z'], Bphi.data),
             'q': (['time', 'psi_n'], q.data),
         }, coords={
-            'time' : psi.time_axis.data,
+            'time': psi.time_axis.data,
             'R': psi.axis1.data,
             'Z': psi.axis2.data,
             'psi_n': pprime.axis1.data,
@@ -152,7 +166,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     dst['Bvac'] = dst.Bvac.fillna(0)
 
-    dst['F0'] = (dst.Bvac*dst.R).mean(dim=['R', 'Z'])
+    dst['F0'] = (dst.Bvac * dst.R).mean(dim=['R', 'Z'])
     dst['shot'] = int(shot)
 
     if first_wall is None:
@@ -166,9 +180,9 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     if isinstance(first_wall, str) and first_wall == 'IBAv3.1':
         resource_package = 'pleque'
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
-        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
-        first_wall = np.loadtxt(first_wall)
+        first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
+        first_wall_path = resources.files(resource_package) / first_wall_resource
+        first_wall = np.loadtxt(str(first_wall_path))
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
     dst['Z_first_wall'] = xr.DataArray(first_wall[:, 1], coords=[first_wall[:, 0]], dims=['R_first_wall'])
@@ -179,6 +193,10 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
         os.environ['CDB_DATA_ROOT'] = cdb_data_root_def
 
     dst.attrs["cocos"] = 13
+    dst.attrs["record_number"] = loaded_record_number
+    dst.attrs["revision"] = loaded_revision
+    dst.attrs["variant"] = loaded_variant
+    dst.attrs["timestamp"] = loaded_timestamp
 
     return dst
 
@@ -204,12 +222,24 @@ def read_efithdf5(file_path, time=None):
         xp = np.array((xp['R'], xp['Z']))
         sp = f5efit['output/separatrixGeometry/strikepointCoords']
         sp = np.array((sp['R'], sp['Z']))
-        limiter = np.column_stack([f5efit['input/limiter/{}Values'
-                                  .format(x)][0, :] for x in 'rz'])
+
+        # For compass, limiter is always fixed during the discharge; however, in some cases some times are
+        # not calculated. Therefore, the first nonnan value is used as limiter
+
+        limiter_r = np.array(f5efit['input/limiter/rValues'])
+        limiter_z = np.array(f5efit['input/limiter/zValues'])
+
+        limiter_r = limiter_r[np.isfinite(limiter_r).any(axis=1)][0, :]
+        limiter_z = limiter_z[np.isfinite(limiter_z).any(axis=1)][0, :]
+
+        if limiter_r.shape != limiter_z.shape:
+            raise ValueError(f'limiter_r and limiter_z have different shapes: {limiter_r.shape} and {limiter_z.shape}')
+
+        limiter = np.column_stack([limiter_r, limiter_z])
 
         # todo create better representation of these objects
-        lcfs_R = f5efit['/output/separatrixGeometry/boundaryCoordsR']
-        lcfs_Z = f5efit['/output/separatrixGeometry/boundaryCoordsZ']
+        lcfs_r = f5efit['/output/separatrixGeometry/boundaryCoordsR']
+        lcfs_z = f5efit['/output/separatrixGeometry/boundaryCoordsZ']
 
         dst = xr.Dataset({
             'psi': (['time', 'R', 'Z'], f5efit['output/profiles2D/poloidalFlux']),
@@ -225,8 +255,8 @@ def read_efithdf5(file_path, time=None):
             'x_points': (['ndim', 'time', 'nx'], xp),
             'strike_points': (['ndim', 'time', 'ns'], sp),
             'first_wall': (['points', 'ndim'], limiter),
-            'R_lcfs': (['time', 'np_lcfs'], lcfs_R),
-            'Z_lcfs': (['time', 'np_lcfs'], lcfs_Z),
+            'R_lcfs': (['time', 'np_lcfs'], lcfs_r),
+            'Z_lcfs': (['time', 'np_lcfs'], lcfs_z),
         }, coords={
             'time': t,
             'Rt': (['time', 'R'], f5efit['output/profiles2D/r']),
@@ -234,9 +264,7 @@ def read_efithdf5(file_path, time=None):
             'psi_n': (['psi_n'], f5efit['output/fluxFunctionProfiles/normalizedPoloidalFlux']),
         }
         )
-        # the limiter is not expected to change in time, so take 0th time index
-        limiter = np.column_stack([f5efit['input/limiter/{}Values'.format(x)][0, :]
-                                   for x in 'rz'])
+
         dst.load()
 
     efit_slices = EquilibriaTimeSlices(dst, limiter)
@@ -270,16 +298,14 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     if first_wall is None:
         print('--- No limiter specified. The IBA v3.1 limiter will be used.')
-        first_wall = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall = pkg_resources.resource_filename(resource_package, first_wall)
+        first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
+        first_wall_path = resources.files(resource_package) / first_wall_resource
 
     if isinstance(first_wall, str):
-        first_wall = np.loadtxt(first_wall)
+        first_wall = np.loadtxt(first_wall_path)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 
     eq._Ip = ds.attrs['cpasma']
 
     return eq
-
-

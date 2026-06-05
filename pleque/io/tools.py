@@ -29,10 +29,10 @@ class EquilibriaTimeSlices:
         :param tolerance: float or None, raise ValueError if the selected time slice is outside the tolerance.
                           If None the warning is shown if the time difference is more then 10 ms.
         """
-        ds = self.eqs_dataset.dropna(dim='time', how='all') \
+        ds: xr.Dataset = self.eqs_dataset.dropna(dim='time', how='all') \
             .sel(time=time, method='nearest')
         if 'Rt' in ds:
-            ds = ds.rename({'Rt': 'R', 'Zt': 'Z'})
+            ds = ds.rename_vars({'Rt': 'R', 'Zt': 'Z'})
         if tolerance is not None and np.abs(ds.time - time) > tolerance:
             raise ValueError('Insufficient time slice found! Delta time: {:.1f} ms\n'
                              '         Required time: {:.1f} ms, selected time {:.1f} ms. '
