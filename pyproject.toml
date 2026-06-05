@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pleque"
-version = "0.1.0b0"
+version = "0.0.9"
 description = "PLEQUE is a Python module allowing simple visualisation and manipulation of tokamak plasma equilibria."
 authors = ["Lukáš Kripner <kripner@ipp.cas.cz>"]
 license = "MIT"

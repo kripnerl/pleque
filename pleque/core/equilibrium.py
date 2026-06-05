@@ -414,7 +414,7 @@ class Equilibrium(object):
     def nabla_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords) -> np.ndarray:
         """
         Return the value of :math:`\nabla \psi`.
-        
+
         :return: Array of shape (2, ...) containing the gradient components [dψ/dR, dψ/dZ].
                 If grid=True, the shape will be (2, nR, nZ).
         """
@@ -425,7 +425,7 @@ class Equilibrium(object):
         nabla_psi = np.stack((dpsi_dr, dpsi_dz))
 
         return nabla_psi
-        
+
 
     @scalar_function
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):

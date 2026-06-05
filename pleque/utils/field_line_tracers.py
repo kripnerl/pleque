@@ -1,6 +1,8 @@
 import numpy as np
 import logging
 
+from pleque import Equilibrium
+
 
 def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
