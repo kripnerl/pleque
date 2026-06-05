@@ -7,8 +7,7 @@
 2. Set release number 
    1. in `README.md`,
    2. in `pleque/__init__.py`,
-   3. minor release number in `docs/source/conf.py` (e. g. 0.1)
-   4. in `setup.py`
+   3. minor release number in `docs/source/conf.py` (e.g. 0.1)
 3. Create push request to master/develop on GitLab.
 4. Wait for the approval.
 5. Tag the commit as `v[release_number]`
