@@ -40,15 +40,6 @@ class Equilibrium(object):
         """
         return value.T if grid else value
 
-    # def __init__(self,
-    #              basedata: xarray.Dataset,
-    #              first_wall=None: Iterable[(float, float)],
-    #              psi_lcfs=None: float,
-    #              X_points=None: Iterable[(float, float)],
-    #              strike_points=None: Iterable[(float, float)],
-    #              spline_order=5: int,
-    #              cocos=3: int,
-    #             ):
     def __init__(self,
                  basedata: xarray.Dataset,
                  first_wall=None,
@@ -306,8 +297,10 @@ class Equilibrium(object):
             # --- Plasma boundary ---
             # -----------------------
 
-            rs = np.linspace(self.R_min, self.R_max, 700)
-            zs = np.linspace(self.Z_min, self.Z_max, 1200)
+            nr = settings.nr_grid if settings.nr_grid is not None else 700
+            nz = settings.nz_grid if settings.nz_grid is not None else 1200
+            rs = np.linspace(self.R_min, self.R_max, nr)
+            zs = np.linspace(self.Z_min, self.Z_max, nz)
 
             if limiter_plasma:
                 self._strike_points = self._limiter_point[np.newaxis, :]
@@ -1460,8 +1453,6 @@ class Equilibrium(object):
         # todo test cocos here!
         # todo: test grid
         # todo: test test test
-        from scipy.constants import mu_0
-
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc = self._cocosdic['sigma_cyl']
 
@@ -1473,8 +1464,6 @@ class Equilibrium(object):
 
     @scalar_function
     def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        from scipy.constants import mu_0
-
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc = self._cocosdic['sigma_cyl']
 
@@ -1503,7 +1492,6 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.Fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
@@ -1526,7 +1514,6 @@ class Equilibrium(object):
         :param coords:
         :return:
         """
-        from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = - self._cocosdic["sigma_Bp"] * (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return cc_norm * (coord.R * self.pprime(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord))
