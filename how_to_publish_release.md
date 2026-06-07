@@ -4,8 +4,7 @@
     - `release_number` format: `major.minor.subminor` (e.g. 0.1.2) for main versions, or
     - `major.minor.subminor.patchnumber` if needed, or
     - `major.minor.subminorbbetaversion` (e.g. 0.1.1b3) for testing release 
-2. Set release number 
-   1. in `README.md`,
+2. Set release number
    2. in `pleque/__init__.py`,
    3. minor release number in `docs/source/conf.py` (e.g. 0.1)
 3. Create push request to master/develop on GitLab.

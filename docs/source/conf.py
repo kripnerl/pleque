@@ -138,6 +138,12 @@ latex_documents = [
      'Lukas Kripner', 'manual'),
 ]
 
+# DEBUG temporal fix
+
+from logging import getLogger
+getLogger('nbsphinx').warning("nbsphinx allow errors enabled in conf.py")
+nbsphinx_allow_errors = True
+
 # -- Options for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples

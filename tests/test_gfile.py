@@ -7,8 +7,8 @@ import pleque
 from pleque.io import _geqdsk
 from pleque.io.geqdsk import read
 from pleque.io.readers import read_geqdsk
+from pleque.tests.utils import resource_path
 
-import pkg_resources
 import xarray as xr
 
 def test_calculated_profiles(geqdsk_file):
@@ -59,8 +59,8 @@ def test_fiesta_gfile_vs_database():
     file_name = '{}/g0000.0000'.format(tmp_dir.name)
 
     resource_package = "pleque.resources"
-    gfile_file = pkg_resources.resource_filename(resource_package, "test00.gfile")
-    nc_file = pkg_resources.resource_filename(resource_package, "test00.nc")
+    gfile_file = resource_path(resource_package, "test00.gfile")
+    nc_file = resource_path(resource_package, "test00.nc")
 
     basedata = xr.load_dataset(nc_file).load()
 

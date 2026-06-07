@@ -207,6 +207,34 @@ def test_intersections(equilibrium):
     assert intersections is None
 
 
+def test_array_input():
+
+    r = np.linspace(1, 2, 10)
+    z = np.linspace(-1, 1, 12)
+
+    rr, zz = np.meshgrid(r, z)
+
+    coord = Coordinates(eq, R=rr, Z=zz, grid=False)
+
+    assert coord.R.shape == rr.shape
+    assert coord.Z.shape == rr.shape
+    assert coord.r_mid.shape == rr.shape
+
+    coord = Coordinates(eq, r=coord.r_mid, theta=np.zeros_like(coord.r_mid), grid=False)
+
+    assert coord.R.shape == rr.shape
+    assert coord.Z.shape == rr.shape
+    assert coord.r_mid.shape == rr.shape
+
+    B_midplane = eq.B_pol(r=coord.r_mid, theta=np.zeros_like(coord.r_mid), grid=False)
+    B_coords = eq.B_pol(coord)
+
+    assert B_midplane.shape == rr.shape
+    assert B_coords.shape == rr.shape
+    assert B_midplane.shape == B_coords.shape
+
+
+
 def test_distances():
 
         R = 2

@@ -368,7 +368,10 @@ class Coordinates(object):
 
     def as_array(self, dim=None, coord_type=None):
         """
-        Return array of size (N, dim), where N is number of points and dim number of dimensions specified by coord_type
+        Return coordinates as point rows with shape ``(N, dim)``.
+
+        For grid coordinates the mesh is flattened in ``np.meshgrid(R, Z)``
+        order, so each row is one ``(R, Z)`` point.
 
         :param dim: reduce the number of dimensions to dim (todo)
         :param coord_type: not effected at the moment (TODO)
@@ -424,16 +427,6 @@ class Coordinates(object):
 
         return normal
 
-    @deprecated('Replaced by ``incidence_angle_sin``.')
-    def incidence_angle_cos(self, vecs):
-        """
-
-        :param vecs: array (3, N_vecs)
-        :return: array of cosines of angles of incidence
-        """
-
-        return flux_expansion.incidence_angle_sin(self, vecs)
-
     def incidence_angle_sin(self, vecs):
         """
 
@@ -442,19 +435,6 @@ class Coordinates(object):
         """
 
         return flux_expansion.incidence_angle_sin(self, vecs)
-
-    @deprecated('Replaced by ``impact_angle_sin``')
-    def impact_angle_cos(self):
-        """
-        Impact angle calculation - dot product of PFC norm and local magnetic field direction.
-        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
-        of the magnetic field.
-
-        :return: array of impact angles cosines
-
-        """
-
-        return flux_expansion.impact_angle_sin(self)
 
     def impact_angle_sin(self):
         """
@@ -467,19 +447,6 @@ class Coordinates(object):
         """
 
         return flux_expansion.impact_angle_sin(self)
-
-    @deprecated('Replaced by impact_angle_sin_pol_projection.')
-    def pol_projection_impact_angle_cos(self):
-        """
-        Impact angle calculation - dot product of PFC norm and local magnetic field direction
-        poloidal projection only.
-        Internally uses `incidence_angle_sin` function where `vecs` are replaced by the vector
-        of the poloidal magnetic field (Bphi = 0).
-
-        :return: array of impact angles cosines
-        """
-
-        return flux_expansion.impact_angle_cos_pol_projection(self)
 
     def impact_angle_sin_pol_projection(self):
         """
