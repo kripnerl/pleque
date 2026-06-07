@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -11,12 +10,12 @@ class Settings(BaseSettings):
 
     """
     npsi_grid: int = Field(200, description="Default number of flux labels used for evaluation of flux surfaces.")
-    nr_grid: Optional[int] = Field(None,
+    nr_grid: int | None = Field(None,
                                    description=
                                    """Default number of radial points of rectangular grid used for various calculations.
                                     If None, the input grid is used."""
                                    )
-    nz_grid: Optional[int] = Field(None,
+    nz_grid: int | None = Field(None,
                                    description=
                                    """Default number of vertical points of rectangular grid used for various calculations.
                                    If None, the input grid is used."""

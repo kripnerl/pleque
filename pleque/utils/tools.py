@@ -7,10 +7,10 @@ def arglis(seq):
     n = len(seq)
     p = [0] * n
     m = [0] * (n + 1)
-    l = 0
+    lis_len = 0
     for i in range(n):
         lo = 1
-        hi = l
+        hi = lis_len
         while lo <= hi:
             mid = (lo + hi) // 2
             if seq[m[mid]] < seq[i]:
@@ -22,13 +22,13 @@ def arglis(seq):
         p[i] = m[new_l - 1]
         m[new_l] = i
 
-        if new_l > l:
-            l = new_l
+        if new_l > lis_len:
+            lis_len = new_l
 
     s = []
-    k = m[l]
+    k = m[lis_len]
 
-    for i in range(l - 1, -1, -1):
+    for _i in range(lis_len - 1, -1, -1):
         s.append(k)
         k = p[k]
     return s[::-1]
@@ -127,7 +127,7 @@ def xp_sections(spln: BivariateSpline, R_xp: float, Z_xp: float, length: float =
     np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
    Generates poloidal cross-sections of the planes of the x-point section (Σ_s).
-   
+
    Args:
        spln (BivariateSpline): Spline representation of poloidal flux.
        R_xp (float): R-coordinate of the X-point.
@@ -136,7 +136,7 @@ def xp_sections(spln: BivariateSpline, R_xp: float, Z_xp: float, length: float =
            eigenvectors. Defaults to 1.0.
        n_points (int, optional): Number of points for linspace, defining the
            resolution of each section. Defaults to 100.
-   
+
    Returns:
        tuple: Tuple of four arrays containing the R and Z coordinates for each plane.
        The order of x-point planes directions (with respect to x-point) (lfs, in-plasma, hfs, out) is preserved.
@@ -157,7 +157,7 @@ def xp_sections(spln: BivariateSpline, R_xp: float, Z_xp: float, length: float =
     if Z_xp > 0:
         secs = (secs[0], secs[3], secs[2], secs[1])
 
-    return secs # noqa
+    return secs
 
 
 def xp_vecs(spln: BivariateSpline, R, Z):

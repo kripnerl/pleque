@@ -19,3 +19,10 @@ before_script:
 test:pytest:
   script:
     - pytest
+
+lint:ruff:
+  stage: test
+  script:
+    - pip install ruff
+    - ruff check pleque/ tests/
+  needs: ["test:pytest"]

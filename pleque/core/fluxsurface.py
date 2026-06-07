@@ -2,7 +2,7 @@ import numpy as np
 from shapely import geometry
 
 from pleque.core import Coordinates
-from pleque.utils.decorators import *
+from pleque.utils.decorators import deprecated
 
 
 class Surface(Coordinates):
@@ -89,7 +89,7 @@ class Surface(Coordinates):
 
     @property
     def diff_volume(self):
-        """
+        r"""
         Diferential volume :math:`V' = dV/d\psi`
         Jardin, S.: Computational Methods in Plasma Physics
 
@@ -152,6 +152,7 @@ class FluxSurface(Surface):
         :return:
         """
         from scipy.interpolate import CubicSpline
+
         from pleque.utils.tools import arglis
 
         if not hasattr(self, '_straight_fieldline_theta'):
@@ -280,14 +281,14 @@ class FluxSurface(Surface):
 
         :param func: func(X, Y), Union[ndarray, int, float]
         :param method: str, ['sum', 'trapezoid', 'simps']
-        :return: 
+        :return:
         """
         import inspect
         try:
-            from scipy.integrate import trapezoid, simpson
+            from scipy.integrate import simpson, trapezoid
         except ModuleNotFoundError:
-            from scipy.integrate import trapz as trapezoid
             from scipy.integrate import simps as simpson
+            from scipy.integrate import trapz as trapezoid
 
         if method == 'sum':
             Rs = (self.R[1:] + self.R[:-1]) / 2
@@ -309,14 +310,14 @@ class FluxSurface(Surface):
             else:
                 func_val = func
 
-        l = np.hstack((0, np.cumsum(self.dists)))
+        arc_length = np.hstack((0, np.cumsum(self.dists)))
 
         if method == 'sum':
             ret = np.sum(self.dists * Rs / diff_psi * func_val)
         elif method in ['trapz','trapezoid']:
-            ret = trapezoid(Rs / diff_psi * func_val, l)
+            ret = trapezoid(Rs / diff_psi * func_val, arc_length)
         elif method == 'simps':
-            ret = simpson(Rs / diff_psi * func_val, l)
+            ret = simpson(Rs / diff_psi * func_val, arc_length)
         else:
             ret = None
 

@@ -1,18 +1,18 @@
 from collections.abc import Iterable
 
+from scipy.optimize import brentq, minimize
 from scipy.signal import argrelmin
-from scipy.optimize import minimize, brentq
 
 try:
     from scipy.integrate import cumulative_trapezoid
 except ModuleNotFoundError:
     from scipy.integrate import cumtrapz as cumulative_trapezoid
 
-import pleque
-import pleque.utils.surfaces as surf
-from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
+
+import pleque.utils.surfaces as surf
+from pleque.utils.surfaces import find_contour, points_inside_curve
 
 
 def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
@@ -134,8 +134,8 @@ def find_extremes(rs, zs, psi_spl, order=20):
         # psi_diff = (np.max(psi) - np.min(psi)) ** 2
         # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
-        for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-            for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
+        for _i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
+            for _j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
                 if ar == br and az == bz:
                     r_ex = rs[ar]
                     z_ex = zs[az]
@@ -160,7 +160,7 @@ def find_extremes(rs, zs, psi_spl, order=20):
         if len(o_points) == 0 and order == 0:
 
             import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
+            _fig, ax = plt.subplots()
             ax.contourf(rs, zs, psi_xysq.T)
             ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
             ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
@@ -225,7 +225,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     def psi_xysq_func(x):
         """
         Return sum of squre of gradients of psi spline in R a Z direction.
-        
+
         return: array
         """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
@@ -244,7 +244,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     def psi_xysq_func(x):
         """
         Return sum of squre of gradients of psi spline in R a Z direction.
-        
+
         return: array
         """
         return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \

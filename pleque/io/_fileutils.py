@@ -13,7 +13,7 @@ def f2s(f):
     s = ""
     if f >= 0.0:
         s += " "
-    return s + "%1.9E" % f
+    return s + f"{f:1.9E}"
 
 
 class ChunkOutput:
@@ -77,10 +77,10 @@ def write_2d(val, out):
 def next_value(fh):
     """
     A generator which yields values from a file handle
-    
+
     Checks if the value is a float or int, returning
     the correct type depending on if '.' is in the string
-    
+
     """
     pattern = re.compile(r'[ +\-]?\d+(?:\.\d+(?:[Ee][\+\-]\d\d)?)?')
 

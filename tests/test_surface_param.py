@@ -1,16 +1,16 @@
 from pleque.tests.utils import get_test_equilibria_filenames
 
-def test_q_profiles():
-    from pleque.io.compass import read_fiesta_equilibrium
-    from pleque.io._geqdsk import read as read_gfile
 
-    import matplotlib.pyplot as plt
+def test_q_profiles():
     import numpy as np
+
+    from pleque.io._geqdsk import read as read_gfile
+    from pleque.io.compass import read_fiesta_equilibrium
 
     g_file = get_test_equilibria_filenames()[0]
 
     eq = read_fiesta_equilibrium(g_file)
-    with open(g_file, 'r') as f:
+    with open(g_file) as f:
         eq_dict = read_gfile(f)
 
     print(eq_dict.keys())

@@ -18,7 +18,7 @@ def coords_3d(*coordinates, coord_type=None, **coords):
 def coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **coords):
     print('--------')
     xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-    print('_coord_type_input = {}'.format(xy._coord_type_input))
+    print(f'_coord_type_input = {xy._coord_type_input}')
     assert xy.dim == 2
     assert isinstance(xy._x1_input, np.ndarray)
     assert isinstance(xy._x2_input, np.ndarray)
@@ -31,9 +31,9 @@ def coords_1d(*coordinates, psi_n=None, coord_type=None, grid=False, **coords):
     xy = eq.coordinates(*coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
     print('--------')
-    print('dim = {}'.format(xy.dim))
-    print('_x1_input = {}'.format(xy._x1_input))
-    print('_coord_type_input = {}'.format(xy._coord_type_input))
+    print(f'dim = {xy.dim}')
+    print(f'_x1_input = {xy._x1_input}')
+    print(f'_coord_type_input = {xy._coord_type_input}')
     assert xy.dim == 1
     assert isinstance(xy._x1_input, np.ndarray)
     print('--------')
@@ -154,7 +154,7 @@ def test_coordinates(equilibrium):
     assert coord is coord2
 
     coord = eq.coordinates(psi_n=np.linspace(0, 1, 10))
-    print('r_mid = {}'.format(coord.r_mid))
+    print(f'r_mid = {coord.r_mid}')
 
     coord = eq.coordinates(eq._mg_axis[0], eq._mg_axis[1])
     compare_arrays(coord.psi_n, [0])

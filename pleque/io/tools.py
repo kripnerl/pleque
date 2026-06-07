@@ -1,7 +1,8 @@
-import xarray as xr
-import numpy as np
 from collections import OrderedDict
-from typing import Union
+
+import numpy as np
+import xarray as xr
+
 from pleque import Equilibrium
 
 
@@ -34,22 +35,22 @@ class EquilibriaTimeSlices:
         if 'Rt' in ds:
             ds = ds.rename_vars({'Rt': 'R', 'Zt': 'Z'})
         if tolerance is not None and np.abs(ds.time - time) > tolerance:
-            raise ValueError('Insufficient time slice found! Delta time: {:.1f} ms\n'
-                             '         Required time: {:.1f} ms, selected time {:.1f} ms. '
-                             .format(ds.time.item() - time, time, ds.time.item()))
+            raise ValueError(f'Insufficient time slice found! Delta time: {ds.time.item() - time:.1f} ms\n'
+                             f'         Required time: {time:.1f} ms, selected time {ds.time.item():.1f} ms. '
+                             )
 
         elif np.abs(ds.time - time) > 10:
             print('!!!!!!!!!!!')
-            print('WARNING: Insufficient time slice found! Delta time: {:.1f} ms\n'
-                  '         Required time: {:.1f} ms, selected time {:.1f} ms. '
-                  .format(ds.time.item() - time, time, ds.time.item()))
+            print(f'WARNING: Insufficient time slice found! Delta time: {ds.time.item() - time:.1f} ms\n'
+                  f'         Required time: {time:.1f} ms, selected time {ds.time.item():.1f} ms. '
+                  )
             print('!!!!!!!!!!!')
 
         eq = Equilibrium(ds, self.limiter, cocos=self.cocos)
         return eq
 
 
-def xr2dict(ds: Union[xr.Dataset, xr.DataArray]):
+def xr2dict(ds: xr.Dataset | xr.DataArray):
     """
     Convert Dataset or DataArray to single dictionary.
 
@@ -88,7 +89,7 @@ def da2dict(da: xr.DataArray):
         # axis attributes:
 
         for ka, atr in val.attrs.items():
-            ret_dict["{}/{}".format(k, ka)] = atr
+            ret_dict[f"{k}/{ka}"] = atr
 
     return ret_dict
 
@@ -108,7 +109,7 @@ def ds2dict(ds: xr.Dataset):
     for k, val in ds.variables.items():
         ret_dict[k] = val.values
         for ka, atr in val.attrs.items():
-            ret_dict["{}/{}".format(k, ka)] = atr
+            ret_dict[f"{k}/{ka}"] = atr
 
     return ret_dict
 
