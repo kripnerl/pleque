@@ -1,11 +1,11 @@
 
 from importlib import resources
 
-import pleque.io.readers as readers
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 import pleque
+import pleque.io.readers as readers
 
 
 def resource_path(package, resource):
@@ -36,10 +36,10 @@ def load_testing_equilibrium(case=0, cocos=None):
     """
     # cases are numbered from one... for now :-)
     res_file = get_test_equilibria_filenames()[case]
-    res_limiterfile = get_test_divertor()[0]
+    get_test_divertor()[0]
 
     #    equil = read_fiesta_equilibrium(res_file)
-    if 'eqdsk' in res_file or 'gfile' in res_file or '/g' in res_file or '\g' in res_file:
+    if 'eqdsk' in res_file or 'gfile' in res_file or '/g' in res_file or r'\g' in res_file:
         # load as NetCDF
         if cocos is None:
             equil = readers.read_geqdsk(res_file)

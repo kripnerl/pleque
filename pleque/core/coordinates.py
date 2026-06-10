@@ -1,17 +1,16 @@
-from collections.abc import Sequence
 import itertools
 from typing import Union
 
 import numpy as np
-import xarray
+from scipy.interpolate import splev, splprep
 
-from pleque.utils.decorators import deprecated
 import pleque.utils.flux_expansions as flux_expansion
+from pleque.utils.decorators import deprecated
+
 from .cocos import cocos_coefs
-from scipy.interpolate import splprep, splev
 
 
-class Coordinates(object):
+class Coordinates:
 
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         r"""
@@ -315,7 +314,7 @@ class Coordinates(object):
 
         uses r_mid and the magnetic axis equilibrium
         """
-        r_mgax, z_mgax = self._eq._mg_axis
+        _r_mgax, z_mgax = self._eq._mg_axis
         R = self.R_mid
         Z = np.full_like(R, z_mgax)
         coords = Coordinates(self._eq, R, Z)
@@ -400,7 +399,7 @@ class Coordinates(object):
     def normal_vector(self):
         """
         Calculate limiter normal vector with fw input directly from eq class
-        
+
         :param first_wall: interpolated first wall
         :return: array (3, N_vecs) of limiter elements normals of the same
         """
@@ -466,7 +465,7 @@ class Coordinates(object):
         distances between spatial steps along the tracked field line
 
         Distance is returned in psi_n for dim = 1. In meters otherwise.
-       
+
         :return:
         self._dists
         """
@@ -547,7 +546,7 @@ class Coordinates(object):
                     raise ValueError('Invalid combination of input coordinates.')
             elif self.dim == 3:
                 # if tuple(xy_name) in self._valid_coordinates_3d:
-                permutations = list(itertools.permutations(xy_name))
+                list(itertools.permutations(xy_name))
                 # if any([p in self._valid_coordinates_3d for p in permutations]):
                 #
                 #     # todo: implement various order of coordinates
@@ -569,8 +568,8 @@ class Coordinates(object):
                 coord_type_ = tuple(actual)
             else:
                 # self._incompatible_dimension_error(self.dim)
-                raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
-                                 .format(self.dim))
+                raise ValueError(f'Operation in {self.dim} space has not be en allowed yet. Sorry.'
+                                 )
 
             self._coord_type_input = coord_type_
         else:
@@ -661,9 +660,9 @@ class Coordinates(object):
             else:
                 ret_coord_type = ('psi_n',)
                 print("WARNING: _coord_type_input is not correct. \n"
-                      "{} is not allowed \n"
+                      f"{tuple(coord_type)} is not allowed \n"
                       "Force set _coord_type_input = ('psi_n',)"
-                      .format(tuple(coord_type)))
+                      )
         elif self.dim == 2:
             if coord_type is None:
                 ret_coord_type = ('R', 'Z')
@@ -674,9 +673,9 @@ class Coordinates(object):
             else:
                 ret_coord_type = ('R', 'Z')
                 print("WARNING: _coord_type_input is not correct. \n"
-                      "{} is not allowed \n"
+                      f"{tuple(coord_type)} is not allowed \n"
                       "Force set _coord_type_input = ('R', 'Z')"
-                      .format(tuple(coord_type)))
+                      )
         elif self.dim == 3:
             if coord_type is None:
                 ret_coord_type = ('R', 'Z', 'phi')
@@ -685,19 +684,19 @@ class Coordinates(object):
             else:
                 ret_coord_type = ('R', 'Z', 'phi')
                 print("WARNING: _coord_type_input is not correct. \n"
-                      "{} is not allowed \n"
+                      f"{tuple(coord_type)} is not allowed \n"
                       "Force set _coord_type_input = ('R', 'Z', 'phi')"
-                      .format(tuple(coord_type)))
+                      )
 
         else:
-            raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
-                             .format(self.dim))
+            raise ValueError(f'Operation in {self.dim} space has not be en allowed yet. Sorry.'
+                             )
         # todo: make order dependent!
         return ret_coord_type
 
     def _incompatible_dimension_error(self, dim):
-        raise ValueError('Operation in {} space has not be en allowed yet. Sorry.'
-                         .format(dim))
+        raise ValueError(f'Operation in {dim} space has not be en allowed yet. Sorry.'
+                         )
 
     def _convert_to_default_coord_type(self):
         if self.dim == 0:
@@ -762,12 +761,13 @@ class Coordinates(object):
         :return:
         """
         import inspect
+
         import numpy as np
         try:
-            from scipy.integrate import trapezoid, simpson
+            from scipy.integrate import simpson, trapezoid
         except ModuleNotFoundError:
-            from scipy.integrate import trapz as trapezoid
             from scipy.integrate import simps as simpson
+            from scipy.integrate import trapz as trapezoid
 
         #
         dx = np.hstack((0, np.cumsum(self.dists)))

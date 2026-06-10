@@ -18,7 +18,7 @@ def read_geqdsk(filename, cocos=3):
     :return: instance of `Equilibrium`
     """
 
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         eq = read_as_equilibrium(f, cocos)
 
     return eq

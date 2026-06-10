@@ -1,14 +1,14 @@
-import h5py
-import numpy as np
+import logging
 import os
 from importlib import resources
+
+import h5py
+import numpy as np
 import xarray as xr
 
 from pleque.core import Equilibrium
-from pleque.io._geqdsk import read, data_as_ds
+from pleque.io._geqdsk import data_as_ds, read
 from pleque.io.tools import EquilibriaTimeSlices
-from pleque.utils.surfaces import add_xpoint
-import logging
 
 logger = (logging.getLogger(__name__))
 # logging.basicConfig(level=logging.DEBUG)
@@ -82,15 +82,15 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
                      cdb_data_root='/compass/CC19_COMPASS-U_data/:/compass/CC20_COMPASS-U_data/'):
     """
     Load data from CUDB Fiesta signal.
-    
-    Note: for the convenience CUDB environment is hard set. 
-    
-    :param shot: 
-    :param time: 
-    :param revision: 
-    :param variant: 
-    :param time_unit: 
-    :return: 
+
+    Note: for the convenience CUDB environment is hard set.
+
+    :param shot:
+    :param time:
+    :param revision:
+    :param variant:
+    :param time_unit:
+    :return:
     """
     from pyCDB.pyCDBBase import CDBException
 
@@ -106,7 +106,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     if time_unit == 'ms':
         time *= 1000
 
-    strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
+    strid_postfix = f'{shot:d}:{variant}:{revision:d}'
 
     log_msg = f'Loading data from CUDB for shot {shot}, time {time}, revision {revision}, ' \
                 f'variant {variant}, strid_postfix {strid_postfix}'
@@ -288,7 +288,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     resource_package = 'pleque'
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         data = read(f)
         ds = data_as_ds(data)
 

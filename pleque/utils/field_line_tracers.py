@@ -1,15 +1,14 @@
-import numpy as np
 import logging
 
-from pleque import Equilibrium
+import numpy as np
 
 
 def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
-    
+
     The created function is suitable for use in an ODE integrator
     where the toroidal angle $\\phi$ plays the role of time.
-    
+
     Parameters
     ----------
     BR_func, BZ_func, Bphi_func: Functions of R and Z.
@@ -19,8 +18,8 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
     -------
     dphi_func: function (phi: float, X: [float, float]) -> [float, float]
         gradient function in the [R, Z] plane
-       
-        
+
+
     Note
     ----
     This function is mostly useful when the full spatial coordinates of the field line are required.
@@ -54,20 +53,20 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
 
 def ds_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     """Factory for function $d[R,Z]/ds=f(s, [R,Z])$
-    
+
     The created function is suitable for use in an ODE integrator
     where the field line length $s$ plays the role of time.
-    
+
     Parameters
     ----------
     BR_func, BZ_func, Bphi_func : function (R: float, Z:float) -> float
         functions for calculating magnetic field components in the [R, Z] plane
-        
+
     Returns
     -------
     ds_func: function (s: float, X: [float, float]) -> [float, float]
         gradient function in the [R, Z] plane
-        
+
     Note
     ----
     This function is mostly useful when only the field line length is required
@@ -89,7 +88,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
 def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 360):
     """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
-    
+
     Parameters
     ----------
     y0 : [float, float]
