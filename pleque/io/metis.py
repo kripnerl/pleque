@@ -44,7 +44,7 @@ def read(equilibrium, file, time):
     psi_sep = toexp.psi.values[np.argmax(np.abs(toexp.psi.values))]
     psi_n = np.abs((toexp.psi.values - psi_axis) / (psi_sep - psi_axis))
 
-    crds = Coordinates(equilibrium=equilibrium, psi_n=psi_n)
+    crds = Coordinates.from_coords(equilibrium, psi_n=psi_n)
 
     for name in list(toexp.variables.keys()):
         #todo: better handling of complex values

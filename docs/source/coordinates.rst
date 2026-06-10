@@ -7,37 +7,13 @@ The tokamak is a curvilinear device which can be described in a number of coordi
 Accepted coordinates types
 --------------------------
 
-**1D - coordinates**
+The accepted coordinate types and the full coordinate input syntax (shared by
+``Coordinates.from_coords``, ``Equilibrium.coordinates`` and all
+coordinate-accepting ``Equilibrium`` methods) are documented in a single
+place:
 
-+------------------------+-----------+------------------------------+
-| Coordinate             | Code      | Note                         |
-+========================+===========+==============================+
-|:math:`\psi_\mathrm{N}` | ``psi_n`` | Default 1D coordinate        |
-+------------------------+-----------+------------------------------+
-|:math:`\psi`            | ``psi``   |                              |
-+------------------------+-----------+------------------------------+
-|:math:`\rho`            | ``rho``   | :math:`\rho = \sqrt{\psi_n}` |
-+------------------------+-----------+------------------------------+
-
-**2D - coordinates**
-
-+------------------------+--------------+-------------------------------------------------+
-| Coordinate             | Code         | Note                                            |
-+========================+==============+=================================================+
-|:math:`(R, Z)`          | ``R, Z``     | Default 2D coordinate                           |
-+------------------------+--------------+-------------------------------------------------+
-|:math:`(r, \theta)`     | ``r, theta`` | Polar coordinates with respect to magnetic axis |
-+------------------------+--------------+-------------------------------------------------+
-
-**3D - coordinates**
-
-+------------------------+---------------+-------------------------------------------------+
-| Coordinate             | Code          | Note                                            |
-+========================+===============+=================================================+
-|:math:`(R, Z, \phi)`    | ``R, Z, phi`` | Default 3D coordinate                           |
-+------------------------+---------------+-------------------------------------------------+
-|:math:`(X, Y, Z)`       | ``X, Y, Z``   |                                                 |
-+------------------------+---------------+-------------------------------------------------+
+.. automethod:: pleque.core.coordinates.Coordinates.from_coords
+   :noindex:
 
 Array shape convention
 ----------------------

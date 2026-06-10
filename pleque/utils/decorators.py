@@ -78,6 +78,33 @@ def deprecated(reason):
         raise TypeError(repr(type(reason)))
 
 
+def append_to_doc(*snippets):
+    """
+    Append shared documentation snippets to the docstring of the decorated
+    function (or of a function passed to the returned decorator).
+
+    The original docstring is dedented with :func:`inspect.getdoc`, so the
+    appended snippets can be written flush-left and the result still renders
+    correctly with Sphinx autodoc. The function object is modified in place;
+    no wrapper is created, so there is no runtime overhead.
+    """
+
+    text = '\n\n'.join(snippet.strip('\n') for snippet in snippets)
+
+    def decorator(func):
+        doc = inspect.getdoc(func)
+        if doc:
+            func.__doc__ = doc.rstrip() + '\n\n' + text + '\n'
+        else:
+            # The leading newline keeps the first snippet line out of the
+            # docstring-dedent logic of autodoc/inspect.cleandoc, which would
+            # otherwise strip the indentation of directive continuation lines.
+            func.__doc__ = '\n' + text + '\n'
+        return func
+
+    return decorator
+
+
 def scalar_function(func):
     """
     Serves to register class functions of Equilibrium class as scalar functions.
