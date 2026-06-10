@@ -18,4 +18,11 @@ before_script:
 
 test:pytest:
   script:
-    - pytest
+    - pytest --junitxml=report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+    paths:
+      - report.xml
+    expire_in: 1 week
