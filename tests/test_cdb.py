@@ -2,9 +2,10 @@ import pytest
 
 pycdb = pytest.importorskip('pyCDB')
 
-import numpy as np
-import os
-import tempfile
+import os  # noqa: E402
+import tempfile  # noqa: E402
+
+import numpy as np  # noqa: E402
 
 os.environ['CDB_PATH'] = os.getenv('CDB_PATH', '/home/kripner/Projects/CDB/src')
 
@@ -17,9 +18,8 @@ os.environ['CDB_PATH'] = os.getenv('CDB_PATH', '/home/kripner/Projects/CDB/src')
                           (17588, 't1100_ZsepTS_285', 2, 1100)
                           ])
 def test_cdb(shot, variant, revision, time):
-    from pleque.io.compass import read_efithdf5
+
     from pleque.io.compass import cdb
-    from os.path import expanduser
 
     eq = cdb(shot=shot, time=time, variant=variant, revision=revision)
 
@@ -40,8 +40,8 @@ def test_cdb_EFITSlices():
 
 
 def test_cdb_to_gfile():
-    from pleque.io.compass import cdb
     from pleque.io import readers
+    from pleque.io.compass import cdb
 
     eq = cdb(17854, 1000)
 

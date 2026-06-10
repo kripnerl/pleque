@@ -1,6 +1,6 @@
 import numpy as np
-from skimage import measure
 import shapely.geometry as geo
+from skimage import measure
 
 
 def find_contour(array, level, r=None, z=None, fully_connected="low", positive_orientation="low"):
@@ -57,7 +57,7 @@ def intersection(line1, line2):
 
 
 def fluxsurf_error(psi_spl, points, psi_target):
-    """
+    r"""
     Calculate :math:`1/N \sum_i (\psi_i - \psi_\mathrm{target})^2`
 
     :param psi_spl: 2D spline
@@ -217,8 +217,9 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
     :param vect_no: (0, 1) Choose one of the eigen vectors of matrix of field line differential equation.
     :return:
     """
-    from pleque.utils.tools import xp_vecs
     import numpy.linalg as la
+
+    from pleque.utils.tools import xp_vecs
 
     evecs, _ = xp_vecs(equilibrium._spl_psi, *xp)
     mg_axis = equilibrium._mg_axis
@@ -227,7 +228,7 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
 
     # if there is obtuse angle between line connecting x-point and mg axis and
     # the separatrix branch multiply t
-    vec_dir = np.sign(evec.dot(mg_axis - xp))
+    np.sign(evec.dot(mg_axis - xp))
     if evec.dot(mg_axis - xp) < 0:
         evec *= -1
 
@@ -252,8 +253,6 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
 
     trace = equilibrium.trace_field_line(coord, stopper_method=stopper, in_first_wall=True, direction=direction)
     t = trace[0]
-    rs = t.R
-    zs = t.Z
 
     return t
     # rs = np.hstack((rs[-1], rs))

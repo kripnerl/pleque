@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import numpy as np
+import xarray as xr
 
 import pleque
 from pleque.io import _geqdsk
@@ -9,7 +10,6 @@ from pleque.io.geqdsk import read
 from pleque.io.readers import read_geqdsk
 from pleque.tests.utils import resource_path
 
-import xarray as xr
 
 def test_calculated_profiles(geqdsk_file):
     """
@@ -20,7 +20,7 @@ def test_calculated_profiles(geqdsk_file):
     """
 
     eq = read_geqdsk(geqdsk_file, cocos=3)
-    with open(geqdsk_file, 'r') as f:
+    with open(geqdsk_file) as f:
         eq_dict = _geqdsk.read(f)
 
     pressure = eq_dict['pres']
@@ -41,7 +41,7 @@ def test_calculated_profiles(geqdsk_file):
 
 def test_from_to_gfile(equilibrium):
     tmp_dir = tempfile.TemporaryDirectory()
-    file_name = '{}/g{:d}.{:.0f}{}'.format(tmp_dir.name, equilibrium.shot, int(equilibrium.time), equilibrium.time_unit)
+    file_name = f'{tmp_dir.name}/g{equilibrium.shot:d}.{int(equilibrium.time):.0f}{equilibrium.time_unit}'
 
     print(file_name)
 
@@ -56,7 +56,7 @@ def test_from_to_gfile(equilibrium):
 
 def test_fiesta_gfile_vs_database():
     tmp_dir = tempfile.TemporaryDirectory()
-    file_name = '{}/g0000.0000'.format(tmp_dir.name)
+    file_name = f'{tmp_dir.name}/g0000.0000'
 
     resource_package = "pleque.resources"
     gfile_file = resource_path(resource_package, "test00.gfile")

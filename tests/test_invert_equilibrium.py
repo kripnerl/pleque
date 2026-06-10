@@ -1,8 +1,9 @@
 import numpy as np
-import pytest
 import xarray as xr
+
 from pleque import Equilibrium
 from pleque.tests.utils import load_testing_equilibrium
+
 
 def create_test_equilibrium():
     """Create a simple test equilibrium for testing inversion."""

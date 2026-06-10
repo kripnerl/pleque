@@ -65,17 +65,17 @@ def test_vector_function_dimensions(equilibrium, vector_registered_function, r, 
     Test that vector functions return arrays with the correct shape:
     - (n_dim, n_elements) when grid=False
     - (n_dim, n_z, n_r) when grid=True
-    
+
     According to the project requirements, functions returning vector quantities
     should have a shape of (n_dim, n_elements) when grid=False, where:
     - n_elements is the number of points
     - n_dim is the dimensionality of the vector (3 for 3D vectors)
-    
+
     When grid=True, the shape should be (n_dim, n_z, n_r), where:
     - n_z is the number of Z coordinates
     - n_r is the number of R coordinates
     - n_dim is the dimensionality of the vector (3 for 3D vectors)
-    
+
     """
     func = vector_registered_function
     result = func(R=r, Z=z, grid=grid)
@@ -93,11 +93,11 @@ def test_scalar_function_dimensions(equilibrium, scalar_registered_functions, r,
     Test that scalar functions return arrays with the correct shape:
     - (n_elements) when grid=False
     - (n_z, n_r) when grid=True
-    
+
     According to the project requirements, functions returning scalar quantities
     should have a shape of (n_elements) when grid=False, where:
     - n_elements is the number of points
-    
+
     When grid=True, the shape should be (n_z, n_r), where:
     - n_z is the number of Z coordinates
     - n_r is the number of R coordinates

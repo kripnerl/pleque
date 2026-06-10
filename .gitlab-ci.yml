@@ -30,3 +30,19 @@ test:pytest:
       - report.xml
       - coverage.xml
     expire_in: 1 week
+    - pytest
+
+lint:ruff:
+  stage: test
+  script:
+    - pip install ruff
+    - ruff check pleque/ tests/
+  needs: ["test:pytest"]
+
+typecheck:ty:
+  stage: test
+  script:
+    - pip install ty
+    - ty check pleque/
+  needs: ["test:pytest"]
+  allow_failure: true  # ty is new; don't block pipeline until annotations are complete

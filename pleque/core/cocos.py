@@ -2,7 +2,6 @@ from typing import TypedDict
 
 import numpy as np
 
-
 """
 COCOS coefficients:
 exp_Bp
@@ -13,7 +12,13 @@ sign_q
 sign_pprime
 """
 
-CocosInfo = TypedDict('CocosInfo', {'exp_Bp': int, 'sigma_Bp': int, 'sigma_cyl': int, 'sigma_pol': int, 'sign_q': int, 'sign_pprime': int})
+class CocosInfo(TypedDict):
+    exp_Bp: int
+    sigma_Bp: int
+    sigma_cyl: int
+    sigma_pol: int
+    sign_q: int
+    sign_pprime: int
 
 def cocos_coefs(cocos_idx) -> CocosInfo:
     """

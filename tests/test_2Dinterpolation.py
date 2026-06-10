@@ -1,6 +1,7 @@
 import numpy as np
-from pleque.tests.utils import load_testing_equilibrium
 import pytest
+
+from pleque.tests.utils import load_testing_equilibrium
 
 
 def multivariate_gaussian(pos, mu, Sigma):
@@ -31,7 +32,7 @@ mu = np.array([0., 1.])
 Sigma = np.array([[1., -0.5], [-0.5, 1.5]])
 
 # Pack X and Y into a single 3-dimensional array
-pos = np.empty(R.shape + (2,))
+pos = np.empty((*R.shape, 2))
 pos[:, :, 0] = R
 pos[:, :, 1] = Z
 
@@ -53,7 +54,7 @@ def test_surfacefunction(equilibrium, data, coord1, coord2, spline_order, spline
     results2 = equilibrium.surfacefuncs.add_surface_func('test', data, coord1, coord2, spline_order=spline_order,
                                                           spline_smooth=spline_smooth)
     delta = results2(coord1, coord2) - data
-    print('average error between original values and 2D spline is {}:'.format(float(np.mean(delta))))
+    print(f'average error between original values and 2D spline is {float(np.mean(delta))}:')
 
 
 

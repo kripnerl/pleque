@@ -1,4 +1,5 @@
 import types
+
 import numpy as np
 
 
@@ -27,7 +28,7 @@ class SurfaceFunctions:
         indr, indz = self.evalcoord(coord)
         #print(coord.R[indr].shape)
         #print(coord.Z[indz].shape)
-        data_= data[indr, :]
+        data[indr, :]
         data = data[:, indz]
         #print(data.shape)
         self._func_names.append(name)

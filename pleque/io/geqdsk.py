@@ -3,6 +3,7 @@ import logging
 import numpy as np
 
 import pleque
+
 from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
 
@@ -15,7 +16,7 @@ def read(file, cocos=3, first_wall=None):
     :param cocos: Tokamak coordinates convention. Default cocos = 3 (EFIT).
     :return:
     """
-    with open(file, 'r') as f:
+    with open(file) as f:
         eq = read_as_equilibrium(f, cocos, first_wall=first_wall)
 
     return eq
@@ -193,12 +194,12 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
       rmagx, zmagx  R,Z at magnetic axis (O-point)
       simagx        Poloidal flux psi at magnetic axis
       sibdry        Poloidal flux psi at plasma boundary
-      cpasma        Plasma current [Amps]   
+      cpasma        Plasma current [Amps]
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       q          1D array of q(psi)
-      
+
       psi           2D array (nx,ny) of poloidal flux
       """
     data = dict.fromkeys(['nx', 'ny', 'rdim', 'zdim', 'rcentr', 'bcentr', 'rleft', 'zmid', 'rmagx', 'zmagx',
