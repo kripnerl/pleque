@@ -76,6 +76,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "pleque/core/__init__.py" = ["F401", "I001"]  # import order is load-order-dependent due to circular imports
+"pleque/io/__init__.py" = ["F401"]  # public API re-exports (read_geqdsk, write_geqdsk, ...)
 "pleque/io/jet/__init__.py" = ["F401"]
 "pleque/__init__.py" = ["F401", "F403"]
 "tests/**/*.py" = ["F841"]
