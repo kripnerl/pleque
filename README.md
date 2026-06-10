@@ -102,6 +102,24 @@ the same spatial shape as the requested coordinates for scalar quantities.
 * Passing mesh-shaped `R` and `Z` arrays with `grid=False` is treated as elementwise evaluation
   and preserves the mesh shape.
 
+## Configuration
+
+All tunable algorithm parameters (grid resolutions, solver tolerances, search heuristics, ...)
+have built-in defaults that can be overridden by a `pleque.toml` file — in the working
+directory, in the user config directory (`~/.config/pleque/` or `%APPDATA%\pleque\`), or as a
+`[tool.pleque]` table in `pyproject.toml` — or by `PLEQUE_`-prefixed environment variables:
+
+```toml
+[flux_surfaces]
+n_psi = 300
+
+[lcfs]
+search_grid_nr = 1000
+```
+
+See the [configuration documentation](https://pleque.readthedocs.io/en/latest/configuration.html)
+for the file lookup order and the full settings reference.
+
 ## Authors
 
 * **Lukáš Kripner** - [kripnerl](https://github.com/kripnerl)

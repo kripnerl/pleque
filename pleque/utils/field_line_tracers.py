@@ -2,6 +2,8 @@ import logging
 
 import numpy as np
 
+from pleque.config.settings import get_settings
+
 
 def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
@@ -85,7 +87,7 @@ def ds_tracer_factory(BR_func, BZ_func, Bphi_func, direction=1):
     return ds_func
 
 
-def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 360):
+def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=None):
     """Factory for function which stops field line tracing close to the original poloidal angle
     Suitable for the *events* argument of :func:`scipy.integrate.solve_ivp`
 
@@ -99,8 +101,11 @@ def poloidal_angle_stopper_factory(y0, y_center, direction, stop_res=np.pi / 360
         sign of dtheta/dphi derivative, depends on plasma current and toroidal mag. field
     stop_res : float
         stopping offset to stop before initial position
-        necessary to prevent stopping at initial position
+        necessary to prevent stopping at initial position.
+        Defaults to the value from PLEQUE settings (`field_line_tracing.default_stop_resolution`).
     """
+    if stop_res is None:
+        stop_res = get_settings().field_line_tracing.default_stop_resolution
     y_center = np.asarray(y_center)  # should be [R0, Z0]
 
     def full_arc(y):
@@ -186,10 +191,11 @@ def ds_grad_psi_tracer_factory(psi_spl):
     return ds_func
 
 
-def rz_target_s_min_stopper_factory(y0, s_min, atol=1e-6):
+def rz_target_s_min_stopper_factory(y0, s_min, atol=None):
     """Stopper which returns the (squared) distance after a minimum traced length
 
     atol is subtracted from the distance to guarantee 0-crossing
+    (defaults to the value from PLEQUE settings, `field_line_tracing.target_stopper_atol`)
 
 
     This should prevent early stopping by having the initial distance 0
@@ -197,6 +203,9 @@ def rz_target_s_min_stopper_factory(y0, s_min, atol=1e-6):
     A good estimate for s_min could be r_mid of y0=[Rt, Zt],
     because the total flux surface length will be at least pi times larger
     """
+    if atol is None:
+        atol = get_settings().field_line_tracing.target_stopper_atol
+
     def stopper(s, y):
         if s < s_min:           # only started tracing
             return 42

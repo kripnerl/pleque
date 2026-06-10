@@ -2,6 +2,8 @@ import numpy as np
 import shapely.geometry as geo
 from skimage import measure
 
+from pleque.config.settings import get_settings
+
 
 def find_contour(array, level, r=None, z=None, fully_connected="low", positive_orientation="low"):
     """
@@ -108,20 +110,25 @@ def points_inside_curve(points, contour):
     return measure.points_in_poly(points, contour)
 
 
-def get_surface(equilibrium, psi, r=100, z=100, norm=True, closed=True, insidelcfs=True):
+def get_surface(equilibrium, psi, r=None, z=None, norm=True, closed=True, insidelcfs=True):
     """
     Finds points of surface with given value of psi.
     :param equilibrium: Equilibrium object
     :param psi: Value of psi to get the surface for
     :param r: If number, specifies number of points in the r dimension of the mesh. If numpy array,
-    gives r grid points.
+    gives r grid points. Defaults to the value from PLEQUE settings (`flux_surfaces.contour_grid_nr`).
     :param z: If number, specifies number of points in the z dimension of the mesh. If numpy array,
-    gives z grid points.
+    gives z grid points. Defaults to the value from PLEQUE settings (`flux_surfaces.contour_grid_nz`).
     :param norm: Specifies whether we are working with normalised values of psi
     :param closed: Are we looking for a closed surface?
     :param insidelcfs: Are we looking for a closed surface inside lcfs?
     :return: List of contours with surface coordinates
     """
+    fs_cfg = get_settings().flux_surfaces
+    if r is None:
+        r = fs_cfg.contour_grid_nr
+    if z is None:
+        z = fs_cfg.contour_grid_nz
 
     # if r is integer make r grid
     if not isinstance(r, np.ndarray):
@@ -166,7 +173,7 @@ def curve_is_closed(points):
     return np.isclose(points[0, 0], points[-1, 0]) and np.isclose(points[0, 1], points[-1, 1])
 
 
-def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
+def point_inside_fluxsurface(equilibrium, points, psi, r=None, z=None, norm=True,
                              insidelcfs=True):
     """
     Checks if a point is inside a flux surface with specified value of psi.
@@ -175,9 +182,9 @@ def point_inside_fluxsurface(equilibrium, points, psi, r=100, z=100, norm=True,
     :param points: 2d numpy array (N, 2) of points coordinates
     :param psi: value of the psi on the surface
     :param r: If number, specifies number of points in the r dimension of the mesh. If numpy array,
-    gives r grid points.
+    gives r grid points. Defaults to the value from PLEQUE settings (`flux_surfaces.contour_grid_nr`).
     :param z: If number, specifies number of points in the z dimension of the mesh. If numpy array,
-    gives z grid points.
+    gives z grid points. Defaults to the value from PLEQUE settings (`flux_surfaces.contour_grid_nz`).
     :param norm:  Specifies whether we are working with normalised values of psi
     :param insidelcfs:  Are we looking for a closed surface inside lcfs?
     :return: array of bool
@@ -206,7 +213,7 @@ def point_in_first_wall(equilibrium, points):
     return isinside
 
 
-def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
+def track_plasma_boundary(equilibrium, xp, xp_shift=None, vect_no=0, phi_0=0):
     """
     Tracing one of two separa   trix branches (switched by `vect_no`) which are goes around magnetic axis
     for `direction = 1` or in the opposite direction for `direction = -1`.
@@ -214,12 +221,17 @@ def track_plasma_boundary(equilibrium, xp, xp_shift=1e-6, vect_no=0, phi_0=0):
     :param equilibrium:
     :type equilibrium: pleque.Equilibrium
     :param xp: x-point position
+    :param xp_shift: Distance by which the tracing start point is shifted from the x-point.
+                     Defaults to the value from PLEQUE settings (`lcfs.x_point_shift`).
     :param vect_no: (0, 1) Choose one of the eigen vectors of matrix of field line differential equation.
     :return:
     """
     import numpy.linalg as la
 
     from pleque.utils.tools import xp_vecs
+
+    if xp_shift is None:
+        xp_shift = get_settings().lcfs.x_point_shift
 
     evecs, _ = xp_vecs(equilibrium._spl_psi, *xp)
     mg_axis = equilibrium._mg_axis

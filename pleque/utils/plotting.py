@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import pleque
+from pleque.config.settings import get_settings
 from pleque.utils.equi_tools import get_psi_n_on_q
 
 
@@ -26,12 +27,13 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     if ax is None:
         ax = plt.gca()
 
-    rs = np.linspace(eq.R_min, eq.R_max, 400)
-    zs = np.linspace(eq.Z_min, eq.Z_max, 600)
+    plot_cfg = get_settings().plotting
+    rs = np.linspace(eq.R_min, eq.R_max, plot_cfg.grid_nr)
+    zs = np.linspace(eq.Z_min, eq.Z_max, plot_cfg.grid_nz)
 
     try:
         if levels is None:
-            levels = 60
+            levels = plot_cfg.debug_contour_levels
         cl = ax.contour(rs, zs, eq._spl_psi(rs, zs).T, levels)
         if colorbar:
             plt.contour(cl)
@@ -101,14 +103,15 @@ def plot_rational_surface(eq, ax, q_tuple, linestyles="--", colors="C3"):
     qarr = np.array(q_tuple)
     q = qarr[:, 0] / qarr[:, 1]
 
-    psi_n = get_psi_n_on_q(eq, q, max_psi_n=0.95)
+    plot_cfg = get_settings().plotting
+    psi_n = get_psi_n_on_q(eq, q, max_psi_n=plot_cfg.rational_q_psi_n_max)
 
     i_ok = np.nonzero(psi_n)[0]
 
     psi_n = np.atleast_1d(psi_n)[i_ok]
     qarr = qarr[i_ok, :]
 
-    coords = eq.grid((400, 600), 'size')
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
     mask_inlcfs = eq.in_lcfs(coords)
 
     psi_ns = np.ma.masked_array(coords.psi_n, np.logical_not(mask_inlcfs))
@@ -145,7 +148,8 @@ def plot_lcfs(eq, ax, color="C1", lw=2, ls="--"):
 
 
 def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
-    coords = eq.grid((400, 600), 'size')
+    plot_cfg = get_settings().plotting
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
     psi = eq.psi(coords)
 
     mask_inlcfs = eq.in_lcfs(coords)
@@ -155,21 +159,25 @@ def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
     elif where.lower() == "out_lcfs":
         psi = np.ma.masked_array(psi, mask_inlcfs)
 
-    cl = ax.contour(coords.R, coords.Z, psi, 20, alpha=alpha, **kwargs)
+    cl = ax.contour(coords.R, coords.Z, psi, plot_cfg.psi_contour_levels, alpha=alpha, **kwargs)
 
     return cl
 
 
-def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", dr:float = 2e-3, lw=0.7, ls="solid"):
+def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", dr: float | None = None, lw=0.7, ls="solid"):
+    plot_cfg = get_settings().plotting
+    if dr is None:
+        dr = plot_cfg.sol_spacing
     contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + dr * np.arange(1, 6), theta=np.zeros(5), grid=False)
-    coords = eq.grid((400, 600), 'size')
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
 
     ax.contour(coords.R, coords.Z, coords.psi, np.sort(np.squeeze(contour_out.psi)), colors=colors,
                linewidths=lw,
                linestyles=ls)
 
 
-def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, dr_sol:float = 2e-3, **kwargs):
+def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, dr_sol: float | None = None,
+                     **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -206,13 +214,15 @@ def normalize_axis_xylim_by_first_wall(eq, ax):
     rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
     zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
 
+    margin = get_settings().plotting.axis_margin
+
     size = rlim[1] - rlim[0]
-    rlim[0] -= size / 12
-    rlim[1] += size / 12
+    rlim[0] -= size * margin
+    rlim[1] += size * margin
 
     size = zlim[1] - zlim[0]
-    zlim[0] -= size / 12
-    zlim[1] += size / 12
+    zlim[0] -= size * margin
+    zlim[1] += size * margin
     ax.set_xlim(*rlim)
     ax.set_ylim(*zlim)
 

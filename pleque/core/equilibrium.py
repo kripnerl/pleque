@@ -17,7 +17,6 @@ from pleque.utils.decorators import deprecated, ordered_path_scalar_function, sc
 from pleque.utils.surfaces import track_plasma_boundary
 from pleque.utils.tools import arglis, xp_sections
 
-settings = get_settings()
 
 class Equilibrium:
     """
@@ -44,9 +43,9 @@ class Equilibrium:
                  x_points=None,
                  strike_points=None,
                  init_method="hints",
-                 spline_order=3,
-                 spline_smooth=0,
-                 find_extremes_order=20,
+                 spline_order=None,
+                 spline_smooth=None,
+                 find_extremes_order=None,
                  cocos=None,
                  verbose=False,
                  ):
@@ -68,10 +67,10 @@ class Equilibrium:
                             If "hints" module use given optional arguments as a help with initialization.
                             If "fast-forward" module use given optional arguments as final and doesn't try to correct.
                             *Note:* Only "hints" method is currently tested.
-        :param spline_order:
-        :param spline_smooth:
+        :param spline_order: Order of the 2D psi spline. Defaults to the value from PLEQUE settings.
+        :param spline_smooth: Smoothing factor of the 2D psi spline. Defaults to the value from PLEQUE settings.
         :param find_extremes_order: Define number of points on internal grid used for identifying
-                                    magnetic axis and x-points.
+                                    magnetic axis and x-points. Defaults to the value from PLEQUE settings.
         :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
                       working. Be aware of signs in the module!
         :param verbose:
@@ -83,13 +82,21 @@ class Equilibrium:
             print('Equilibrium module initialization')
             print('---------------------------------')
 
+        cfg = get_settings()
+        if spline_order is None:
+            spline_order = cfg.splines.psi_order
+        if spline_smooth is None:
+            spline_smooth = cfg.splines.psi_smooth
+        if find_extremes_order is None:
+            find_extremes_order = cfg.critical_points.find_extremes_order
+
         if cocos is None:
             if "cocos" in basedata.attrs:
                 cocos = basedata.attrs["cocos"]
             elif "cocos" in basedata:
                 cocos = basedata["cocos"]
             else:
-                cocos = 3
+                cocos = cfg.default_cocos
 
         self._basedata = basedata
         self._verbose = verbose
@@ -173,10 +180,11 @@ class Equilibrium:
 
                 # todo: remove this if possible
                 # lets reduce the wall a bit to be have some plasma behind the wall
-                rwall_min += dr / 100
-                rwall_max -= dr / 100
-                zwall_min += dz / 100
-                zwall_max -= dz / 100
+                wall_cfg = get_settings().grid
+                rwall_min += dr * wall_cfg.synthetic_wall_margin
+                rwall_max -= dr * wall_cfg.synthetic_wall_margin
+                zwall_min += dz * wall_cfg.synthetic_wall_margin
+                zwall_max -= dz * wall_cfg.synthetic_wall_margin
 
                 corners = np.array(
                     [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
@@ -184,8 +192,8 @@ class Equilibrium:
                 newwall_r = []
                 newwall_z = []
                 for i in range(-1, 3):
-                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
+                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], wall_cfg.synthetic_wall_points_per_side)
+                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], wall_cfg.synthetic_wall_points_per_side)
                     newwall_r += list(rs)
                     newwall_z += list(zs)
                 self._first_wall = np.stack((newwall_r, newwall_z)).T
@@ -304,8 +312,9 @@ class Equilibrium:
 
     def _setup_plasma_boundary(self):
         """Find LCFS contour and strike points using the recognized plasma type."""
-        nr = settings.nr_grid if settings.nr_grid is not None else 700
-        nz = settings.nz_grid if settings.nz_grid is not None else 1200
+        lcfs_cfg = get_settings().lcfs
+        nr = lcfs_cfg.search_grid_nr
+        nz = lcfs_cfg.search_grid_nz
         rs = np.linspace(self.R_min, self.R_max, nr)
         zs = np.linspace(self.Z_min, self.Z_max, nz)
 
@@ -327,7 +336,7 @@ class Equilibrium:
         close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
                                               self._mg_axis, self._psi_axis)
 
-        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
+        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > lcfs_cfg.refinement_tolerance:
             close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 
         if self._verbose:
@@ -361,22 +370,23 @@ class Equilibrium:
             F = np.zeros_like(psi_n)
             self._vacuum = True
 
-        self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
+        spl_cfg = get_settings().splines
+        self._fpol_spl = UnivariateSpline(psi_n, F, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
         if FFprime is None:
             self._df_dpsin_spl = self._fpol_spl.derivative()
             Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
             FFprime = F * Fprime
 
-        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
         if pprime is None:
             self._dp_dpsin_spl = self._pressure_spl.derivative()
             pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
 
-        self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
-        self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
-        self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=3, s=0)
+        self._pprime_spl = UnivariateSpline(psi_n, pprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
+        self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
+        self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
         self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
         self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
@@ -605,9 +615,12 @@ class Equilibrium:
     # XXXXXX TODO TODO TODO
     @deprecated('The structure and behaviour of this function will change soon!\n'
                 'to keep the same behaviour use `_flux_surface` instead.')
-    def flux_surface(self, *coordinates, resolution=(1e-3, 1e-3), dim="step",
+    def flux_surface(self, *coordinates, resolution=None, dim="step",
                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
                      coord_type=None, **coords):
+        if resolution is None:
+            contour_step = get_settings().flux_surfaces.contour_step
+            resolution = (contour_step, contour_step)
         return self._flux_surface(*coordinates, resolution=resolution, dim=dim,
                                   closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
                                   coord_type=coord_type, **coords)
@@ -650,7 +663,7 @@ class Equilibrium:
         # todo: to get lcfs, here is small trick. This should be handled better
         #       otherwise it may return crossed loop
         if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
-            psi_n = 1 - 1e-5
+            psi_n = 1 - get_settings().lcfs.inner_psi_n_offset
         else:
             psi_n = coordinates.psi_n[0]
 
@@ -1161,7 +1174,8 @@ class Equilibrium:
         :param resolution: Iterable of size 2 or a number. If a number is passed,
                            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
                            resolutions or dimension sizes can be required by passing an iterable of size 2.
-                           If None, default grid of size (1000, 2000) is returned.
+                           If None, the default grid given by the PLEQUE settings (`grid.default_nr`,
+                           `grid.default_nz`) is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
                     of the resolution.
                     If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
@@ -1173,8 +1187,9 @@ class Equilibrium:
         if resolution is None:
             if not hasattr(self, '_default_grid'):
                 # TODO THIS is slow now. Decrease resolution and then use find_fluxsurface_step (!!!)
-                R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), 1000)
-                Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), 2000)
+                grid_cfg = get_settings().grid
+                R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), grid_cfg.default_nr)
+                Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), grid_cfg.default_nz)
                 self._default_grid = self.coordinates(R=R, Z=Z, grid=True)
             return self._default_grid
         else:
@@ -1841,11 +1856,12 @@ class Equilibrium:
             else:
                 phi0 = coords.phi[i]
 
-            atol = 1e-6
+            flt_cfg = get_settings().field_line_tracing
+            atol = flt_cfg.atol
             if self.is_xpoint_plasma:
                 xp = self._x_point
                 xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
-                atol = np.minimum(xp_dist * 1e-3, atol)
+                atol = np.minimum(xp_dist * flt_cfg.x_point_atol_scale, atol)
 
             if self._verbose:
                 print(f'>>> tracing from: {y0[0]:3f},{y0[1]:3f},{phi0:3f}')
@@ -1874,7 +1890,7 @@ class Equilibrium:
 
                     stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                                  dphidtheta * direction,
-                                                                 stop_res=np.pi / 1024)
+                                                                 stop_res=flt_cfg.poloidal_stop_resolution)
                 else:
                     if self._verbose:
                         print('>>> z-lim stopper is used')
@@ -1890,18 +1906,18 @@ class Equilibrium:
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                              dphidtheta * direction,
-                                                             stop_res=np.pi / 1024)
+                                                             stop_res=flt_cfg.poloidal_stop_resolution)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
-                            (phi0, direction * sigma_B0 * (2 * np.pi * 50 + phi0)),
+                            (phi0, direction * sigma_B0 * (2 * np.pi * flt_cfg.max_toroidal_turns + phi0)),
                             y0,
                             #                            method='RK45',
                             method='LSODA',
                             events=stopper,
-                            max_step=1e-2,  # we want high phi resolution
+                            max_step=flt_cfg.max_step,  # we want high phi resolution
                             atol=atol,
-                            rtol=1e-8,
+                            rtol=flt_cfg.rtol,
                             )
 
             if self._verbose:
@@ -1956,7 +1972,7 @@ class Equilibrium:
 
         return res
 
-    def lcfs_field_line(self, vect_no=0, xp_shift=1e-6, phi0: float = 0.0):
+    def lcfs_field_line(self, vect_no=0, xp_shift=None, phi0: float = 0.0):
         """
         Computes (some) field line laying on last closed flux surface.
 
@@ -1965,7 +1981,7 @@ class Equilibrium:
             Index of eigenvector determing the direction of integration. Default is 0.
         xp_shift: float
             A small positional adjustment for the x-point in the plasma boundary tracking.
-            Default is 1e-6.
+            Defaults to the value from PLEQUE settings (`lcfs.x_point_shift`).
         phi0: float
             Toroidal angle on which is field line initiated.
 
@@ -1974,10 +1990,12 @@ class Equilibrium:
             A representation of the LCFS field line as a result of the plasma boundary
             tracking method.
         """
-        lcfs = track_plasma_boundary(self, self._x_point, vect_no=0, xp_shift=1e-6, phi_0=phi0)
+        if xp_shift is None:
+            xp_shift = get_settings().lcfs.x_point_shift
+        lcfs = track_plasma_boundary(self, self._x_point, vect_no=vect_no, xp_shift=xp_shift, phi_0=phi0)
         return lcfs
 
-    def trace_flux_surface(self, *coordinates, s_resolution=1e-3, R=None,
+    def trace_flux_surface(self, *coordinates, s_resolution=None, R=None,
                            Z=None, psi_n=None, coord_type=None, **coords):
         """
         Find a closed flux surface inside LCFS with requested values of psi or psi-normalized.
@@ -1992,12 +2010,17 @@ class Equilibrium:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
                             If coordinates is spatial point (dim=2) then the trace starts at the midplane.
                             Coordinates.grid must be False.
-        :param s_resolution: max_step in the distance along the flux surface contour
+        :param s_resolution: max_step in the distance along the flux surface contour.
+                             Defaults to the value from PLEQUE settings (`flux_surfaces.trace_step`).
         :return: FluxSurface
         """
         from scipy.integrate import solve_ivp
 
         import pleque.utils.field_line_tracers as flt
+
+        fs_cfg = get_settings().flux_surfaces
+        if s_resolution is None:
+            s_resolution = fs_cfg.trace_step
 
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
         if coords.dim == 1:
@@ -2010,7 +2033,7 @@ class Equilibrium:
                                                       atol=s_resolution ** 2)
 
         sol = solve_ivp(ds_func,
-                        (0, coords.r_mid * 2 * np.pi * 4),
+                        (0, coords.r_mid * 2 * np.pi * fs_cfg.trace_max_turns),
                         y0,
                         method='LSODA',
                         events=stopper,
@@ -2035,13 +2058,15 @@ class Equilibrium:
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3):
+    def to_geqdsk(self, file, nx=None, ny=None, q_positive=True, use_basedata=False, cocos_out=3):
         """
         Write a GEQDSK/g-file equilibrium file.
 
         :param file: str, file name
-        :param nx: int, number radial points and profiles points
-        :param ny: int, number of vertical points
+        :param nx: int, number radial points and profiles points.
+                   Defaults to the value from PLEQUE settings (`io.geqdsk_nx`).
+        :param ny: int, number of vertical points.
+                   Defaults to the value from PLEQUE settings (`io.geqdsk_ny`).
         :param use_basedata: The original basedata of equilibrium are used instead of interpolation splines.
                              If this option is chosen, the nx and ny parameters are ignored.
         :param q_positive: Save q value always positive.
@@ -2085,7 +2110,7 @@ class Equilibrium:
     def _map_midplane2psi(self):
         from scipy.interpolate import UnivariateSpline
 
-        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], get_settings().flux_surfaces.midplane_map_points)
         psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
 
         if self._psi_axis < self._psi_lcfs:
@@ -2098,16 +2123,18 @@ class Equilibrium:
 
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
-        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+        spl_cfg = get_settings().splines
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
     def _init_fluxsurfaces(self, npsi: int | None = None, psi_n_levels: Sequence[float] | None = None):
 
         if psi_n_levels and npsi:
             raise ValueError("npsi and psi_n_levels cannot be used simultaneously.")
         if psi_n_levels is None:
-            psi0 = settings.psin0
+            fs_cfg = get_settings().flux_surfaces
+            psi0 = fs_cfg.psi_n_min
             if npsi is None:
-                npsi = settings.npsi_grid
+                npsi = fs_cfg.n_psi
             psi_n_levels = np.linspace(psi0, 1, npsi)
         else:
             npsi = len(psi_n_levels)
@@ -2121,7 +2148,8 @@ class Equilibrium:
         self._flux_surfaces = surfs
 
     def _init_q(self):
-        psi_n = np.arange(0.01, 1, 0.005)
+        fs_cfg = get_settings().flux_surfaces
+        psi_n = np.arange(fs_cfg.q_psi_n_min, 1, fs_cfg.q_psi_n_step)
         qs = []
 
         if self._verbose:
@@ -2134,6 +2162,7 @@ class Equilibrium:
             qs.append(c.eval_q)
         qs = np.array(qs)
 
-        self._q_spl = UnivariateSpline(psi_n, qs, s=0, k=3)
+        spl_cfg = get_settings().splines
+        self._q_spl = UnivariateSpline(psi_n, qs, s=spl_cfg.profile_smooth, k=spl_cfg.profile_order)
         self._dq_dpsin_spl = self._q_spl.derivative()
         self._q_anideriv_spl = self._q_spl.antiderivative()

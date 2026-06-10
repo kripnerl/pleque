@@ -2,6 +2,7 @@ import numpy as np
 import omas
 import xarray as xr
 
+from pleque.config.settings import get_settings
 from pleque.core import Equilibrium
 
 
@@ -137,11 +138,12 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if ods is None:
         ods = omas.ODS(cocosio=cocosio)
 
+    io_cfg = get_settings().io
     if grid_1d is None:
-        grid_1d = equilibrium.coordinates(psi_n=np.linspace(0, 1, 200))
+        grid_1d = equilibrium.coordinates(psi_n=np.linspace(0, 1, io_cfg.omas_n_psi))
 
     if grid_2d is None:
-        grid_2d = equilibrium.grid(resolution=(1e-3, 1e-3), dim="step")
+        grid_2d = equilibrium.grid(resolution=(io_cfg.omas_grid_step, io_cfg.omas_grid_step), dim="step")
 
     shot_time = equilibrium.time
     if equilibrium.time_unit == "ms":
