@@ -15,6 +15,7 @@ PLEQUE is a code which allows easy and quick access to tokamak equilibria obtain
    coordinates
    flux_expansion
    naming_convention
+   configuration
 
 
 API Reference

@@ -17,7 +17,7 @@ netcdf4 = "^1.6.3"
 h5py = "^3.8.0"
 scikit-image = ">0.20.0"
 matplotlib = { version = "^3.7.1", optional = false }
-pydantic-settings = "^2.10.1"
+pydantic-settings = { version = "^2.10.1", extras = ["toml"] }
 pydantic = "^2.13.4"
 
 [tool.poetry.group.dev.dependencies]
