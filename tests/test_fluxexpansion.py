@@ -1,5 +1,6 @@
-from pleque import Coordinates
 import numpy as np
+
+from pleque import Coordinates
 
 
 def test_normal_vectors():

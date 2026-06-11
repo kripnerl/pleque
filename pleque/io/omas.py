@@ -4,6 +4,7 @@ import xarray as xr
 
 from pleque.core import Equilibrium
 
+
 def read(ods: omas.ODS, time=None, time_unit="s"):
     """
 
@@ -23,14 +24,14 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
 
     try:
         shot = ods["info"]["shot"]
-    except:
+    except Exception:
         shot = ods["dataset_description"]["data_entry"]["pulse"]
 
     if "wall" not in ods:
         try:
             # todo: (Need the latest OMAS)
             from omas.omas_physics import add_wall
-            omas.add_wall(omas)
+            add_wall(omas)
         except ImportError:
             print("The newest OMAS is required to add wall to IDS.")
         except KeyError:
@@ -53,13 +54,13 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
         time_idx = np.argmin(np.abs(np.array(ods_times) - time / time_factor))
 
     # Plasma boundary (LCFS)
-    rbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["r"]
-    zbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["z"]
+    ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["r"]
+    ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["z"]
     psibnd = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_boundary"]
 
     # Magnetic axis
-    rmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["r"]
-    zmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["z"]
+    ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["r"]
+    ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["z"]
     psimgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_axis"]
 
     # 1D profiles
@@ -146,8 +147,7 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if equilibrium.time_unit == "ms":
         shot_time *= 1e3
     elif equilibrium.time_unit != "s":
-        print("WARNING: unknown time unit ({}) is used. Seconds will be used insted for saving.".format(
-            equilibrium.time_unit))
+        print(f"WARNING: unknown time unit ({equilibrium.time_unit}) is used. Seconds will be used insted for saving.")
 
     # ods["info"]["shot"] = equilibrium.shot
     ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot

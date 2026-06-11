@@ -1,5 +1,6 @@
-import numpy as np
 import types
+
+import numpy as np
 
 
 class FluxFunctions:

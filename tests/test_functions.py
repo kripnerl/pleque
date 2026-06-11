@@ -1,12 +1,12 @@
-from pleque.io import _geqdsk
 import numpy as np
 import xarray as xa
 
-from pleque.utils.equi_tools import pprime2p, ffprime2f
+from pleque.io import _geqdsk
+from pleque.utils.equi_tools import ffprime2f, pprime2p
 
 
 def test_profiles_integration(geqdsk_file):
-    with open(geqdsk_file, 'r') as f:
+    with open(geqdsk_file) as f:
         eq_in = _geqdsk.read(f)
 
     psi_ax = eq_in['simagx']

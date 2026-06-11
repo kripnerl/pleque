@@ -1,18 +1,26 @@
 from collections.abc import Iterable
 
+from scipy.optimize import brentq, minimize
 from scipy.signal import argrelmin
-from scipy.optimize import minimize, brentq
 
 try:
     from scipy.integrate import cumulative_trapezoid
 except ModuleNotFoundError:
     from scipy.integrate import cumtrapz as cumulative_trapezoid
 
-import pleque
-import pleque.utils.surfaces as surf
-from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
+
+import pleque.utils.surfaces as surf
+from pleque.utils.surfaces import find_contour, points_inside_curve
+
+
+def _make_psi_grad_sq(psi_spl):
+    """Return a closure that evaluates the squared gradient magnitude of psi at point x=(R,Z)."""
+    def psi_grad_sq(x):
+        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
+               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    return psi_grad_sq
 
 
 def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
@@ -93,14 +101,7 @@ def find_extremes(rs, zs, psi_spl, order=20):
     """
 
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-            + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    psi_xysq_func = _make_psi_grad_sq(psi_spl)
 
     def psi_2nd_derivatives(r_coord, z_coord):
         _psi_xx = (psi_spl(r_coord, z_coord, dx=2, dy=0, grid=False))
@@ -134,8 +135,8 @@ def find_extremes(rs, zs, psi_spl, order=20):
         # psi_diff = (np.max(psi) - np.min(psi)) ** 2
         # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
-        for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-            for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
+        for _i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
+            for _j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
                 if ar == br and az == bz:
                     r_ex = rs[ar]
                     z_ex = zs[az]
@@ -160,7 +161,7 @@ def find_extremes(rs, zs, psi_spl, order=20):
         if len(o_points) == 0 and order == 0:
 
             import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
+            _fig, ax = plt.subplots()
             ax.contourf(rs, zs, psi_xysq.T)
             ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
             ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
@@ -222,16 +223,7 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
 
     o_point = o_points[sortidx[0]]
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-        
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
-
-    o_point = minimize_in_vicinity(o_point, psi_xysq_func, r_lims, z_lims)
+    o_point = minimize_in_vicinity(o_point, _make_psi_grad_sq(psi_spl), r_lims, z_lims)
 
     return o_point, sortidx
 
@@ -241,14 +233,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     if x_points is None or len(x_points) == 0:
         return (None, None), list([])
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-        
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    psi_xysq_func = _make_psi_grad_sq(psi_spl)
 
     len_diff = np.ones(x_points.shape[0])
     monotonic = np.zeros(x_points.shape[0])

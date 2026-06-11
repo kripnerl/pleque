@@ -28,7 +28,7 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
 
     rs = np.linspace(eq.R_min, eq.R_max, 400)
     zs = np.linspace(eq.Z_min, eq.Z_max, 600)
-    
+
     try:
         if levels is None:
             levels = 60
@@ -74,12 +74,12 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
 
     try:
         ax.plot(eq._limiter_point[0], eq._limiter_point[1], "g+", lw=3, label='limiter point')
-    except:
+    except Exception:
         print("WARNING: Limiter point is in trouble.")
 
     try:
         ax.plot(eq._strike_points[:, 0], eq._strike_points[:, 1], "C3+", lw=2, label='strike points')
-    except:
+    except Exception:
         print("WARNING: Strike-points in trouble.")
 
     ax.set_title("DEBUG PLOT")
@@ -220,7 +220,7 @@ def normalize_axis_xylim_by_first_wall(eq, ax):
 def plot_cocos_geometry(eq: pleque.Equilibrium):
     # TODO STUB
 
-    fig, axs = plt.subplots(1, 2, projection='polar')
+    _fig, axs = plt.subplots(1, 2, projection='polar')
 
     # Top view:
     ax = axs[0]
@@ -230,7 +230,7 @@ def plot_cocos_geometry(eq: pleque.Equilibrium):
     r1 = 0.25 * np.ones_like(phi)
     r2 = 0.75 * np.ones_like(phi)
 
-    phi_direction = np.linspace(0, np.pi / 4)
+    np.linspace(0, np.pi / 4)
     # TODO
 
     ax.plot(phi, r1, 'k-')

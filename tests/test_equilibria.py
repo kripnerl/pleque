@@ -1,11 +1,10 @@
-from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
-from pleque.io.readers import read_geqdsk
-from pleque import Coordinates
-from numpy import array
 import numpy as np
-
 import pytest
+from numpy import array
 
+from pleque import Coordinates
+from pleque.io.readers import read_geqdsk
+from pleque.tests.utils import get_test_equilibria_filenames
 
 # import matplotlib.pyplot as plt
 #
@@ -46,7 +45,7 @@ def test_equilibria(case):
 
     gfiles = get_test_equilibria_filenames()
 
-    print("Reading {}".format(gfiles[case]))
+    print(f"Reading {gfiles[case]}")
 
     eq = read_geqdsk(gfiles[case])
 
