@@ -124,6 +124,8 @@ Top level
 Name                Type    Default   Description
 =================== ======= ========= ==========================================================
 ``default_cocos``   int     3         COCOS convention assumed when the input does not specify one.
+``debug_plots``     bool    false     Draw (blocking) matplotlib debug plots when the equilibrium
+                                      initialization fails. Keep disabled in headless environments.
 =================== ======= ========= ==========================================================
 
 ``[grid]`` — default computational grids
@@ -267,3 +269,34 @@ Old name             New name
 700/1200"); the new fields default to 700/1200 directly. Unprefixed
 environment variables (e.g. ``NPSI_GRID``) are no longer read — use the
 ``PLEQUE_`` prefix.
+
+
+.. _logging:
+
+Logging
+-------
+
+PLEQUE logs through the standard :mod:`logging` machinery under the
+``pleque`` logger hierarchy (one logger per module, e.g.
+``pleque.core.equilibrium``). As a library, PLEQUE does not configure any
+handler by default; to see the messages either use the convenience helper
+
+.. code-block:: python
+
+   import logging
+   import pleque
+
+   pleque.set_log_level(logging.DEBUG)  # or logging.INFO
+
+or configure the logger yourself:
+
+.. code-block:: python
+
+   import logging
+
+   logging.basicConfig()
+   logging.getLogger("pleque").setLevel(logging.INFO)
+
+The ``verbose=True`` argument of :class:`pleque.Equilibrium` is kept for
+backward compatibility and simply calls
+``pleque.set_log_level(logging.DEBUG)``.
