@@ -1,4 +1,5 @@
 import copy
+import logging
 from collections.abc import Sequence
 
 import numpy as np
@@ -17,10 +18,49 @@ from pleque.utils.decorators import deprecated, ordered_path_scalar_function, sc
 from pleque.utils.surfaces import track_plasma_boundary
 from pleque.utils.tools import arglis, xp_sections
 
+logger = logging.getLogger(__name__)
+
 
 class Equilibrium:
     """
-    Equilibrium class ...
+    Tokamak plasma equilibrium based on the poloidal flux function psi(R, Z).
+
+    The equilibrium is initialised from an `xarray.Dataset` with psi on a
+    rectangular (R, Z) grid and 1D profiles of the toroidal field function F
+    and pressure (or their psi-derivatives) as functions of psi_n. The
+    initialisation proceeds in the following steps:
+
+    1. *Input parsing.* Spatial data, profiles and optional hints are read from
+       the dataset and constructor arguments. If no first wall is given, an
+       artificial rectangular wall slightly inset with respect to the psi grid
+       is synthesized.
+    2. *2D spline construction.* psi(R, Z) is interpolated by a
+       `RectBivariateSpline` (order and smoothing from the PLEQUE settings).
+    3. *Critical points.* Candidate extremes of |grad psi|^2 are located on a
+       regular grid and classified by the determinant of the Hessian of psi
+       into O-points (det > 0) and X-points (det < 0); the magnetic axis and
+       the relevant X-points are then recognized among the candidates and the
+       plasma configuration (limiter vs. X-point/diverted) is determined,
+       including the limiter point and psi on the last closed flux surface.
+    4. *Plasma boundary.* Strike points are found as intersections of the
+       LCFS-psi contour with the first wall. The LCFS contour itself is found
+       by the marching-squares algorithm on a search grid and refined by an
+       iterative downhill (gradient-step) method until the relative psi error
+       drops below the `lcfs.refinement_tolerance` setting; for diverted
+       plasmas the X-point is inserted into the contour. (Note: poloidal
+       field-line tracing of the boundary is *not* used during the
+       initialisation; it is available separately via `lcfs_field_line`.)
+    5. *1D profile splines.* If derivatives (pprime, FFprime) are provided,
+       the p and F profiles are obtained by integration — this requires
+       psi_axis and psi_lcfs, which is why this step runs *after* the
+       critical-point search. Otherwise the derivatives are computed from the
+       provided p and F profiles. If neither pressure nor F is available a
+       vacuum equilibrium (p = F = 0) is constructed.
+    6. *Midplane mapping.* A 1D spline mapping the outer-midplane radius to
+       psi is built.
+
+    Known limitations: COCOS handling is not complete (`_Bpol_sign` is not yet
+    resolved from the input convention).
     """
 
     @staticmethod
@@ -53,34 +93,51 @@ class Equilibrium:
         Equilibrium class instance should be obtained generally by functions in pleque.io
         package.
 
-        Optional arguments may help the initialization.
+        The hint arguments (`mg_axis`, `psi_lcfs`, `x_points`, `strike_points`) can be used
+        to speed up the initialisation or to make it more robust; each of them may
+        alternatively be provided as a `basedata` variable of the same name (an explicitly
+        passed argument takes precedence, with a logged warning). How the hints are used is
+        controlled by `init_method`.
 
-        :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
-                         f = B_tor * R
+        If the initialisation fails, the exception is logged (and re-raised); set the
+        `debug_plots` PLEQUE setting (e.g. ``PLEQUE_DEBUG_PLOTS=1``) to also draw a debug
+        plot of the partially initialised equilibrium.
+
+        :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, F(psi_n), p(psi_n)
+                         (or their derivatives FFprime(psi_n), pprime(psi_n)); F = B_tor * R
         :param first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration.
-        :param mg_axis: suspected position of the o-point
-        :param psi_lcfs:
-        :param x_points:
-        :param strike_points:
-        :param init_method: str On of ("full", "hints", "fast_forward").
-                            If "full" no hints are taken and module tries to recognize all critical points itself.
-                            If "hints" module use given optional arguments as a help with initialization.
-                            If "fast-forward" module use given optional arguments as final and doesn't try to correct.
-                            *Note:* Only "hints" method is currently tested.
+                           If not given (nor present in basedata), an artificial rectangular wall slightly
+                           inset with respect to the psi grid is synthesized.
+        :param mg_axis: array-like (2) suspected (R, Z) position of the magnetic axis
+        :param psi_lcfs: float, suspected value of psi on the last closed flux surface
+        :param x_points: array-like (n, 2) suspected (R, Z) positions of the X-points
+        :param strike_points: array-like (n, 2) suspected (R, Z) positions of the strike points
+        :param init_method: str One of ("full", "hints", "fast_forward"):
+                            "full" — all hints are ignored and the module recognizes all critical
+                            points itself;
+                            "hints" (default) — the given hints are used to assist the recognition;
+                            "fast_forward" — the `mg_axis` and `x_points` hints are taken as final
+                            and the critical-point search is skipped (`psi_lcfs` and `strike_points`
+                            hints are likewise used as final when given); if the required hints are
+                            missing, the method falls back to "hints" with a logged warning.
         :param spline_order: Order of the 2D psi spline. Defaults to the value from PLEQUE settings.
         :param spline_smooth: Smoothing factor of the 2D psi spline. Defaults to the value from PLEQUE settings.
         :param find_extremes_order: Define number of points on internal grid used for identifying
                                     magnetic axis and x-points. Defaults to the value from PLEQUE settings.
         :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
                       working. Be aware of signs in the module!
-        :param verbose:
-
+        :param verbose: Superseded by logging: `verbose=True` calls
+                        ``pleque.set_log_level(logging.DEBUG)`` (process-global). Prefer configuring
+                        the ``pleque`` logger directly.
         """
 
         if verbose:
-            print('---------------------------------')
-            print('Equilibrium module initialization')
-            print('---------------------------------')
+            # Backward-compatible alias for configuring the `pleque` logger.
+            from pleque import set_log_level
+
+            set_log_level(logging.DEBUG)
+
+        logger.debug('Equilibrium module initialization')
 
         cfg = get_settings()
         if spline_order is None:
@@ -98,23 +155,23 @@ class Equilibrium:
             else:
                 cocos = cfg.default_cocos
 
+        if init_method == "fast":
+            init_method = "fast_forward"
+        if init_method not in ("full", "hints", "fast_forward"):
+            raise ValueError(f"Unknown init_method {init_method!r}; expected one of ('full', 'hints', 'fast_forward').")
+
         self._basedata = basedata
         self._verbose = verbose
-        self._mg_axis = mg_axis
-        self._psi_lcfs = psi_lcfs
-        self._x_points = x_points
-        self._strike_points = strike_points
+        self._load_hints(basedata, mg_axis, psi_lcfs, x_points, strike_points)
         self._spline_order = spline_order
-        # TODO TODO TODO
         self._init_method = init_method
         self._cocos = cocos
         self._cocosdic = cc.cocos_coefs(cocos)
 
-        # todo: resolve this from input (for COCOS time) TODO TODO TODO
+        # todo: resolve this from the input COCOS convention
         self._Bpol_sign = 1
 
-        if self._verbose:
-            print(f"Equilibrium initialized with cocos={self._cocos} and init_method={self._init_method}")
+        logger.debug("Equilibrium initialized with cocos=%s and init_method=%s", self._cocos, self._init_method)
 
         self._flux_surfaces = None
 
@@ -122,37 +179,85 @@ class Equilibrium:
             r, z, psi = self._load_spatial_data(basedata, first_wall)
             psi_n, pressure, pprime, F, FFprime = self._load_profiles(basedata)
 
-            if verbose:
-                print('--- Generate 2D spline ---')
+            logger.debug('Generating 2D spline')
             self._setup_psi_spline(r, z, psi, spline_order, spline_smooth)
 
-            if verbose:
-                print('--- Looking for critical points ---')
+            logger.debug('Looking for critical points')
             self._find_critical_points(r, z, find_extremes_order)
 
-            if verbose:
-                print('--- Recognizing equilibrium type ---')
+            logger.debug('Recognizing equilibrium type')
             self._setup_plasma_boundary()
 
-            if verbose:
-                print('--- Generate 1D splines ---')
+            logger.debug('Generating 1D splines')
             self._setup_1d_profiles(psi_n, F, FFprime, pressure, pprime)
 
-            if verbose:
-                print('--- Mapping midplane to psi_n ---')
+            logger.debug('Mapping midplane to psi_n')
             self._map_midplane2psi()
 
-        except:
+        except Exception:
+            logger.exception("Equilibrium initialization failed.")
 
-            import matplotlib.pyplot as plt
+            if get_settings().debug_plots:
+                try:
+                    import matplotlib.pyplot as plt
 
-            from pleque.utils.plotting import _plot_debug
+                    from pleque.utils.plotting import _plot_debug
 
-            plt.figure()
-            _plot_debug(self)
-            plt.show()
+                    plt.figure()
+                    _plot_debug(self)
+                    plt.show()
+                except Exception:
+                    logger.exception("Debug plot of the failed initialization could not be drawn.")
 
             raise
+
+    def _load_hints(self, basedata: xarray.Dataset, mg_axis, psi_lcfs, x_points, strike_points):
+        """
+        Resolve initialization hints from constructor arguments with fallback to `basedata` variables.
+
+        An explicitly passed argument takes precedence over a `basedata` variable of the same
+        name; a warning is logged when both are given.
+        """
+
+        def resolve(name, value):
+            if value is not None:
+                if name in basedata:
+                    logger.warning("%s specified both in basedata and as an argument. Using the argument value.", name)
+                return value
+            if name in basedata:
+                return basedata[name].values
+            return None
+
+        self._mg_axis = resolve('mg_axis', mg_axis)
+        self._psi_lcfs = resolve('psi_lcfs', psi_lcfs)
+        self._x_points = resolve('x_points', x_points)
+        self._strike_points = resolve('strike_points', strike_points)
+
+    def _resolve_first_wall(self, basedata: xarray.Dataset, first_wall, r, z):
+        """
+        Resolve the first wall from the argument, `basedata` variables, or synthesize one.
+
+        NaN rows are dropped from the result.
+        """
+        if first_wall is not None:
+            logger.debug("First wall taken from the constructor argument.")
+        elif 'first_wall' in basedata:
+            first_wall = basedata["first_wall"].values
+            logger.debug("First wall taken from the 'first_wall' basedata variable.")
+        elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
+            first_wall = np.array([basedata.R_first_wall.values,
+                                   basedata.Z_first_wall.values]).T
+            logger.debug("First wall taken from the 'R_first_wall'/'Z_first_wall' basedata variables.")
+        elif 'r_lim' in basedata and 'z_lim' in basedata:
+            first_wall = np.array([basedata.r_lim.values,
+                                   basedata.z_lim.values]).T
+            logger.debug("First wall taken from the 'r_lim'/'z_lim' basedata variables.")
+        else:
+            first_wall = eq_tools.synthesize_rectangular_wall(r, z)
+            logger.info("No first wall given; a rectangular wall around the psi grid was synthesized.")
+
+        first_wall = np.asarray(first_wall)
+        return first_wall[~np.isnan(first_wall).any(axis=1)]
 
     def _load_spatial_data(self, basedata: xarray.Dataset, first_wall) -> tuple:
         """Load psi grid, first wall, and spatial metadata from dataset."""
@@ -160,47 +265,7 @@ class Equilibrium:
         z = basedata.Z.values
         psi = basedata.psi.transpose('R', 'Z').values
 
-        if first_wall is None:
-            if 'first_wall' in basedata:
-                self._first_wall = basedata["first_wall"].values
-            elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
-                self._first_wall = np.array([basedata.R_first_wall.values,
-                                             basedata.Z_first_wall.values]).T
-            elif 'r_lim' in basedata and 'z_lim' in basedata:
-                self._first_wall = np.array([basedata.r_lim.values,
-                                             basedata.z_lim.values]).T
-            else:
-                rwall_min = np.min(r)
-                rwall_max = np.max(r)
-                zwall_min = np.min(z)
-                zwall_max = np.max(z)
-
-                dr = rwall_max - rwall_min
-                dz = zwall_max - zwall_min
-
-                # todo: remove this if possible
-                # lets reduce the wall a bit to be have some plasma behind the wall
-                wall_cfg = get_settings().grid
-                rwall_min += dr * wall_cfg.synthetic_wall_margin
-                rwall_max -= dr * wall_cfg.synthetic_wall_margin
-                zwall_min += dz * wall_cfg.synthetic_wall_margin
-                zwall_max -= dz * wall_cfg.synthetic_wall_margin
-
-                corners = np.array(
-                    [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
-                     [rwall_min, zwall_min]])
-                newwall_r = []
-                newwall_z = []
-                for i in range(-1, 3):
-                    rs = np.linspace(corners[i, 0], corners[i + 1, 0], wall_cfg.synthetic_wall_points_per_side)
-                    zs = np.linspace(corners[i, 1], corners[i + 1, 1], wall_cfg.synthetic_wall_points_per_side)
-                    newwall_r += list(rs)
-                    newwall_z += list(zs)
-                self._first_wall = np.stack((newwall_r, newwall_z)).T
-        else:
-            self._first_wall = first_wall
-
-        self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
+        self._first_wall = self._resolve_first_wall(basedata, first_wall, r, z)
 
         if 'time' in basedata:
             self.time = basedata['time'].values
@@ -269,35 +334,61 @@ class Equilibrium:
                                             s=spline_smooth)
 
     def _find_critical_points(self, r, z, find_extremes_order: int):
-        """Find and classify all critical points; set plasma type and psi at LCFS."""
-        x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
+        """
+        Find and classify all critical points; set plasma type and psi at LCFS.
 
-        # TODO: Raise warning if no o_point was found!
+        Hint usage depends on `init_method`: "full" ignores all hints, "hints"
+        (default) uses them to assist the recognition, and "fast_forward" takes
+        the magnetic-axis and X-point hints as final, skipping the critical-point
+        search entirely.
+        """
+        use_hints = self._init_method in ("hints", "fast_forward")
+        mg_axis_hint = self._mg_axis if use_hints else None
+        psi_lcfs_hint = self._psi_lcfs if use_hints else None
+        x_points_hint = self._x_points if use_hints else None
 
-        r_lim = (self.R_min, self.R_max)
-        z_lim = (self.Z_min, self.Z_max)
+        trust_hints = self._init_method == "fast_forward"
+        if trust_hints and (mg_axis_hint is None or x_points_hint is None):
+            logger.warning("init_method='fast_forward' requires mg_axis and x_points hints; "
+                           "falling back to 'hints' behaviour.")
+            trust_hints = False
 
-        self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
-                                                            first_wall=self._first_wall,
-                                                            mg_axis_candidate=self._mg_axis)
-        self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
-        self._o_points = o_points[sortidx]
-        self._o_points[0] = self._mg_axis
+        if trust_hints:
+            self._mg_axis = np.asarray(mg_axis_hint, dtype=float)
+            self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
+            self._o_points = self._mg_axis[np.newaxis, :]
 
-        # todo: use these two x-points in the future
-        (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
-                                                          self._spl_psi,
-                                                          r_lim, z_lim, self._psi_lcfs, self._x_points)
+            self._x_points = np.asarray(x_points_hint, dtype=float).reshape(-1, 2)
+            xp1 = self._x_points[0] if len(self._x_points) > 0 else None
+            self._x_point = xp1
+            self._x_point2 = self._x_points[1] if len(self._x_points) > 1 else None
+            self._psi_xp = self._spl_psi(*xp1, grid=False) if xp1 is not None else None
+        else:
+            x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
 
-        self._x_point = xp1
-        self._x_point2 = xp2
-        self._psi_xp = self._spl_psi(*xp1, grid=False) if xp1 is not None else None
+            r_lim = (self.R_min, self.R_max)
+            z_lim = (self.Z_min, self.Z_max)
 
-        self._x_points = x_points[sortidx]
-        if xp1 is not None:
-            self._x_points[0] = xp1
-        if xp2 is not None:
-            self._x_points[1] = xp2
+            self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
+                                                                first_wall=self._first_wall,
+                                                                mg_axis_candidate=mg_axis_hint)
+            self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
+            self._o_points = o_points[sortidx]
+            self._o_points[0] = self._mg_axis
+
+            (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
+                                                              self._spl_psi,
+                                                              r_lim, z_lim, psi_lcfs_hint, x_points_hint)
+
+            self._x_point = xp1
+            self._x_point2 = xp2
+            self._psi_xp = self._spl_psi(*xp1, grid=False) if xp1 is not None else None
+
+            self._x_points = x_points[sortidx]
+            if xp1 is not None:
+                self._x_points[0] = xp1
+            if xp2 is not None:
+                self._x_points[1] = xp2
 
         limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
                                                                        self._mg_axis, self._psi_axis,
@@ -305,10 +396,12 @@ class Equilibrium:
         self._limiter_plasma = limiter_plasma
         self._limiter_point = limiter_point
 
-        if self._verbose:
-            print(">> Limiter plasma found." if limiter_plasma else ">> X-point plasma found.")
+        logger.info("Limiter plasma found." if limiter_plasma else "X-point plasma found.")
 
-        self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
+        if trust_hints and psi_lcfs_hint is not None:
+            self._psi_lcfs = float(np.asarray(psi_lcfs_hint).item())
+        else:
+            self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
     def _setup_plasma_boundary(self):
         """Find LCFS contour and strike points using the recognized plasma type."""
@@ -323,14 +416,15 @@ class Equilibrium:
             self._contact_point = self._limiter_point
         else:
             self._contact_point = None
-            if len(self._first_wall) < 4:
+            if self._init_method == "fast_forward" and self._strike_points is not None:
+                self._strike_points = np.asarray(self._strike_points, dtype=float).reshape(-1, 2)
+            elif len(self._first_wall) < 4:
                 self._strike_points = None
             else:
                 self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
                                                                   self._first_wall)
 
-        if self._verbose:
-            print("--- Looking for LCFS: ---")
+        logger.debug("Looking for LCFS")
 
         # sometimes this close_lcfs is empty - investigate!
         close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
@@ -339,8 +433,8 @@ class Equilibrium:
         while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > lcfs_cfg.refinement_tolerance:
             close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 
-        if self._verbose:
-            print(f"Relative LCFS error: {surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs)}")
+        if logger.isEnabledFor(logging.INFO):
+            logger.info("Relative LCFS error: %s", surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs))
 
         if not self._limiter_plasma:
             close_lcfs = surf.add_xpoint(self._x_point, close_lcfs, self._mg_axis)
@@ -357,7 +451,10 @@ class Equilibrium:
         Fprime = None
         if FFprime is not None:
             F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
-            Fprime = FFprime / F
+            F_arr = np.asarray(F)
+            if np.any(F_arr == 0):
+                logger.warning("F profile contains zeros; F' is set to zero there.")
+            Fprime = np.divide(FFprime, F_arr, out=np.zeros_like(F_arr, dtype=float), where=F_arr != 0)
 
         if pprime is not None:
             pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
@@ -914,7 +1011,6 @@ class Equilibrium:
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        # print(coord.r_mid)
         B_midplane = self.B_abs(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_abs(target)
 
@@ -928,7 +1024,6 @@ class Equilibrium:
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        # print(coord.r_mid)
         B_midplane = self.B_pol(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_pol(target)
 
@@ -970,7 +1065,7 @@ class Equilibrium:
         fw = self.first_wall
 
         if len(fw) < 4:
-            print('Warning: first wall is not sufficient. LCFS is used instead.')
+            logger.warning('First wall is not sufficient. LCFS is used instead.')
             fw = self.lcfs
 
         R_min = np.min(fw.R)
@@ -1863,45 +1958,36 @@ class Equilibrium:
                 xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
                 atol = np.minimum(xp_dist * flt_cfg.x_point_atol_scale, atol)
 
-            if self._verbose:
-                print(f'>>> tracing from: {y0[0]:3f},{y0[1]:3f},{phi0:3f}')
-                print(f'>>> atol = {atol}')
+            logger.debug('tracing from: %3f,%3f,%3f', y0[0], y0[1], phi0)
+            logger.debug('atol = %s', atol)
 
             stopper = None
 
             if stopper_method is None:
                 if coords.psi_n[i] <= 1:
                     # todo: determine the direction (now -1) !!
-                    if self._verbose:
-                        print('>>> poloidal stopper is used')
+                    logger.debug('poloidal stopper is used')
 
                     # XXX Direction (TODO)
                     # XXX add these values to cocos dict!
                     # sign(dtheta/dphi) = sigma_pol * sign(I * B)
                     # dphidtheta = self._cocosdic['sigma_pol'] * np.sign(self.I_plasma) * np.sign(self.F0)
-                    # print('dir: {}\nsigma_pol: {}\nsigma_tor: {}\nIp: {}\nF0: {}'.format(
-                    #     direction, self._cocosdic['sigma_pol'], self._cocosdic['sigma_cyl'], self.I_plasma, self.F0
-                    # ))
-                    # print('------------------')
 
                     dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
-                    print(f'direction: {direction}')
-                    print(f'dphidtheta: {dphidtheta}')
+                    logger.debug('direction: %s', direction)
+                    logger.debug('dphidtheta: %s', dphidtheta)
 
                     stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                                  dphidtheta * direction,
                                                                  stop_res=flt_cfg.poloidal_stop_resolution)
                 else:
-                    if self._verbose:
-                        print('>>> z-lim stopper is used')
+                    logger.debug('z-lim stopper is used')
                     stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'z-stopper':
-                if self._verbose:
-                    print('>>> z-lim stopper is used')
+                logger.debug('z-lim stopper is used')
                 stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'poloidal':
-                if self._verbose:
-                    print('>>> poloidal stopper is used')
+                logger.debug('poloidal stopper is used')
 
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
@@ -1920,8 +2006,7 @@ class Equilibrium:
                             rtol=flt_cfg.rtol,
                             )
 
-            if self._verbose:
-                print(f"{sol.message}, {sol.nfev}")
+            logger.debug("%s, %s", sol.message, sol.nfev)
 
             phi = sol.t
             R, Z = sol.y
@@ -2152,11 +2237,10 @@ class Equilibrium:
         psi_n = np.arange(fs_cfg.q_psi_n_min, 1, fs_cfg.q_psi_n_step)
         qs = []
 
-        if self._verbose:
-            print("--- Generating q-splines ---")
+        logger.debug("Generating q-splines")
         for i, pn in enumerate(psi_n):
-            if self._verbose and np.mod(i, 20) == 0:
-                print(f"{pn / np.max(psi_n) * 100:.0f}%\r")
+            if np.mod(i, 20) == 0:
+                logger.debug("q-spline progress: %.0f%%", pn / np.max(psi_n) * 100)
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)

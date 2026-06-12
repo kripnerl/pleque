@@ -1,9 +1,12 @@
+import logging
 from collections import OrderedDict
 
 import numpy as np
 import xarray as xr
 
 from pleque import Equilibrium
+
+logger = logging.getLogger(__name__)
 
 
 class EquilibriaTimeSlices:
@@ -22,13 +25,14 @@ class EquilibriaTimeSlices:
         self.limiter = limiter
         self.cocos = cocos
 
-    def get_time_slice(self, time: float, tolerance=None):
+    def get_time_slice(self, time: float, tolerance=None, init_method="hints"):
         """
         Creates an Equilibrium from the slice nearest to the specified time
 
         :param time: float, time in ms
         :param tolerance: float or None, raise ValueError if the selected time slice is outside the tolerance.
                           If None the warning is shown if the time difference is more then 10 ms.
+        :param init_method: str One of ("full", "hints", "fast_forward"), see `pleque.Equilibrium`.
         """
         ds: xr.Dataset = self.eqs_dataset.dropna(dim='time', how='all') \
             .sel(time=time, method='nearest')
@@ -40,13 +44,11 @@ class EquilibriaTimeSlices:
                              )
 
         elif np.abs(ds.time - time) > 10:
-            print('!!!!!!!!!!!')
-            print(f'WARNING: Insufficient time slice found! Delta time: {ds.time.item() - time:.1f} ms\n'
-                  f'         Required time: {time:.1f} ms, selected time {ds.time.item():.1f} ms. '
-                  )
-            print('!!!!!!!!!!!')
+            logger.warning('Insufficient time slice found! Delta time: %.1f ms. '
+                           'Required time: %.1f ms, selected time %.1f ms.',
+                           ds.time.item() - time, time, ds.time.item())
 
-        eq = Equilibrium(ds, self.limiter, cocos=self.cocos)
+        eq = Equilibrium(ds, self.limiter, init_method=init_method, cocos=self.cocos)
         return eq
 
 

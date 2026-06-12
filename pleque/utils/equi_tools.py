@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 
 from scipy.optimize import brentq, minimize
@@ -14,6 +15,49 @@ import xarray as xa
 import pleque.utils.surfaces as surf
 from pleque.config.settings import get_settings
 from pleque.utils.surfaces import find_contour, points_inside_curve
+
+logger = logging.getLogger(__name__)
+
+
+def synthesize_rectangular_wall(rs, zs):
+    """
+    Synthesize an artificial rectangular first wall around the psi grid.
+
+    The rectangle is slightly inset with respect to the grid extent
+    (`grid.synthetic_wall_margin` setting) so that some plasma can be found
+    behind the wall; each side is sampled with
+    `grid.synthetic_wall_points_per_side` points.
+
+    :param rs: array-like, R coordinates of the psi grid
+    :param zs: array-like, Z coordinates of the psi grid
+    :return: array (4 * points_per_side, 2) of wall points
+    """
+    wall_cfg = get_settings().grid
+
+    rwall_min = np.min(rs)
+    rwall_max = np.max(rs)
+    zwall_min = np.min(zs)
+    zwall_max = np.max(zs)
+
+    dr = rwall_max - rwall_min
+    dz = zwall_max - zwall_min
+
+    rwall_min += dr * wall_cfg.synthetic_wall_margin
+    rwall_max -= dr * wall_cfg.synthetic_wall_margin
+    zwall_min += dz * wall_cfg.synthetic_wall_margin
+    zwall_max -= dz * wall_cfg.synthetic_wall_margin
+
+    corners = np.array(
+        [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
+         [rwall_min, zwall_min]])
+    newwall_r = []
+    newwall_z = []
+    for i in range(-1, 3):
+        side_r = np.linspace(corners[i, 0], corners[i + 1, 0], wall_cfg.synthetic_wall_points_per_side)
+        side_z = np.linspace(corners[i, 1], corners[i + 1, 1], wall_cfg.synthetic_wall_points_per_side)
+        newwall_r += list(side_r)
+        newwall_z += list(side_z)
+    return np.stack((newwall_r, newwall_z)).T
 
 
 def _make_psi_grad_sq(psi_spl):
@@ -170,23 +214,24 @@ def find_extremes(rs, zs, psi_spl, order=None):
                         x_points.append((r_ex, z_ex))
 
 
-        print(f"Found {len(o_points)} o-points and {len(x_points)} x-points with order {order}")
+        logger.debug("Found %d o-points and %d x-points with order %d", len(o_points), len(x_points), order)
         order = order // 2
 
         if len(o_points) == 0 and order == 0:
+            logger.warning("No O-point candidate found on the grid; magnetic-axis recognition will likely fail.")
 
-            import matplotlib.pyplot as plt
-            _fig, ax = plt.subplots()
-            ax.contourf(rs, zs, psi_xysq.T)
-            ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
-            ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
-            ax.set_aspect('equal')
-            ax.set_title(f"DEBUG plot of d2psi_dxdy with argrelmin order {order}")
-            ax.set_xlabel('R')
-            ax.set_ylabel('Z')
+            if get_settings().debug_plots:
+                import matplotlib.pyplot as plt
+                _fig, ax = plt.subplots()
+                ax.contourf(rs, zs, psi_xysq.T)
+                ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
+                ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
+                ax.set_aspect('equal')
+                ax.set_title(f"DEBUG plot of d2psi_dxdy with argrelmin order {order}")
+                ax.set_xlabel('R')
+                ax.set_ylabel('Z')
 
-            plt.show()
-
+                plt.show()
 
     o_points = np.array(o_points)
     x_points = np.array(x_points)

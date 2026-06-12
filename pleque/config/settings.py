@@ -321,6 +321,11 @@ class Settings(BaseSettings):
     )
 
     default_cocos: int = Field(3, description="COCOS convention assumed when the input does not specify one.")
+    debug_plots: bool = Field(
+        False,
+        description="Draw (blocking) matplotlib debug plots when the equilibrium initialization fails. "
+        "Keep disabled in headless environments; enable e.g. with PLEQUE_DEBUG_PLOTS=1.",
+    )
     grid: GridSettings = Field(default_factory=GridSettings)
     splines: SplineSettings = Field(default_factory=SplineSettings)
     critical_points: CriticalPointSettings = Field(default_factory=CriticalPointSettings)

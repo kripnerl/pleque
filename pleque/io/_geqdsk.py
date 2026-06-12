@@ -20,6 +20,7 @@ along with FreeGS.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
+import logging
 from datetime import date
 
 import numpy as np
@@ -29,6 +30,8 @@ from numpy import zeros
 import pleque
 
 from ._fileutils import ChunkOutput, f2s, next_value, write_1d, write_2d
+
+logger = logging.getLogger(__name__)
 
 
 def write(data, fh, label=None, shot=None, time=None):
@@ -65,7 +68,7 @@ def write(data, fh, label=None, shot=None, time=None):
         label = "PLEQUE"
     if len(label) > 11:
         label = label[0:12]
-        print(f'WARNING: label too long, it will be shortened to {label}')
+        logger.warning('label too long, it will be shortened to %s', label)
 
     creation_date = date.today().strftime("%d/%m/%Y")
 
@@ -187,7 +190,7 @@ def read(fh):
     nx = int(words[-2])
     ny = int(words[-1])
 
-    print(f"  nx = {nx}, ny = {ny}")
+    logger.debug("nx = %s, ny = %s", nx, ny)
 
     # Dictionary to hold result
     data = {"nx": nx, "ny": ny}
@@ -238,7 +241,7 @@ def read(fh):
     nbdry = next(values)
     nlim = next(values)
 
-    print(nbdry, nlim)
+    logger.debug("nbdry = %s, nlim = %s", nbdry, nlim)
 
     if nbdry > 0:
         # Read (R,Z) pairs
@@ -291,12 +294,13 @@ def data_as_ds(data):
     return eq_xarray
 
 
-def read_as_equilibrium(fh, cocos=3, first_wall=None):
+def read_as_equilibrium(fh, cocos=3, first_wall=None, init_method="hints"):
     """
     Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
     :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
+    :param init_method: One of ("full", "hints", "fast_forward"), see `pleque.Equilibrium`.
     :return: instance of `Equilibrium`
     """
 
@@ -308,5 +312,5 @@ def read_as_equilibrium(fh, cocos=3, first_wall=None):
     else:
         fw = first_wall
 
-    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos, init_method=init_method)
     return eq
