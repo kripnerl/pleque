@@ -7,7 +7,7 @@ from pleque.utils.decorators import deprecated
 
 class Surface(Coordinates):
 
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         """
         Calculates geometrical properties of a specified surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
@@ -16,7 +16,7 @@ class Surface(Coordinates):
         :param coords: Instance of coordinate class
         """
 
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+        self._init_from_input(equilibrium, coordinates, None, False, cocos, coords)
 
         points_RZ = self.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon

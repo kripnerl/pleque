@@ -1,3 +1,5 @@
+import functools
+import types
 from typing import TypedDict
 
 import numpy as np
@@ -20,14 +22,18 @@ class CocosInfo(TypedDict):
     sign_q: int
     sign_pprime: int
 
+@functools.lru_cache(maxsize=32)
 def cocos_coefs(cocos_idx) -> CocosInfo:
     """
     Define COCOS coefficients.
 
     For more details see Table 1 in O. Sauter, et al., Comp. Phys. Comm. 184 (2013), p. 296
 
+    The result is cached and shared between callers; it is returned as a
+    read-only mapping.
+
     :param cocos_idx: int, COCOS index
-    :return: dict with COCOS coefficients
+    :return: read-only dict with COCOS coefficients
     """
 
     # Note: sign_q and sign_pprime assumes Ip and B0 to be in direction of a toroidal coordinate.
@@ -65,5 +71,5 @@ def cocos_coefs(cocos_idx) -> CocosInfo:
         cocos["sigma_pol"] = -1
         cocos["sign_q"] = -1
 
-    return cocos
+    return types.MappingProxyType(cocos)
 

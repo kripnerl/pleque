@@ -14,7 +14,14 @@ import pleque.utils.surfaces as surf
 from pleque.config.settings import get_settings
 from pleque.core import Coordinates, FluxFunctions, Surface, SurfaceFunctions  # , FluxSurface
 from pleque.core import cocos as cc
-from pleque.utils.decorators import deprecated, ordered_path_scalar_function, scalar_function, vector_function
+from pleque.core.coordinates import COORD_PARAMS_DOC, COORDINATES_DOC
+from pleque.utils.decorators import (
+    append_to_doc,
+    deprecated,
+    ordered_path_scalar_function,
+    scalar_function,
+    vector_function,
+)
 from pleque.utils.surfaces import track_plasma_boundary
 from pleque.utils.tools import arglis, xp_sections
 
@@ -495,13 +502,6 @@ class Equilibrium:
         """
         Psi value
 
-        :param psi_n:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -529,13 +529,6 @@ class Equilibrium:
         r"""
         Return the value of :math:`\pm|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -599,13 +592,6 @@ class Equilibrium:
     def Fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         '''
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         '''
 
@@ -634,12 +620,6 @@ class Equilibrium:
         """
         Absolute value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return: Absolute value of magnetic field in Tesla.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -654,14 +634,8 @@ class Equilibrium:
     def Bvec(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector
 
-        :param grid:
-        :param coordinates:
         :param swap_order: If False, return component-first shape ``(3, ...)``.
                            If True, move the component axis to the end for compatibility.
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return: Magnetic field vector array. Component-first shape is ``(3, n_elements)``
                  for paired points and ``(3, n_z, n_r)`` for grids.
         """
@@ -683,14 +657,8 @@ class Equilibrium:
     def Bvec_norm(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector, normalised
 
-        :param grid:
-        :param coordinates:
         :param swap_order: If False, return component-first shape ``(3, ...)``.
                            If True, move the component axis to the end for compatibility.
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return: Normalised magnetic field vector array. Component-first shape is
                  ``(3, n_elements)`` for paired points and ``(3, n_z, n_r)`` for grids.
         """
@@ -730,10 +698,6 @@ class Equilibrium:
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
         closed are possible.
 
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
                             If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
                             Coordinates.grid must be False.
@@ -827,12 +791,6 @@ class Equilibrium:
         *Poloidal magnetic flux expansion coefficient* is typically used for :math:`\lambda` scaling
         in plane perpendicular to the poloidal component of the magnetic field.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -861,12 +819,6 @@ class Equilibrium:
         .. math::
             \lambda^\mathrm{t} = \lambda^\mathrm{u} f_{\mathrm{pol, eff}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -891,12 +843,6 @@ class Equilibrium:
         .. math::
             q_\theta^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -925,12 +871,6 @@ class Equilibrium:
         .. math::
             q_\perp^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat, eff}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -956,12 +896,6 @@ class Equilibrium:
         .. math::
             q_\parallel^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_\parallel}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -990,12 +924,6 @@ class Equilibrium:
         .. math::
             q_\perp^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_{\mathrm{tot}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -1045,7 +973,7 @@ class Equilibrium:
             contour = find_contour(coordinates.psi, level=level, r=coordinates.R, z=coordinates.Z)
 
         for i in range(len(contour)):
-            contour[i] = Coordinates(self, contour[i])
+            contour[i] = Coordinates.from_coords(self, contour[i])
 
         return contour
 
@@ -1348,12 +1276,6 @@ class Equilibrium:
         """
         Poloidal value of magnetic field in Tesla.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return: Scalar array with shape ``(n_elements,)`` for paired points and
                  ``(n_z, n_r)`` for grids.
         """
@@ -1372,12 +1294,6 @@ class Equilibrium:
         """
         Poloidal value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return: Scalar array with shape ``(n_elements,)`` for paired points and
                  ``(n_z, n_r)`` for grids.
         """
@@ -1397,12 +1313,6 @@ class Equilibrium:
         """
         Absolute value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -1416,12 +1326,6 @@ class Equilibrium:
         """
         Toroidal value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -1442,12 +1346,6 @@ class Equilibrium:
         """
         Absolute value of q.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         return np.abs(self.q(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords))
@@ -1464,13 +1362,6 @@ class Equilibrium:
         """
 
         :param self:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return: Derivative of q with respect to psi.
         """
         if not hasattr(self, '_dq_dpsin_spl'):
@@ -1508,12 +1399,6 @@ class Equilibrium:
         .. math::
             \\psi_\\mathrm{pol} = (2 \\pi)^{1 - e_{Bp}} \\psi_\\mathrm{ref}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -1528,12 +1413,6 @@ class Equilibrium:
         .. math::
             q = \frac{\\mathrm{d \\Phi} }{\\mathrm{d \\psi}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -1579,12 +1458,6 @@ class Equilibrium:
 
         [Wesson: Tokamaks, p. 105]
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -1601,12 +1474,6 @@ class Equilibrium:
         .. math::
           R p' + \frac{1}{\mu_0 R} ff'
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -1802,28 +1669,25 @@ class Equilibrium:
         secs_coords = tuple(self.coordinates(sec) for sec in secs)
         return secs_coords
 
+    @append_to_doc(COORDINATES_DOC)
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
         Return instance of Coordinates. If instances of coordinates is already on the input, just pass it through.
 
-        :param coordinates:
-        :param coord_type:
-        :param grid:
-        :param coords:
-        :return:
+        :param coordinates: Positional coordinates; see below.
+        :param coord_type: Tuple naming the input coordinates, e.g. ``('rho',)`` or ``('Z', 'R')``.
+        :param grid: If ``True``, the coordinates span a rectangular grid (2D only).
+        :param coords: Coordinates passed by name; see below.
+        :return: Instance of :class:`pleque.core.Coordinates`.
         """
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates.from_coords(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def _as_fluxsurface(self, *coordinates, coord_type=None, grid=False, **coords):
         """
 
-        :param coordinates:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         from pleque import FluxSurface
@@ -1872,14 +1736,9 @@ class Equilibrium:
 
         Todo: The field line is traced to min/max value of z of first wall, distance is calculated to the last
             point before first wall.
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param stopper: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
                        automatically chosen based on psi_n coordinate.
-        :param coords:
         :return:
         """
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
@@ -1913,15 +1772,10 @@ class Equilibrium:
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
         are limited by z planes given be outermost z coordinates of the first wall.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param stopper_method: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
                        automatically chosen based on psi_n coordinate.
         :param in_first_wall: if True the only inner part of field line is returned.
-        :param coords:
         :return:
 
         """
@@ -2088,10 +1942,6 @@ class Equilibrium:
 
         TODO support open and/or flux surfaces outise LCFS, needs different stopper
 
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
                             If coordinates is spatial point (dim=2) then the trace starts at the midplane.
                             Coordinates.grid must be False.
@@ -2250,3 +2100,27 @@ class Equilibrium:
         self._q_spl = UnivariateSpline(psi_n, qs, s=spl_cfg.profile_smooth, k=spl_cfg.profile_order)
         self._dq_dpsin_spl = self._q_spl.derivative()
         self._q_anideriv_spl = self._q_spl.antiderivative()
+
+
+# All public Equilibrium methods accepting the rich coordinate input
+# (see ``Coordinates.from_coords``). A note cross-referencing the canonical
+# description of the input syntax is appended to their docstrings, so the
+# syntax itself is documented in a single place only.
+_COORDINATE_INPUT_METHODS = [
+    'psi', 'nabla_psi', 'diff_psi', 'psi_n', 'r_mid', 'rho',
+    'pressure', 'pprime', 'f', 'F', 'Fprime', 'ffprime', 'FFprime',
+    'B_abs', 'Bvec', 'Bvec_norm', 'B_R', 'B_Z', 'B_pol', 'B_tor',
+    'abs_q', 'q', 'diff_q', 'shear', 'pol_flux', 'tor_flux',
+    'j_R', 'j_Z', 'j_pol', 'j_tor',
+    'flux_surface',
+    'poloidal_mag_flux_exp_coef', 'effective_poloidal_mag_flux_exp_coef',
+    'poloidal_heat_flux_exp_coef', 'effective_poloidal_heat_flux_exp_coef',
+    'parallel_heat_flux_exp_coef', 'total_heat_flux_exp_coef',
+    'outter_parallel_fl_expansion_coef', 'outter_poloidal_fl_expansion_coef',
+    'in_first_wall', 'in_lcfs',
+    'connection_length', 'trace_field_line', 'trace_flux_surface',
+]
+
+for _name in _COORDINATE_INPUT_METHODS:
+    append_to_doc(COORD_PARAMS_DOC)(getattr(Equilibrium, _name))
+del _name
