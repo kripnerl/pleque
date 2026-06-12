@@ -1,16 +1,14 @@
-from collections.abc import Iterable
 import warnings
-import itertools
-from typing import Union
+from collections.abc import Iterable
+from typing import ClassVar, Union
 
 import numpy as np
 from scipy.interpolate import splev, splprep
 
-from pleque.utils.decorators import append_to_doc, deprecated
 import pleque.utils.flux_expansions as flux_expansion
+from pleque.utils.decorators import append_to_doc, deprecated
 
 from .cocos import cocos_coefs
-
 
 #: Canonical description of the coordinate input syntax accepted across PLEQUE.
 #: It is appended (via :func:`pleque.utils.decorators.append_to_doc`) to the
@@ -81,7 +79,7 @@ COORD_PARAMS_DOC = """
 """
 
 
-class Coordinates(object):
+class Coordinates:
     r"""
     Basic PLEQUE class to handle various coordinate systems in tokamak
     equilibrium.
@@ -92,13 +90,13 @@ class Coordinates(object):
     """
 
     # Sets of recognised coordinate names, shared by all instances:
-    _valid_coordinates = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
-    _valid_coordinates_1d = {('psi_n',), ('psi',), ('rho',)}
-    _valid_coordinates_2d = {('R', 'Z'), ('r', 'theta')}
-    _valid_coordinates_3d = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
+    _valid_coordinates: ClassVar[set] = {'R', 'Z', 'psi_n', 'psi', 'rho', 'r', 'theta', 'phi', 'X', 'Y'}
+    _valid_coordinates_1d: ClassVar[set] = {('psi_n',), ('psi',), ('rho',)}
+    _valid_coordinates_2d: ClassVar[set] = {('R', 'Z'), ('r', 'theta')}
+    _valid_coordinates_3d: ClassVar[set] = {('R', 'Z', 'phi'), ('X', 'Y', 'Z')}
 
     # Default coordinate type for a given dimension:
-    _default_coord_types = {1: ('psi_n',), 2: ('R', 'Z'), 3: ('R', 'Z', 'phi')}
+    _default_coord_types: ClassVar[dict] = {1: ('psi_n',), 2: ('R', 'Z'), 3: ('R', 'Z', 'phi')}
 
     def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         r"""

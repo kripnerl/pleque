@@ -4,26 +4,23 @@ from collections.abc import Sequence
 import numpy as np
 import xarray
 from scipy.constants import mu_0
-from shapely import Polygon, Point
-
-import pleque
-from pleque.utils.decorators import append_to_doc, deprecated, ordered_path_scalar_function, scalar_function, \
-    vector_function
-
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
-from pleque.core import Coordinates
-from pleque.core.coordinates import COORD_PARAMS_DOC, COORDINATES_DOC
-from pleque.utils.tools import arglis, xp_sections
-from pleque.core import FluxFunctions, Surface  # , FluxSurface
-from pleque.core import SurfaceFunctions
-from pleque.core import cocos as cc
+from shapely import Point, Polygon
+
 import pleque.utils.equi_tools as eq_tools
 import pleque.utils.flux_expansions as flux_expansion
 import pleque.utils.surfaces as surf
 from pleque.config.settings import get_settings
 from pleque.core import Coordinates, FluxFunctions, Surface, SurfaceFunctions  # , FluxSurface
 from pleque.core import cocos as cc
-from pleque.utils.decorators import deprecated, ordered_path_scalar_function, scalar_function, vector_function
+from pleque.core.coordinates import COORD_PARAMS_DOC, COORDINATES_DOC
+from pleque.utils.decorators import (
+    append_to_doc,
+    deprecated,
+    ordered_path_scalar_function,
+    scalar_function,
+    vector_function,
+)
 from pleque.utils.surfaces import track_plasma_boundary
 from pleque.utils.tools import arglis, xp_sections
 
