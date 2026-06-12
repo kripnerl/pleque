@@ -10,8 +10,7 @@ from pleque.core import Equilibrium
 from pleque.io._geqdsk import data_as_ds, read
 from pleque.io.tools import EquilibriaTimeSlices
 
-logger = (logging.getLogger(__name__))
-# logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def cdb(shot=None, time=1060, revision=1, variant=''):
     """
@@ -179,7 +178,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     if isinstance(first_wall, str) and first_wall == 'IBAv3.1':
         resource_package = 'pleque'
-        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        logger.info('No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall_path = resources.files(resource_package).joinpath(*first_wall_resource.split("/"))
         first_wall = np.loadtxt(str(first_wall_path))
@@ -297,7 +296,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         first_wall = np.stack((ds.r_lim.values, ds.z_lim.values)).T
 
     if first_wall is None:
-        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        logger.info('No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
         first_wall = str(resources.files(resource_package).joinpath(*first_wall_resource.split("/")))
 

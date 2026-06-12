@@ -8,6 +8,8 @@ from pleque.config.settings import get_settings
 from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
 
+logger = logging.getLogger(__name__)
+
 # Sentinel distinguishing "argument not given" from an explicit None (None has its own
 # meaning for `nbdry` in `write`).
 _UNSET = object()
@@ -33,10 +35,9 @@ def _is_1dprofile_in_basedata(basedata, name, nx):
     if name in basedata:
         if basedata[name].shape[0] == nx and basedata[name].ndim == 1:
             return True
-        logging.info(f"Basedata {name} has wrong shape or dimension.\n"
-                     f"Shape: {basedata[name].shape}, expected: ({nx},), "
-                     f"ndim: {basedata[name].ndim}, expected: 1.")
-    logging.info(f"Basedata {name} not found.")
+        logger.info("Basedata %s has wrong shape or dimension. Shape: %s, expected: (%s,), ndim: %s, expected: 1.",
+                    name, basedata[name].shape, nx, basedata[name].ndim)
+    logger.info("Basedata %s not found.", name)
     return False
 
 

@@ -4,6 +4,8 @@ import numpy as np
 
 from pleque.config.settings import get_settings
 
+logger = logging.getLogger(__name__)
+
 
 def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_func=None, direction=1):
     """Factory for function $d[R,Z]/d\\phi=f(\\phi, [R,Z])$
@@ -27,7 +29,7 @@ def dphi_tracer_factory(BR_func, BZ_func, Bphi_func, BR_pert_func=None, BZ_pert_
     This function is mostly useful when the full spatial coordinates of the field line are required.
     """
     if direction < 0:
-        logging.warning("Tracing field lines in the opposite direction of the magnetic field.")
+        logger.warning("Tracing field lines in the opposite direction of the magnetic field.")
 
 
     if BR_pert_func and BR_pert_func:

@@ -1,9 +1,13 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 import pleque
 from pleque.config.settings import get_settings
 from pleque.utils.equi_tools import get_psi_n_on_q
+
+logger = logging.getLogger(__name__)
 
 
 def _plot_extremes(o_points, x_points, ax: plt.Axes = None,
@@ -38,51 +42,51 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
         if colorbar:
             plt.contour(cl)
     except Exception:
-        print("WARNING: Something wrong with psi spline.")
+        logger.warning("Something wrong with psi spline.")
 
     try:
         ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k+-", label='first wall')
     except Exception:
-        print("WARNING: No first wall?!")
+        logger.warning("No first wall?!")
 
     try:
         ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], "C0", label='LCFS')
     except Exception:
-        print("WARNING: LCFS in troubles?!")
+        logger.warning("LCFS in troubles?!")
 
     try:
         ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
     except Exception:
-        print("WARNING: LCFS contour problem.")
+        logger.warning("LCFS contour problem.")
 
     try:
         ax.plot(eq._o_points[:, 0], eq._o_points[:, 1], "C0o", label='o-points')
     except Exception:
-        print("WARNING: O-points in trouble")
+        logger.warning("O-points in trouble")
     try:
         ax.plot(*eq._mg_axis, "C1o", label='mg axis')
     except Exception:
-        print("WARNING: mg. axis in trouble")
+        logger.warning("mg. axis in trouble")
 
     try:
         ax.plot(eq._x_points[:, 0], eq._x_points[:, 1], "C2x", label='x-points')
     except Exception:
-        print("WARNING: X-points in trouble")
+        logger.warning("X-points in trouble")
 
     try:
         ax.plot(eq._x_point[0], eq._x_point[1], "rx", lw=2, label='x-point')
     except Exception:
-        print("WARNING: THE X-point in trouble")
+        logger.warning("THE X-point in trouble")
 
     try:
         ax.plot(eq._limiter_point[0], eq._limiter_point[1], "g+", lw=3, label='limiter point')
     except Exception:
-        print("WARNING: Limiter point is in trouble.")
+        logger.warning("Limiter point is in trouble.")
 
     try:
         ax.plot(eq._strike_points[:, 0], eq._strike_points[:, 1], "C3+", lw=2, label='strike points')
     except Exception:
-        print("WARNING: Strike-points in trouble.")
+        logger.warning("Strike-points in trouble.")
 
     ax.set_title("DEBUG PLOT")
     ax.legend()

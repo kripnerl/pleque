@@ -1,9 +1,13 @@
+import logging
+
 import numpy as np
 import omas
 import xarray as xr
 
 from pleque.config.settings import get_settings
 from pleque.core import Equilibrium
+
+logger = logging.getLogger(__name__)
 
 
 def read(ods: omas.ODS, time=None, time_unit="s"):
@@ -34,7 +38,7 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
             from omas.omas_physics import add_wall
             add_wall(omas)
         except ImportError:
-            print("The newest OMAS is required to add wall to IDS.")
+            logger.warning("The newest OMAS is required to add wall to IDS.")
         except KeyError:
             pass
 
@@ -149,7 +153,8 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if equilibrium.time_unit == "ms":
         shot_time *= 1e3
     elif equilibrium.time_unit != "s":
-        print(f"WARNING: unknown time unit ({equilibrium.time_unit}) is used. Seconds will be used insted for saving.")
+        logger.warning("Unknown time unit (%s) is used. Seconds will be used instead for saving.",
+                       equilibrium.time_unit)
 
     # ods["info"]["shot"] = equilibrium.shot
     ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot

@@ -1,4 +1,5 @@
 import itertools
+import logging
 from typing import Union
 
 import numpy as np
@@ -8,6 +9,8 @@ import pleque.utils.flux_expansions as flux_expansion
 from pleque.utils.decorators import deprecated
 
 from .cocos import cocos_coefs
+
+logger = logging.getLogger(__name__)
 
 
 class Coordinates:
@@ -577,8 +580,8 @@ class Coordinates:
                 xy = coordinates[0]
 
                 if self.grid:
-                    print('WARNING: grid == True is not allowed for this coordinates input. '
-                          'Turning grid = False.')
+                    logger.warning('grid == True is not allowed for this coordinates input. '
+                                   'Turning grid = False.')
                 self.grid = False
 
                 if isinstance(xy, Iterable):
@@ -642,8 +645,8 @@ class Coordinates:
         self._convert_to_default_coord_type()
 
         if self.dim != 2 and self.grid:
-            print('WARNING: grid == True is not allowed for dim != 2 (yet).'
-                  'Turning grid = False.')
+            logger.warning('grid == True is not allowed for dim != 2 (yet).'
+                           'Turning grid = False.')
             self.grid = False
 
     def _verify_coord_type(self, coord_type):
@@ -659,10 +662,8 @@ class Coordinates:
                 ret_coord_type = tuple(coord_type)
             else:
                 ret_coord_type = ('psi_n',)
-                print("WARNING: _coord_type_input is not correct. \n"
-                      f"{tuple(coord_type)} is not allowed \n"
-                      "Force set _coord_type_input = ('psi_n',)"
-                      )
+                logger.warning("_coord_type_input is not correct. %s is not allowed. "
+                               "Force set _coord_type_input = ('psi_n',)", tuple(coord_type))
         elif self.dim == 2:
             if coord_type is None:
                 ret_coord_type = ('R', 'Z')
@@ -672,10 +673,8 @@ class Coordinates:
                 ret_coord_type = tuple(coord_type[::-1])
             else:
                 ret_coord_type = ('R', 'Z')
-                print("WARNING: _coord_type_input is not correct. \n"
-                      f"{tuple(coord_type)} is not allowed \n"
-                      "Force set _coord_type_input = ('R', 'Z')"
-                      )
+                logger.warning("_coord_type_input is not correct. %s is not allowed. "
+                               "Force set _coord_type_input = ('R', 'Z')", tuple(coord_type))
         elif self.dim == 3:
             if coord_type is None:
                 ret_coord_type = ('R', 'Z', 'phi')
@@ -683,10 +682,8 @@ class Coordinates:
                 ret_coord_type = tuple(coord_type)
             else:
                 ret_coord_type = ('R', 'Z', 'phi')
-                print("WARNING: _coord_type_input is not correct. \n"
-                      f"{tuple(coord_type)} is not allowed \n"
-                      "Force set _coord_type_input = ('R', 'Z', 'phi')"
-                      )
+                logger.warning("_coord_type_input is not correct. %s is not allowed. "
+                               "Force set _coord_type_input = ('R', 'Z', 'phi')", tuple(coord_type))
 
         else:
             raise ValueError(f'Operation in {self.dim} space has not be en allowed yet. Sorry.'
