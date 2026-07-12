@@ -2,7 +2,7 @@ import functools
 import inspect
 import warnings
 
-string_types = (type(b''), type(u''))
+string_types = (bytes, str)
 
 
 def deprecated(reason):
@@ -76,3 +76,75 @@ def deprecated(reason):
 
     else:
         raise TypeError(repr(type(reason)))
+
+
+def append_to_doc(*snippets):
+    """
+    Append shared documentation snippets to the docstring of the decorated
+    function (or of a function passed to the returned decorator).
+
+    The original docstring is dedented with :func:`inspect.getdoc`, so the
+    appended snippets can be written flush-left and the result still renders
+    correctly with Sphinx autodoc. The function object is modified in place;
+    no wrapper is created, so there is no runtime overhead.
+    """
+
+    text = '\n\n'.join(snippet.strip('\n') for snippet in snippets)
+
+    def decorator(func):
+        doc = inspect.getdoc(func)
+        if doc:
+            func.__doc__ = doc.rstrip() + '\n\n' + text + '\n'
+        else:
+            # The leading newline keeps the first snippet line out of the
+            # docstring-dedent logic of autodoc/inspect.cleandoc, which would
+            # otherwise strip the indentation of directive continuation lines.
+            func.__doc__ = '\n' + text + '\n'
+        return func
+
+    return decorator
+
+
+def scalar_function(func):
+    """
+    Serves to register class functions of Equilibrium class as scalar functions.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        return func(self, *args, **kwargs)
+
+    wrapper._scalar_function = True
+
+    return wrapper
+
+
+def ordered_path_scalar_function(func):
+    """
+    Register scalar functions that require ordered non-grid coordinates.
+
+    These functions use geometry derived from neighbouring coordinate points
+    (for example a wall or target surface normal), so rectangular grids and
+    mesh-shaped point arrays are not meaningful inputs.
+    """
+
+    wrapper = scalar_function(func)
+    wrapper._requires_ordered_path = True
+
+    return wrapper
+
+
+def vector_function(ndim):
+    """
+    Serves to register class functions of Equilibrium class as vector functions.
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            return func(self, *args, **kwargs)
+        wrapper._vector_function = True
+        wrapper._vector_ndim = ndim
+        return wrapper
+
+    return decorator

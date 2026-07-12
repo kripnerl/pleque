@@ -3,10 +3,10 @@ import pytest
 
 import pleque.core.cocos as coc
 from pleque.core import Equilibrium
-from pleque.io._geqdsk import read as read_geqdsk_as_dict, data_as_ds
+from pleque.io._geqdsk import data_as_ds
+from pleque.io._geqdsk import read as read_geqdsk_as_dict
 from pleque.io.readers import read_geqdsk
 
-import pytest
 
 def test_cocos_dict():
     for i in range(1, 9):
@@ -80,8 +80,8 @@ def test_cocos_dict():
 
 @pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4]])  # , [5], [6], [7], [8]])
 def test_directions(geqdsk_file, cocos):
-    print('g-file: {}'.format(geqdsk_file))
-    print('COCOS: {}'.format(cocos))
+    print(f'g-file: {geqdsk_file}')
+    print(f'COCOS: {cocos}')
 
     direction = -1
 
@@ -117,8 +117,8 @@ def test_directions(geqdsk_file, cocos):
     print('sigma_cyl: {}\nsigma_pol: {}\nIp: {}\nF0: {}'.format(
         eq._cocosdic['sigma_cyl'], eq._cocosdic['sigma_pol'], eq.I_plasma, eq.F0
     ))
-    print('sign psi: {}'.format(eq._psi_sign))
-    print('dphi = {}\ndtheta = {}'.format(dphi, dtheta))
+    print(f'sign psi: {eq._psi_sign}')
+    print(f'dphi = {dphi}\ndtheta = {dtheta}')
 
     assert my_dir == dphidtheta
 
@@ -261,10 +261,10 @@ def test_coordinates_transforms(geqdsk_file, cocos):
 
 @pytest.mark.parametrize(('cocos',), [[1], [2], [3], [4], [5], [6], [7], [8]])
 def test_cocos_consistency(geqdsk_file, cocos):
-    print('COCOS: {}'.format(cocos))
+    print(f'COCOS: {cocos}')
 
     equilibrium = read_geqdsk(geqdsk_file, cocos=cocos)
-    with open(geqdsk_file, 'r') as f:
+    with open(geqdsk_file) as f:
         eq_dict = read_geqdsk_as_dict(f)
         eq_xr = data_as_ds(eq_dict)
         eq_xr.psi.values = eq_xr.psi.values * (2 * np.pi)

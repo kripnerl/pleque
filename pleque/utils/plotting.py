@@ -1,8 +1,13 @@
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 import pleque
+from pleque.config.settings import get_settings
 from pleque.utils.equi_tools import get_psi_n_on_q
+
+logger = logging.getLogger(__name__)
 
 
 def _plot_extremes(o_points, x_points, ax: plt.Axes = None,
@@ -26,61 +31,62 @@ def _plot_debug(eq: pleque.Equilibrium, ax: plt.Axes = None, levels=None, colorb
     if ax is None:
         ax = plt.gca()
 
-    rs = np.linspace(eq.R_min, eq.R_max, 400)
-    zs = np.linspace(eq.Z_min, eq.Z_max, 600)
-    
+    plot_cfg = get_settings().plotting
+    rs = np.linspace(eq.R_min, eq.R_max, plot_cfg.grid_nr)
+    zs = np.linspace(eq.Z_min, eq.Z_max, plot_cfg.grid_nz)
+
     try:
         if levels is None:
-            levels = 60
+            levels = plot_cfg.debug_contour_levels
         cl = ax.contour(rs, zs, eq._spl_psi(rs, zs).T, levels)
         if colorbar:
             plt.contour(cl)
     except Exception:
-        print("WARNING: Something wrong with psi spline.")
+        logger.warning("Something wrong with psi spline.")
 
     try:
         ax.plot(eq._first_wall[:, 0], eq._first_wall[:, 1], "k+-", label='first wall')
     except Exception:
-        print("WARNING: No first wall?!")
+        logger.warning("No first wall?!")
 
     try:
         ax.plot(eq._lcfs[:, 0], eq._lcfs[:, 1], "C0", label='LCFS')
     except Exception:
-        print("WARNING: LCFS in troubles?!")
+        logger.warning("LCFS in troubles?!")
 
     try:
         ax.contour(rs, zs, eq._spl_psi(rs, zs).T, [eq._psi_lcfs], colors="C1", linestyles="--")
     except Exception:
-        print("WARNING: LCFS contour problem.")
+        logger.warning("LCFS contour problem.")
 
     try:
         ax.plot(eq._o_points[:, 0], eq._o_points[:, 1], "C0o", label='o-points')
     except Exception:
-        print("WARNING: O-points in trouble")
+        logger.warning("O-points in trouble")
     try:
         ax.plot(*eq._mg_axis, "C1o", label='mg axis')
     except Exception:
-        print("WARNING: mg. axis in trouble")
+        logger.warning("mg. axis in trouble")
 
     try:
         ax.plot(eq._x_points[:, 0], eq._x_points[:, 1], "C2x", label='x-points')
     except Exception:
-        print("WARNING: X-points in trouble")
+        logger.warning("X-points in trouble")
 
     try:
         ax.plot(eq._x_point[0], eq._x_point[1], "rx", lw=2, label='x-point')
     except Exception:
-        print("WARNING: THE X-point in trouble")
+        logger.warning("THE X-point in trouble")
 
     try:
         ax.plot(eq._limiter_point[0], eq._limiter_point[1], "g+", lw=3, label='limiter point')
-    except:
-        print("WARNING: Limiter point is in trouble.")
+    except Exception:
+        logger.warning("Limiter point is in trouble.")
 
     try:
         ax.plot(eq._strike_points[:, 0], eq._strike_points[:, 1], "C3+", lw=2, label='strike points')
-    except:
-        print("WARNING: Strike-points in trouble.")
+    except Exception:
+        logger.warning("Strike-points in trouble.")
 
     ax.set_title("DEBUG PLOT")
     ax.legend()
@@ -101,14 +107,15 @@ def plot_rational_surface(eq, ax, q_tuple, linestyles="--", colors="C3"):
     qarr = np.array(q_tuple)
     q = qarr[:, 0] / qarr[:, 1]
 
-    psi_n = get_psi_n_on_q(eq, q, max_psi_n=0.95)
+    plot_cfg = get_settings().plotting
+    psi_n = get_psi_n_on_q(eq, q, max_psi_n=plot_cfg.rational_q_psi_n_max)
 
     i_ok = np.nonzero(psi_n)[0]
 
     psi_n = np.atleast_1d(psi_n)[i_ok]
     qarr = qarr[i_ok, :]
 
-    coords = eq.grid((400, 600), 'size')
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
     mask_inlcfs = eq.in_lcfs(coords)
 
     psi_ns = np.ma.masked_array(coords.psi_n, np.logical_not(mask_inlcfs))
@@ -145,7 +152,8 @@ def plot_lcfs(eq, ax, color="C1", lw=2, ls="--"):
 
 
 def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
-    coords = eq.grid((400, 600), 'size')
+    plot_cfg = get_settings().plotting
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
     psi = eq.psi(coords)
 
     mask_inlcfs = eq.in_lcfs(coords)
@@ -155,21 +163,25 @@ def plot_psi_contours(eq, ax, where="in_lcfs", alpha=1, **kwargs):
     elif where.lower() == "out_lcfs":
         psi = np.ma.masked_array(psi, mask_inlcfs)
 
-    cl = ax.contour(coords.R, coords.Z, psi, 20, alpha=alpha, **kwargs)
+    cl = ax.contour(coords.R, coords.Z, psi, plot_cfg.psi_contour_levels, alpha=alpha, **kwargs)
 
     return cl
 
 
-def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", lw=0.7, ls="solid"):
-    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + 2e-3 * np.arange(1, 6), theta=np.zeros(5), grid=False)
-    coords = eq.grid((400, 600), 'size')
+def plot_near_sol(eq: pleque.Equilibrium, ax: plt.Axes, colors="C0", dr: float | None = None, lw=0.7, ls="solid"):
+    plot_cfg = get_settings().plotting
+    if dr is None:
+        dr = plot_cfg.sol_spacing
+    contour_out = eq.coordinates(r=eq.lcfs.r_mid[0] + dr * np.arange(1, 6), theta=np.zeros(5), grid=False)
+    coords = eq.grid((plot_cfg.grid_nr, plot_cfg.grid_nz), 'size')
 
     ax.contour(coords.R, coords.Z, coords.psi, np.sort(np.squeeze(contour_out.psi)), colors=colors,
                linewidths=lw,
                linestyles=ls)
 
 
-def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, **kwargs):
+def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False, dr_sol: float | None = None,
+                     **kwargs):
     if ax is None:
         ax = plt.gca()
 
@@ -185,7 +197,7 @@ def plot_equilibrium(eq: pleque.Equilibrium, ax: plt.Axes = None, colorbar=False
     if colorbar:
         plt.colorbar(cl, ax=ax)
 
-    plot_near_sol(eq, ax)
+    plot_near_sol(eq, ax, dr=dr_sol)
 
     #    contact = eq.strike_points
     #    ax.plot(contact.R, contact.Z, "C3+")
@@ -206,13 +218,15 @@ def normalize_axis_xylim_by_first_wall(eq, ax):
     rlim = [np.min(eq.first_wall.R), np.max(eq.first_wall.R)]
     zlim = [np.min(eq.first_wall.Z), np.max(eq.first_wall.Z)]
 
+    margin = get_settings().plotting.axis_margin
+
     size = rlim[1] - rlim[0]
-    rlim[0] -= size / 12
-    rlim[1] += size / 12
+    rlim[0] -= size * margin
+    rlim[1] += size * margin
 
     size = zlim[1] - zlim[0]
-    zlim[0] -= size / 12
-    zlim[1] += size / 12
+    zlim[0] -= size * margin
+    zlim[1] += size * margin
     ax.set_xlim(*rlim)
     ax.set_ylim(*zlim)
 
@@ -220,7 +234,7 @@ def normalize_axis_xylim_by_first_wall(eq, ax):
 def plot_cocos_geometry(eq: pleque.Equilibrium):
     # TODO STUB
 
-    fig, axs = plt.subplots(1, 2, projection='polar')
+    _fig, axs = plt.subplots(1, 2, projection='polar')
 
     # Top view:
     ax = axs[0]
@@ -230,7 +244,7 @@ def plot_cocos_geometry(eq: pleque.Equilibrium):
     r1 = 0.25 * np.ones_like(phi)
     r2 = 0.75 * np.ones_like(phi)
 
-    phi_direction = np.linspace(0, np.pi / 4)
+    np.linspace(0, np.pi / 4)
     # TODO
 
     ax.plot(phi, r1, 'k-')

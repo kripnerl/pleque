@@ -7,14 +7,16 @@ ficker@ipp.cas.cz
 
 """
 
+import logging
+
 import numpy as np
 import xarray as xr
-
 from jet.data import sal
-
 from sal.core.exception import NodeNotFound
 
 from pleque.core import Equilibrium
+
+logger = logging.getLogger(__name__)
 
 
 def deltapsi_calc(pulse):
@@ -134,7 +136,7 @@ def sal_jet(pulse, timex=47.0, time_unit="s"):
     except NodeNotFound:
         limiter_r = sal.get(data_path.format(94508, 'rlim', sequence)).data.T
         limiter_z = sal.get(data_path.format(94508, 'zlim', sequence)).data.T
-        print("Limiter points not present in #{}, loaded from #94508".format(pulse))
+        logger.warning("Limiter points not present in #%s, loaded from #94508", pulse)
 
     limiter = np.column_stack([limiter_r, limiter_z])
 

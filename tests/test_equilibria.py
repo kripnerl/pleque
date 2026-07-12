@@ -1,11 +1,10 @@
-from pleque.tests.utils import get_test_cases_number, get_test_equilibria_filenames
-from pleque.io.readers import read_geqdsk
-from pleque import Coordinates
-from numpy import array
 import numpy as np
-
 import pytest
+from numpy import array
 
+from pleque import Coordinates
+from pleque.io.readers import read_geqdsk
+from pleque.tests.utils import get_test_equilibria_filenames
 
 # import matplotlib.pyplot as plt
 #
@@ -14,22 +13,20 @@ import pytest
 
 def test_critical(equilibrium):
     """
-    Test if all critical points are properly set. It differ for x-point and limter plasma.
+    Test if all critical points are properly set. It differs for x-point and limiter plasma.
     """
-
-    # # x-point plasma:
-    # This code will be added soon
-    # if equilibrium.is_xpoint_plasma:
-    #     assert equilibrium.x_point == equilibrium.limiter_point
-    #     assert np.isclose(equilibrium._psi_lcfs, equilibrium._psi_xp)
-    #     assert equilibrium.contact_point is None
-    #     if len(equilibrium.first_wall) > 4:
-    #         assert len(equilibrium.strike_points) > 1
-    #
-    # else:
-    #     assert equilibrium.contact_point == equilibrium.strike_points
-    #     assert equilibrium.contact_point == equilibrium.limiter_point
-    pass
+    if not equilibrium._limiter_plasma:
+        # x-point plasma: the plasma is limited by the x-point
+        assert equilibrium._x_point is not None
+        assert np.allclose(equilibrium._x_point, equilibrium._limiter_point)
+        assert np.isclose(np.asarray(equilibrium._psi_lcfs).item(), np.asarray(equilibrium._psi_xp).item())
+        assert equilibrium.contact_point is None
+        if len(equilibrium.first_wall) > 4:
+            assert len(equilibrium.strike_points) > 1
+    else:
+        assert np.allclose(equilibrium._contact_point, equilibrium._limiter_point)
+        assert np.allclose(equilibrium._strike_points[0], equilibrium._contact_point)
+        assert isinstance(equilibrium.contact_point, Coordinates)
 
 
 o_points = [array([0.90891258, 0.01440663]), array([0.9083923, 0.06746012]),
@@ -46,7 +43,7 @@ def test_equilibria(case):
 
     gfiles = get_test_equilibria_filenames()
 
-    print("Reading {}".format(gfiles[case]))
+    print(f"Reading {gfiles[case]}")
 
     eq = read_geqdsk(gfiles[case])
 

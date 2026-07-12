@@ -2,12 +2,12 @@ import numpy as np
 from shapely import geometry
 
 from pleque.core import Coordinates
-from pleque.utils.decorators import *
+from pleque.utils.decorators import deprecated
 
 
 class Surface(Coordinates):
 
-    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, **coords):
+    def __init__(self, equilibrium, *coordinates, coord_type=None, grid=False, cocos=None, **coords):
         """
         Calculates geometrical properties of a specified surface. To make the contour closed, the first and last points in
         the passed coordinates have to be the same.
@@ -16,7 +16,7 @@ class Surface(Coordinates):
         :param coords: Instance of coordinate class
         """
 
-        super().__init__(equilibrium, *coordinates, coord_type=None, grid=False, **coords)
+        self._init_from_input(equilibrium, coordinates, None, False, cocos, coords)
 
         points_RZ = self.as_array(('R', 'Z'))
         # closed surface has to have identical first and last points and then the shape is polygon
@@ -89,7 +89,7 @@ class Surface(Coordinates):
 
     @property
     def diff_volume(self):
-        """
+        r"""
         Diferential volume :math:`V' = dV/d\psi`
         Jardin, S.: Computational Methods in Plasma Physics
 
@@ -152,6 +152,7 @@ class FluxSurface(Surface):
         :return:
         """
         from scipy.interpolate import CubicSpline
+
         from pleque.utils.tools import arglis
 
         if not hasattr(self, '_straight_fieldline_theta'):
@@ -280,14 +281,14 @@ class FluxSurface(Surface):
 
         :param func: func(X, Y), Union[ndarray, int, float]
         :param method: str, ['sum', 'trapezoid', 'simps']
-        :return: 
+        :return:
         """
         import inspect
         try:
-            from scipy.integrate import trapezoid, simpson
+            from scipy.integrate import simpson, trapezoid
         except ModuleNotFoundError:
-            from scipy.integrate import trapz as trapezoid
             from scipy.integrate import simps as simpson
+            from scipy.integrate import trapz as trapezoid
 
         if method == 'sum':
             Rs = (self.R[1:] + self.R[:-1]) / 2
@@ -309,14 +310,14 @@ class FluxSurface(Surface):
             else:
                 func_val = func
 
-        l = np.hstack((0, np.cumsum(self.dists)))
+        arc_length = np.hstack((0, np.cumsum(self.dists)))
 
         if method == 'sum':
             ret = np.sum(self.dists * Rs / diff_psi * func_val)
         elif method in ['trapz','trapezoid']:
-            ret = trapezoid(Rs / diff_psi * func_val, l)
+            ret = trapezoid(Rs / diff_psi * func_val, arc_length)
         elif method == 'simps':
-            ret = simps(Rs / diff_psi * func_val, l)
+            ret = simpson(Rs / diff_psi * func_val, arc_length)
         else:
             ret = None
 
@@ -409,3 +410,15 @@ class FluxSurface(Surface):
         '''
         rep = (self.triangul_up + self.triangul_low) * 0.5
         return rep
+
+    def psi_n_error(self):
+        """
+        Calculate mean value of psi_n on the flux surface, and its mean relative error and absolute error as std.
+        :return: tuple(float, float, float) - mean_psi, mean_abs_err, mean_rel_err
+        """
+
+        mean_psi = self.psi_n.mean()
+        abs_err = np.std(self.psi_n)
+        rel_err = abs_err / mean_psi
+
+        return mean_psi, abs_err, rel_err

@@ -7,7 +7,7 @@ from pleque.core import Coordinates
 
 class Affine:
 
-    def __init__(self, transform: np.ndarray = np.eye(4), name: str = ""):
+    def __init__(self, transform: np.ndarray | None = None, name: str = ""):
         """
         Affine transformation class.
 
@@ -15,9 +15,9 @@ class Affine:
         :param transform: Affine transformation matrix of the snape (ndim+1, ndim+1)
         """
         self.name = name
-        self.transformation = transform
+        self.transformation = transform if transform is not None else np.eye(4)
         self.dim = self.transformation.shape[0] - 1
-        self.transformation_inverse = np.zeros_like(transform)
+        self.transformation_inverse = np.zeros_like(self.transformation)
         self._recalculate_inverse()
 
     def __mul__(self, other):

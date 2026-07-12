@@ -1,17 +1,16 @@
-import h5py
-import numpy as np
+import logging
 import os
 from importlib import resources
+
+import h5py
+import numpy as np
 import xarray as xr
 
 from pleque.core import Equilibrium
-from pleque.io._geqdsk import read, data_as_ds
+from pleque.io._geqdsk import data_as_ds, read
 from pleque.io.tools import EquilibriaTimeSlices
-from pleque.utils.surfaces import add_xpoint
-import logging
 
-logger = (logging.getLogger(__name__))
-# logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def cdb(shot=None, time=1060, revision=1, variant=''):
     """
@@ -82,15 +81,15 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
                      cdb_data_root='/compass/CC19_COMPASS-U_data/:/compass/CC20_COMPASS-U_data/'):
     """
     Load data from CUDB Fiesta signal.
-    
-    Note: for the convenience CUDB environment is hard set. 
-    
-    :param shot: 
-    :param time: 
-    :param revision: 
-    :param variant: 
-    :param time_unit: 
-    :return: 
+
+    Note: for the convenience CUDB environment is hard set.
+
+    :param shot:
+    :param time:
+    :param revision:
+    :param variant:
+    :param time_unit:
+    :return:
     """
     from pyCDB.pyCDBBase import CDBException
 
@@ -106,7 +105,7 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
     if time_unit == 'ms':
         time *= 1000
 
-    strid_postfix = '{:d}:{}:{:d}'.format(shot, variant, revision)
+    strid_postfix = f'{shot:d}:{variant}:{revision:d}'
 
     log_msg = f'Loading data from CUDB for shot {shot}, time {time}, revision {revision}, ' \
                 f'variant {variant}, strid_postfix {strid_postfix}'
@@ -179,9 +178,9 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     if isinstance(first_wall, str) and first_wall == 'IBAv3.1':
         resource_package = 'pleque'
-        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        logger.info('No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall_path = resources.files(resource_package) / first_wall_resource
+        first_wall_path = resources.files(resource_package).joinpath(*first_wall_resource.split("/"))
         first_wall = np.loadtxt(str(first_wall_path))
 
     dst['R_first_wall'] = xr.DataArray(first_wall[:, 0], coords=[first_wall[:, 0]], dims=['R_first_wall'])
@@ -288,7 +287,7 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
 
     resource_package = 'pleque'
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         data = read(f)
         ds = data_as_ds(data)
 
@@ -297,12 +296,12 @@ def read_fiesta_equilibrium(filepath, first_wall=None):
         first_wall = np.stack((ds.r_lim.values, ds.z_lim.values)).T
 
     if first_wall is None:
-        print('--- No limiter specified. The IBA v3.1 limiter will be used.')
+        logger.info('No limiter specified. The IBA v3.1 limiter will be used.')
         first_wall_resource = 'resources/limiter_v3_1_iba_v2.dat'
-        first_wall_path = resources.files(resource_package) / first_wall_resource
+        first_wall = str(resources.files(resource_package).joinpath(*first_wall_resource.split("/")))
 
     if isinstance(first_wall, str):
-        first_wall = np.loadtxt(first_wall_path)
+        first_wall = np.loadtxt(first_wall)
 
     eq = Equilibrium(ds, first_wall=first_wall)
 

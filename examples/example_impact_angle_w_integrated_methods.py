@@ -26,7 +26,7 @@ npoints=500
 
 
 
-coords=Coordinates(eq,np.vstack((first_wall.R,first_wall.Z)).T)
+coords=Coordinates.from_coords(eq,np.vstack((first_wall.R,first_wall.Z)).T)
 
 # Resample using new method
 coords2=coords.resample2(npoints)

@@ -1,5 +1,6 @@
-from pleque.io import _geqdsk, readers
 import matplotlib.pyplot as plt
+
+from pleque.io import _geqdsk, readers
 
 
 def read_write_geqdsk(file_in, file_out):
@@ -11,7 +12,7 @@ def read_write_geqdsk(file_in, file_out):
     :return:
     '''
 
-    with open(file_in, 'r') as f:
+    with open(file_in) as f:
         eq_in = _geqdsk.read(f)
 
     with open(file_out, 'w') as f:
@@ -39,7 +40,7 @@ def read_write_geqsk_flip_direction(file_in, file_out, flip=True, plot=False):
     :return:
     """
 
-    with open(file_in, 'r') as f:
+    with open(file_in) as f:
         eq_in = _geqdsk.read(f)
 
 

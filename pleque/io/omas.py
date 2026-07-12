@@ -1,8 +1,14 @@
+import logging
+
 import numpy as np
 import omas
 import xarray as xr
 
+from pleque.config.settings import get_settings
 from pleque.core import Equilibrium
+
+logger = logging.getLogger(__name__)
+
 
 def read(ods: omas.ODS, time=None, time_unit="s"):
     """
@@ -23,16 +29,16 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
 
     try:
         shot = ods["info"]["shot"]
-    except:
+    except Exception:
         shot = ods["dataset_description"]["data_entry"]["pulse"]
 
     if "wall" not in ods:
         try:
             # todo: (Need the latest OMAS)
             from omas.omas_physics import add_wall
-            omas.add_wall(omas)
+            add_wall(omas)
         except ImportError:
-            print("The newest OMAS is required to add wall to IDS.")
+            logger.warning("The newest OMAS is required to add wall to IDS.")
         except KeyError:
             pass
 
@@ -53,13 +59,13 @@ def read(ods: omas.ODS, time=None, time_unit="s"):
         time_idx = np.argmin(np.abs(np.array(ods_times) - time / time_factor))
 
     # Plasma boundary (LCFS)
-    rbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["r"]
-    zbnd = ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["z"]
+    ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["r"]
+    ods["equilibrium"]["time_slice"][time_idx]["boundary"]["outline"]["z"]
     psibnd = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_boundary"]
 
     # Magnetic axis
-    rmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["r"]
-    zmgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["z"]
+    ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["r"]
+    ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["magnetic_axis"]["z"]
     psimgax = ods["equilibrium"]["time_slice"][time_idx]["global_quantities"]["psi_axis"]
 
     # 1D profiles
@@ -136,18 +142,19 @@ def write(equilibrium: Equilibrium, grid_1d=None, grid_2d=None, gridtype=1, ods=
     if ods is None:
         ods = omas.ODS(cocosio=cocosio)
 
+    io_cfg = get_settings().io
     if grid_1d is None:
-        grid_1d = equilibrium.coordinates(psi_n=np.linspace(0, 1, 200))
+        grid_1d = equilibrium.coordinates(psi_n=np.linspace(0, 1, io_cfg.omas_n_psi))
 
     if grid_2d is None:
-        grid_2d = equilibrium.grid(resolution=(1e-3, 1e-3), dim="step")
+        grid_2d = equilibrium.grid(resolution=(io_cfg.omas_grid_step, io_cfg.omas_grid_step), dim="step")
 
     shot_time = equilibrium.time
     if equilibrium.time_unit == "ms":
         shot_time *= 1e3
     elif equilibrium.time_unit != "s":
-        print("WARNING: unknown time unit ({}) is used. Seconds will be used insted for saving.".format(
-            equilibrium.time_unit))
+        logger.warning("Unknown time unit (%s) is used. Seconds will be used instead for saving.",
+                       equilibrium.time_unit)
 
     # ods["info"]["shot"] = equilibrium.shot
     ods["dataset_description"]["data_entry"]["pulse"] = equilibrium.shot

@@ -1,63 +1,12 @@
 import numpy as np
-import pytest
-import xarray as xr
+
 from pleque import Equilibrium
-from pleque.tests.utils import load_testing_equilibrium
+from pleque.tests.utils import load_testing_equilibrium, synthetic_dataset, synthetic_test_wall
+
 
 def create_test_equilibrium():
     """Create a simple test equilibrium for testing inversion."""
-    # Create a simple grid
-    R = np.linspace(0.9, 2.1, 15)
-    Z = np.linspace(-1.15, 1.2, 30)
-    R_mesh, Z_mesh = np.meshgrid(R, Z)
-
-    # Create a simple psi function: (R-1.5)^2 + Z^2
-    psi = (R_mesh - 1.5)**2 + (Z_mesh-0.2)**2
-
-    # Create a simple F function
-    F0 = 1
-    psi_n = np.linspace(0.0, 1.0, 10)
-
-    # Create a simple pprime function
-    pprime = np.linspace(-1.0, 0.0, 10)
-
-    # Create a simple FFprime function
-    FFprime = np.linspace(0.0, 1.0, 10)
-
-    # Create a simple first wall
-    first_wall = np.array([
-        [1.0, -1.0],
-        [2.0, -1.0],
-        [2.0, -0.2],
-        [2.0, 0],
-        [2.0, 0.2],
-        [2.0, 1.1],
-        [1.0, 1.1],
-        [1.0, 0.2],
-        [1.0, 0],
-        [1.0, -0.2],
-        [1.0, -1.0]
-    ])
-
-    # Create a dataset
-    ds = xr.Dataset(
-        data_vars={
-            'psi': (['Z', 'R'], psi),
-            'pprime': (['psi_n'], pprime),
-            'FFprime': (['psi_n'], FFprime),
-        },
-        coords={
-            'R': R,
-            'Z': Z,
-            'psi_n': psi_n,
-        },
-        attrs={
-            "F0": F0,
-        }
-    )
-
-    # Create an equilibrium
-    eq = Equilibrium(ds, first_wall=first_wall)
+    eq = Equilibrium(synthetic_dataset(), first_wall=synthetic_test_wall())
 
     return eq
 

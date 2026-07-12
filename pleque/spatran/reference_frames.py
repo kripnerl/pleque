@@ -1,4 +1,4 @@
-class ReferenceFrame():
+class ReferenceFrame:
 
     def __init__(self, name, transform=None, parent=None, toparent=True):
         self._name = name
@@ -26,7 +26,7 @@ class ReferenceFrame():
             self._parent = parent
             self._transform_toparent = transform
 
-            if not parent._transform_toorigin is None:
+            if parent._transform_toorigin is not None:
                 self._transform_toorigin = (parent._transform_toorigin * transform)
             else:
                 self._transform_toorigin = transform
