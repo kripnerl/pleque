@@ -54,6 +54,38 @@ def test_from_to_gfile(equilibrium):
     assert np.isclose(equilibrium.magnetic_axis.Z, eq2.magnetic_axis.Z, atol=1e-5, rtol=1e-4)
 
 
+def test_time_unit_from_dataset_seconds():
+    """
+    Regression test: a dataset whose ``time`` axis is in seconds (as produced by
+    the CUDB / Fiesta reader) must yield ``time_unit == 's'`` so the GEQDSK header
+    time is encoded correctly. Previously ``time_unit`` defaulted to ``'ms'`` and
+    ``int(time)`` seconds were written into the header (e.g. 0 ms for t < 1 s).
+    """
+    resource_package = "pleque.resources"
+    nc_file = pkg_resources.resource_filename(resource_package, "test00.nc")
+
+    basedata = xr.load_dataset(nc_file).load()
+    # test00.nc carries time in seconds but no explicit time_unit.
+    basedata["time_unit"] = "s"
+
+    eq = pleque.Equilibrium(basedata, cocos=13)
+
+    # time_unit must be a plain string, not a 0-d DataArray
+    assert eq.time_unit == "s"
+    assert isinstance(eq.time_unit, str)
+
+    # The GEQDSK header time is int(time * 1000) ms when time_unit == 's'.
+    tmp_dir = tempfile.TemporaryDirectory()
+    file_name = "{}/g0000.0000".format(tmp_dir.name)
+    eq.to_geqdsk(file_name)
+    with open(file_name, "r") as f:
+        header = f.readline()
+    os.remove(file_name)
+
+    expected_ms = int(float(np.asarray(basedata["time"])) * 1000)
+    assert "{:d}ms".format(expected_ms) in header
+
+
 def test_fiesta_gfile_vs_database():
     tmp_dir = tempfile.TemporaryDirectory()
     file_name = '{}/g0000.0000'.format(tmp_dir.name)

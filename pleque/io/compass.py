@@ -168,6 +168,9 @@ def get_ds_from_cudb(shot, time=None, revision=-1, variant='', time_unit='s', fi
 
     dst['F0'] = (dst.Bvac * dst.R).mean(dim=['R', 'Z'])
     dst['shot'] = int(shot)
+    # CUDB time axis is in seconds; record it so the Equilibrium does not fall
+    # back to the default 'ms' (which would mis-encode the g-file header time).
+    dst['time_unit'] = 's'
 
     if first_wall is None:
         try:

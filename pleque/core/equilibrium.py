@@ -157,7 +157,9 @@ class Equilibrium(object):
                 self.time = -1
 
             if 'time_unit' in basedata:
-                self.time_unit = basedata['time_unit']
+                # basedata may be an xr.Dataset, so normalise to a plain str
+                # (e.g. from a 0-d DataArray) rather than storing an array.
+                self.time_unit = str(np.asarray(basedata['time_unit']).item())
             else:
                 self.time_unit = "ms"
 
