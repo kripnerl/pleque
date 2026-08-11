@@ -104,5 +104,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Install Pandoc
+        run: sudo apt-get update && sudo apt-get install --yes --no-install-recommends pandoc
+
       - name: Build documentation
         run: uv run make -C docs html
