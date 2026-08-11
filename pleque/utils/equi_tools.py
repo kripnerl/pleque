@@ -1,45 +1,106 @@
+import logging
 from collections.abc import Iterable
 
+from scipy.optimize import brentq, minimize
 from scipy.signal import argrelmin
-from scipy.optimize import minimize, brentq
 
 try:
     from scipy.integrate import cumulative_trapezoid
 except ModuleNotFoundError:
     from scipy.integrate import cumtrapz as cumulative_trapezoid
 
-import pleque
-import pleque.utils.surfaces as surf
-from pleque.utils.surfaces import points_inside_curve, find_contour
 import numpy as np
 import xarray as xa
 
+import pleque.utils.surfaces as surf
+from pleque.config.settings import get_settings
+from pleque.utils.surfaces import find_contour, points_inside_curve
 
-def _get_psi_n_on_q(eq, q, max_psi_n=0.99):
+logger = logging.getLogger(__name__)
+
+
+def synthesize_rectangular_wall(rs, zs):
+    """
+    Synthesize an artificial rectangular first wall around the psi grid.
+
+    The rectangle is slightly inset with respect to the grid extent
+    (`grid.synthetic_wall_margin` setting) so that some plasma can be found
+    behind the wall; each side is sampled with
+    `grid.synthetic_wall_points_per_side` points.
+
+    :param rs: array-like, R coordinates of the psi grid
+    :param zs: array-like, Z coordinates of the psi grid
+    :return: array (4 * points_per_side, 2) of wall points
+    """
+    wall_cfg = get_settings().grid
+
+    rwall_min = np.min(rs)
+    rwall_max = np.max(rs)
+    zwall_min = np.min(zs)
+    zwall_max = np.max(zs)
+
+    dr = rwall_max - rwall_min
+    dz = zwall_max - zwall_min
+
+    rwall_min += dr * wall_cfg.synthetic_wall_margin
+    rwall_max -= dr * wall_cfg.synthetic_wall_margin
+    zwall_min += dz * wall_cfg.synthetic_wall_margin
+    zwall_max -= dz * wall_cfg.synthetic_wall_margin
+
+    corners = np.array(
+        [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
+         [rwall_min, zwall_min]])
+    newwall_r = []
+    newwall_z = []
+    for i in range(-1, 3):
+        side_r = np.linspace(corners[i, 0], corners[i + 1, 0], wall_cfg.synthetic_wall_points_per_side)
+        side_z = np.linspace(corners[i, 1], corners[i + 1, 1], wall_cfg.synthetic_wall_points_per_side)
+        newwall_r += list(side_r)
+        newwall_z += list(side_z)
+    return np.stack((newwall_r, newwall_z)).T
+
+
+def _make_psi_grad_sq(psi_spl):
+    """Return a closure that evaluates the squared gradient magnitude of psi at point x=(R,Z)."""
+    def psi_grad_sq(x):
+        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
+               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    return psi_grad_sq
+
+
+def _get_psi_n_on_q(eq, q, max_psi_n=None):
+    psi_n_cap = get_settings().flux_surfaces.q_search_psi_n_cap
+    if max_psi_n is None:
+        max_psi_n = psi_n_cap
+
     # todo: brentq method is probably not the fastest.
     if not (np.abs(eq.q(0)) < q < np.abs(eq.q(max_psi_n))):
         return None
 
-    psi_n = brentq(lambda psi_n: np.abs(eq.q(psi_n)) - q, 0, 0.99)
+    psi_n = brentq(lambda psi_n: np.abs(eq.q(psi_n)) - q, 0, psi_n_cap)
     return psi_n
 
 
-def get_psi_n_on_q(eq, q, max_psi_n=0.95):
+def get_psi_n_on_q(eq, q, max_psi_n=None):
+    if max_psi_n is None:
+        max_psi_n = get_settings().flux_surfaces.q_search_psi_n_max
     if isinstance(q, Iterable):
         return [_get_psi_n_on_q(eq, _q, max_psi_n=max_psi_n) for _q in q]
     return _get_psi_n_on_q(eq, q, max_psi_n=max_psi_n)
 
 
-def is_monotonic(f, x0, x1, n_test=10):
+def is_monotonic(f, x0, x1, n_test=None):
     """
     Test whether line connection of two points is monotonic on f.
 
     :param f: 2D spline `f(x[0], x[1])`
     :param x0: start point (2d) of the line
     :param x1: end point (2d) of the line
-    :param n_test: number of points which are tested.
+    :param n_test: number of points which are tested. Defaults to the value from PLEQUE settings.
     :return: logic value
     """
+    if n_test is None:
+        n_test = get_settings().critical_points.monotonicity_test_points
     rpts = np.linspace(x0[0], x1[0], n_test)
     zpts = np.linspace(x0[1], x1[1], n_test)
     psi_test = f(rpts, zpts, grid=False)
@@ -60,23 +121,25 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     # minimize in the vicinity:
 
     # Study different methods and find the most propriate and fastest!
-    bounds = ((np.max((r_lims[0], point[0] - 0.1)),
-               np.min((r_lims[-1], point[0] + 0.1))),
-              (np.max((z_lims[0], point[1] - 0.1)),
-               np.min((z_lims[-1], point[1] + 0.1))))
+    cp_cfg = get_settings().critical_points
+    vicinity = cp_cfg.vicinity_radius
+    bounds = ((np.max((r_lims[0], point[0] - vicinity)),
+               np.min((r_lims[-1], point[0] + vicinity))),
+              (np.max((z_lims[0], point[1] - vicinity)),
+               np.min((z_lims[-1], point[1] + vicinity))))
 
-    res = minimize(func, point, method='Powell', options={'xtol': 1e-7})
+    res = minimize(func, point, method='Powell', options={'xtol': cp_cfg.minimizer_xtol})
     res_point = np.array((res['x'][0], res['x'][1]))
 
     # If unbounded Powell algorithm finds wrong minimum, algorithm with bounds is used.
-    if np.sum(res_point ** 2 - point ** 2) > 1e-2:
-        res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': 1e-7})
+    if np.sum(res_point ** 2 - point ** 2) > cp_cfg.relocation_threshold:
+        res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': cp_cfg.minimizer_xtol})
         res_point = np.array((res['x'][0], res['x'][1]))
 
     return res_point
 
 
-def find_extremes(rs, zs, psi_spl, order=20):
+def find_extremes(rs, zs, psi_spl, order=None):
     """
     Find the extremes on grid given by rs and zs.
     x-points: Candidates for x-point
@@ -87,20 +150,17 @@ def find_extremes(rs, zs, psi_spl, order=20):
     :param order: int, order used by scipy argrelmin function
                   (https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.argrelmin.html)
                   How many points on each side to use for the comparison to
-                  consider comparator(n, n+x) to be True
+                  consider comparator(n, n+x) to be True.
+                  Defaults to the value from PLEQUE settings.
     :param psi_spl:
     :return: tuple(x-points, o-points) of arrays(N, 2)
     """
 
+    cp_cfg = get_settings().critical_points
+    if order is None:
+        order = cp_cfg.find_extremes_order
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-            + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    psi_xysq_func = _make_psi_grad_sq(psi_spl)
 
     def psi_2nd_derivatives(r_coord, z_coord):
         _psi_xx = (psi_spl(r_coord, z_coord, dx=2, dy=0, grid=False))
@@ -115,7 +175,7 @@ def find_extremes(rs, zs, psi_spl, order=20):
     x_points = []
 
     iteration = 0
-    while len(o_points) == 0 and order > 0 and iteration < 10:
+    while len(o_points) == 0 and order > 0 and iteration < cp_cfg.find_extremes_max_iter:
 
         iteration += 1
         o_points = []
@@ -134,14 +194,14 @@ def find_extremes(rs, zs, psi_spl, order=20):
         # psi_diff = (np.max(psi) - np.min(psi)) ** 2
         # x_diff = ((rs[-1] - rs[0]) / len(rs)) ** 2 + ((zs[-1] - zs[0]) / len(zs)) ** 2
 
-        for i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
-            for j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
+        for _i, (ar, az) in enumerate(zip(mins0[0], mins0[1])):
+            for _j, (br, bz) in enumerate(zip(mins1[0], mins1[1])):
                 if ar == br and az == bz:
                     r_ex = rs[ar]
                     z_ex = zs[az]
 
                     # XXX Remove bad candidates for the extreme (this is potentional trouble point):
-                    if psi_xysq_func((r_ex, z_ex)) > 1:  # 1e3 * dpsidx:
+                    if psi_xysq_func((r_ex, z_ex)) > cp_cfg.gradient_threshold:  # 1e3 * dpsidx:
                         continue
 
                     psi_xx, psi_yy, psi_xy2 = psi_2nd_derivatives(r_ex, z_ex)
@@ -154,23 +214,24 @@ def find_extremes(rs, zs, psi_spl, order=20):
                         x_points.append((r_ex, z_ex))
 
 
-        print(f"Found {len(o_points)} o-points and {len(x_points)} x-points with order {order}")
+        logger.debug("Found %d o-points and %d x-points with order %d", len(o_points), len(x_points), order)
         order = order // 2
 
         if len(o_points) == 0 and order == 0:
+            logger.warning("No O-point candidate found on the grid; magnetic-axis recognition will likely fail.")
 
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.contourf(rs, zs, psi_xysq.T)
-            ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
-            ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
-            ax.set_aspect('equal')
-            ax.set_title(f"DEBUG plot of d2psi_dxdy with argrelmin order {order}")
-            ax.set_xlabel('R')
-            ax.set_ylabel('Z')
+            if get_settings().debug_plots:
+                import matplotlib.pyplot as plt
+                _fig, ax = plt.subplots()
+                ax.contourf(rs, zs, psi_xysq.T)
+                ax.plot(rs[mins0[0]], zs[mins0[1]], 'rx')
+                ax.plot(rs[mins1[0]], zs[mins1[1]], 'b+')
+                ax.set_aspect('equal')
+                ax.set_title(f"DEBUG plot of d2psi_dxdy with argrelmin order {order}")
+                ax.set_xlabel('R')
+                ax.set_ylabel('Z')
 
-            plt.show()
-
+                plt.show()
 
     o_points = np.array(o_points)
     x_points = np.array(x_points)
@@ -195,11 +256,13 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     :return: tuple with recognize magnetic axis point and arguments of sorted o-points
     """
 
+    cp_cfg = get_settings().critical_points
+
     if mg_axis_candidate is None:
         r_centr = (r_lims[0] + r_lims[-1]) / 2
         z_centr = (z_lims[0] + z_lims[-1]) / 2
         # vertical distance if favoured
-        op_dist = 5 * (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
+        op_dist = cp_cfg.axis_vertical_weight * (o_points[:, 0] - r_centr) ** 2 + (o_points[:, 1] - z_centr) ** 2
     else:
         op_dist = (o_points[:, 0] - mg_axis_candidate[0]) ** 2 + (o_points[:, 1] - mg_axis_candidate[1]) ** 2
     # normalise the maximal distance to one
@@ -216,22 +279,13 @@ def recognize_mg_axis(o_points, psi_spl, r_lims, z_lims, first_wall=None, mg_axi
     if first_wall is not None and len(first_wall) > 2:
         mask_in = points_inside_curve(o_points, first_wall)
         op_in_first_wall[mask_in] = 1
-        op_in_first_wall[np.logical_not(mask_in)] = 1e-3
+        op_in_first_wall[np.logical_not(mask_in)] = cp_cfg.axis_out_of_wall_penalty
 
     sortidx = np.argsort(op_dist * op_psiscale * (1 - op_in_first_wall))
 
     o_point = o_points[sortidx[0]]
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-        
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
-
-    o_point = minimize_in_vicinity(o_point, psi_xysq_func, r_lims, z_lims)
+    o_point = minimize_in_vicinity(o_point, _make_psi_grad_sq(psi_spl), r_lims, z_lims)
 
     return o_point, sortidx
 
@@ -241,14 +295,7 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
     if x_points is None or len(x_points) == 0:
         return (None, None), list([])
 
-    def psi_xysq_func(x):
-        """
-        Return sum of squre of gradients of psi spline in R a Z direction.
-        
-        return: array
-        """
-        return psi_spl(x[0], x[1], dx=1, dy=0, grid=False) ** 2 \
-               + psi_spl(x[0], x[1], dx=0, dy=1, grid=False) ** 2
+    psi_xysq_func = _make_psi_grad_sq(psi_spl)
 
     len_diff = np.ones(x_points.shape[0])
     monotonic = np.zeros(x_points.shape[0])
@@ -269,12 +316,15 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
             len_diff = (x_point_candidates[0] - x_points[:, 0]) ** 2 + (x_point_candidates[1] - x_points[:, 1]) ** 2
         len_diff = len_diff / np.max(len_diff)
 
-    for i, xpoint in enumerate(x_points):
-        monotonic[i] = is_monotonic(psi_spl, mg_axis, xpoint, 10)
-        monotonic[i] = (1 - monotonic[i] * 1) + 1e-3
+    cp_cfg = get_settings().critical_points
+    sort_eps = cp_cfg.x_point_sort_epsilon
 
-    # The monotonic points are preferred (addition of 1e-3 is to avoid zero difference)
-    sortidx = np.argsort((psi_diff + 1e-3) * monotonic * len_diff)
+    for i, xpoint in enumerate(x_points):
+        monotonic[i] = is_monotonic(psi_spl, mg_axis, xpoint, cp_cfg.monotonicity_test_points)
+        monotonic[i] = (1 - monotonic[i] * 1) + sort_eps
+
+    # The monotonic points are preferred (addition of the epsilon is to avoid zero difference)
+    sortidx = np.argsort((psi_diff + sort_eps) * monotonic * len_diff)
     xp1 = x_points[sortidx[0]]
 
     if len(x_points) > 1:
@@ -295,10 +345,10 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
 
 def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
     """
-    Recognize whether the plasma is limited or with x-point and find point which limit the plasma (limiter point).
-    In case of limiter plasma it is contact point, in case of x-point the plasma is limited by x-point.
+    Recognize whether the plasma is limited or with x-point and find the point which limit the plasma (limiter point).
+    In the case of limiter plasma it is the contact point, in the case of x-point the plasma is limited by x-point.
 
-    :param x_point: (R, Z) position of point suspected to by x-point or `None` if there is any.
+    :param x_point: (R, Z) position of point suspected to be an x-point or `None` if there is any.
     :param first_wall: array(N, 2) Points which may limit the plasma.
     :param mg_axis: (R, Z) position of the magnetic axis of plasma.
     :param psi_axis: psi on axis
@@ -317,7 +367,8 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     i = 0
 
-    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, 50)):
+    n_test = get_settings().critical_points.limiter_monotonicity_test_points
+    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, n_test)):
         i += 1
 
     if i == len(idxs_wall):
@@ -352,7 +403,7 @@ def find_close_lcfs(psi_lcfs, rs, zs, psi_spl, mg_axis, psi_axis=0):
     :return:
     """
 
-    new_psi_lcfs = psi_lcfs - 1e-4 * (psi_lcfs - psi_axis)
+    new_psi_lcfs = psi_lcfs - get_settings().lcfs.initial_psi_offset * (psi_lcfs - psi_axis)
 
     contours = find_contour(psi_spl(rs, zs, grid=True).T, new_psi_lcfs, rs, zs)
 
@@ -410,8 +461,9 @@ def find_surface_step(psi_spl, psi_target, flux_surf):
     psix = psix / (deriv_norm ** 2)
     psiy = psiy / (deriv_norm ** 2)
 
-    flux_surf[:, 0] -= 0.99 * psix * (psi - psi_target)
-    flux_surf[:, 1] -= 0.99 * psiy * (psi - psi_target)
+    damping = get_settings().lcfs.surface_step_damping
+    flux_surf[:, 0] -= damping * psix * (psi - psi_target)
+    flux_surf[:, 1] -= damping * psiy * (psi - psi_target)
 
     return flux_surf
 

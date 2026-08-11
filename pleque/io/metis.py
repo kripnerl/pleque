@@ -1,8 +1,8 @@
+import h5py
 import numpy as np
 import xarray as xr
-import h5py
 
-from pleque.core import Coordinates, FluxFunctions
+from pleque.core import Coordinates
 
 
 def read(equilibrium, file, time):
@@ -44,7 +44,7 @@ def read(equilibrium, file, time):
     psi_sep = toexp.psi.values[np.argmax(np.abs(toexp.psi.values))]
     psi_n = np.abs((toexp.psi.values - psi_axis) / (psi_sep - psi_axis))
 
-    crds = Coordinates(equilibrium=equilibrium, psi_n=psi_n)
+    crds = Coordinates.from_coords(equilibrium, psi_n=psi_n)
 
     for name in list(toexp.variables.keys()):
         #todo: better handling of complex values
@@ -58,7 +58,7 @@ def read(equilibrium, file, time):
     return fluxfun
 
 
-def to_omas(fluxfunc, coordinates, ods=None, time=np.array([0], ndmin=1)):
+def to_omas(fluxfunc, coordinates, ods=None, time=None):
     """
 
     :param fluxfunc: FluxFunctions with metis profiles
@@ -69,6 +69,9 @@ def to_omas(fluxfunc, coordinates, ods=None, time=np.array([0], ndmin=1)):
     """
     # TODO: So far only profiles to be used by ASCOT are saved. Others will be added later (or upon request)
     import omas
+
+    if time is None:
+        time = np.array([0], ndmin=1)
 
     if ods is None:
         ods = omas.ODS()

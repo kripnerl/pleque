@@ -1,39 +1,87 @@
 import copy
+import logging
 from collections.abc import Sequence
 
 import numpy as np
 import xarray
 from scipy.constants import mu_0
-from shapely import Polygon, Point
-
-import pleque
-from pleque.utils.decorators import deprecated
-
 from scipy.interpolate import RectBivariateSpline, UnivariateSpline
-from pleque.core import Coordinates
-from pleque.utils.tools import arglis
-from pleque.core import FluxFunctions, Surface  # , FluxSurface
-from pleque.core import SurfaceFunctions
-from pleque.core import cocos as cc
+from shapely import Point, Polygon
+
 import pleque.utils.equi_tools as eq_tools
-import pleque.utils.surfaces as surf
 import pleque.utils.flux_expansions as flux_expansion
+import pleque.utils.surfaces as surf
+from pleque.config.settings import get_settings
+from pleque.core import Coordinates, FluxFunctions, Surface, SurfaceFunctions  # , FluxSurface
+from pleque.core import cocos as cc
+from pleque.core.coordinates import COORD_PARAMS_DOC, COORDINATES_DOC
+from pleque.utils.decorators import (
+    append_to_doc,
+    deprecated,
+    ordered_path_scalar_function,
+    scalar_function,
+    vector_function,
+)
+from pleque.utils.surfaces import track_plasma_boundary
+from pleque.utils.tools import arglis, xp_sections
+
+logger = logging.getLogger(__name__)
 
 
-class Equilibrium(object):
+class Equilibrium:
     """
-    Equilibrium class ...
+    Tokamak plasma equilibrium based on the poloidal flux function psi(R, Z).
+
+    The equilibrium is initialised from an `xarray.Dataset` with psi on a
+    rectangular (R, Z) grid and 1D profiles of the toroidal field function F
+    and pressure (or their psi-derivatives) as functions of psi_n. The
+    initialisation proceeds in the following steps:
+
+    1. *Input parsing.* Spatial data, profiles and optional hints are read from
+       the dataset and constructor arguments. If no first wall is given, an
+       artificial rectangular wall slightly inset with respect to the psi grid
+       is synthesized.
+    2. *2D spline construction.* psi(R, Z) is interpolated by a
+       `RectBivariateSpline` (order and smoothing from the PLEQUE settings).
+    3. *Critical points.* Candidate extremes of |grad psi|^2 are located on a
+       regular grid and classified by the determinant of the Hessian of psi
+       into O-points (det > 0) and X-points (det < 0); the magnetic axis and
+       the relevant X-points are then recognized among the candidates and the
+       plasma configuration (limiter vs. X-point/diverted) is determined,
+       including the limiter point and psi on the last closed flux surface.
+    4. *Plasma boundary.* Strike points are found as intersections of the
+       LCFS-psi contour with the first wall. The LCFS contour itself is found
+       by the marching-squares algorithm on a search grid and refined by an
+       iterative downhill (gradient-step) method until the relative psi error
+       drops below the `lcfs.refinement_tolerance` setting; for diverted
+       plasmas the X-point is inserted into the contour. (Note: poloidal
+       field-line tracing of the boundary is *not* used during the
+       initialisation; it is available separately via `lcfs_field_line`.)
+    5. *1D profile splines.* If derivatives (pprime, FFprime) are provided,
+       the p and F profiles are obtained by integration — this requires
+       psi_axis and psi_lcfs, which is why this step runs *after* the
+       critical-point search. Otherwise the derivatives are computed from the
+       provided p and F profiles. If neither pressure nor F is available a
+       vacuum equilibrium (p = F = 0) is constructed.
+    6. *Midplane mapping.* A 1D spline mapping the outer-midplane radius to
+       psi is built.
+
+    Known limitations: COCOS handling is not complete (`_Bpol_sign` is not yet
+    resolved from the input convention).
     """
 
-    # def __init__(self,
-    #              basedata: xarray.Dataset,
-    #              first_wall=None: Iterable[(float, float)],
-    #              psi_lcfs=None: float,
-    #              X_points=None: Iterable[(float, float)],
-    #              strike_points=None: Iterable[(float, float)],
-    #              spline_order=5: int,
-    #              cocos=3: int,
-    #             ):
+    @staticmethod
+    def _shape_spline_result(value, grid=False):
+        """
+        Convert SciPy spline grid output to PLEQUE's public grid layout.
+
+        RectBivariateSpline returns true grids as (n_R, n_Z). PLEQUE exposes
+        grid-shaped data as (n_Z, n_R), matching np.meshgrid(R, Z). For
+        grid=False SciPy evaluates elementwise and already preserves the input
+        array shape, so no transpose is applied.
+        """
+        return value.T if grid else value
+
     def __init__(self,
                  basedata: xarray.Dataset,
                  first_wall=None,
@@ -42,9 +90,9 @@ class Equilibrium(object):
                  x_points=None,
                  strike_points=None,
                  init_method="hints",
-                 spline_order=3,
-                 spline_smooth=0,
-                 find_extremes_order=20,
+                 spline_order=None,
+                 spline_smooth=None,
+                 find_extremes_order=None,
                  cocos=None,
                  verbose=False,
                  ):
@@ -52,34 +100,59 @@ class Equilibrium(object):
         Equilibrium class instance should be obtained generally by functions in pleque.io
         package.
 
-        Optional arguments may help the initialization.
+        The hint arguments (`mg_axis`, `psi_lcfs`, `x_points`, `strike_points`) can be used
+        to speed up the initialisation or to make it more robust; each of them may
+        alternatively be provided as a `basedata` variable of the same name (an explicitly
+        passed argument takes precedence, with a logged warning). How the hints are used is
+        controlled by `init_method`.
 
-        :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, f(psi_norm), p(psi_norm)
-                         f = B_tor * R
+        If the initialisation fails, the exception is logged (and re-raised); set the
+        `debug_plots` PLEQUE setting (e.g. ``PLEQUE_DEBUG_PLOTS=1``) to also draw a debug
+        plot of the partially initialised equilibrium.
+
+        :param basedata: xarray.Dataset with psi(R, Z) on a rectangular R, Z grid, F(psi_n), p(psi_n)
+                         (or their derivatives FFprime(psi_n), pprime(psi_n)); F = B_tor * R
         :param first_wall: array-like (Nwall, 2)  required for initialization in case of limiter configuration.
-        :param mg_axis: suspected position of the o-point
-        :param psi_lcfs:
-        :param x_points:
-        :param strike_points:
-        :param init_method: str On of ("full", "hints", "fast_forward").
-                            If "full" no hints are taken and module tries to recognize all critical points itself.
-                            If "hints" module use given optional arguments as a help with initialization.
-                            If "fast-forward" module use given optional arguments as final and doesn't try to correct.
-                            *Note:* Only "hints" method is currently tested.
-        :param spline_order:
-        :param spline_smooth:
+                           If not given (nor present in basedata), an artificial rectangular wall slightly
+                           inset with respect to the psi grid is synthesized.
+        :param mg_axis: array-like (2) suspected (R, Z) position of the magnetic axis
+        :param psi_lcfs: float, suspected value of psi on the last closed flux surface
+        :param x_points: array-like (n, 2) suspected (R, Z) positions of the X-points
+        :param strike_points: array-like (n, 2) suspected (R, Z) positions of the strike points
+        :param init_method: str One of ("full", "hints", "fast_forward"):
+                            "full" — all hints are ignored and the module recognizes all critical
+                            points itself;
+                            "hints" (default) — the given hints are used to assist the recognition;
+                            "fast_forward" — the `mg_axis` and `x_points` hints are taken as final
+                            and the critical-point search is skipped (`psi_lcfs` and `strike_points`
+                            hints are likewise used as final when given); if the required hints are
+                            missing, the method falls back to "hints" with a logged warning.
+        :param spline_order: Order of the 2D psi spline. Defaults to the value from PLEQUE settings.
+        :param spline_smooth: Smoothing factor of the 2D psi spline. Defaults to the value from PLEQUE settings.
         :param find_extremes_order: Define number of points on internal grid used for identifying
-                                    magnetic axis and x-points.
+                                    magnetic axis and x-points. Defaults to the value from PLEQUE settings.
         :param cocos: At the moment module assume cocos to be 3 (no other option). The implemetnation is not fully
                       working. Be aware of signs in the module!
-        :param verbose:
-
+        :param verbose: Superseded by logging: `verbose=True` calls
+                        ``pleque.set_log_level(logging.DEBUG)`` (process-global). Prefer configuring
+                        the ``pleque`` logger directly.
         """
 
         if verbose:
-            print('---------------------------------')
-            print('Equilibrium module initialization')
-            print('---------------------------------')
+            # Backward-compatible alias for configuring the `pleque` logger.
+            from pleque import set_log_level
+
+            set_log_level(logging.DEBUG)
+
+        logger.debug('Equilibrium module initialization')
+
+        cfg = get_settings()
+        if spline_order is None:
+            spline_order = cfg.splines.psi_order
+        if spline_smooth is None:
+            spline_smooth = cfg.splines.psi_smooth
+        if find_extremes_order is None:
+            find_extremes_order = cfg.critical_points.find_extremes_order
 
         if cocos is None:
             if "cocos" in basedata.attrs:
@@ -87,74 +160,40 @@ class Equilibrium(object):
             elif "cocos" in basedata:
                 cocos = basedata["cocos"]
             else:
-                cocos = 3
+                cocos = cfg.default_cocos
+
+        if init_method == "fast":
+            init_method = "fast_forward"
+        if init_method not in ("full", "hints", "fast_forward"):
+            raise ValueError(f"Unknown init_method {init_method!r}; expected one of ('full', 'hints', 'fast_forward').")
 
         self._basedata = basedata
         self._verbose = verbose
-        self._mg_axis = mg_axis
-        self._psi_lcfs = psi_lcfs
-        self._x_points = x_points
-        self._strike_points = strike_points
+        self._load_hints(basedata, mg_axis, psi_lcfs, x_points, strike_points)
         self._spline_order = spline_order
-        # TODO TODO TODO
         self._init_method = init_method
         self._cocos = cocos
         self._cocosdic = cc.cocos_coefs(cocos)
 
-        # todo: resolve this from input (for COCOS time) TODO TODO TODO
+        # todo: resolve this from the input COCOS convention
         self._Bpol_sign = 1
 
+        logger.debug("Equilibrium initialized with cocos=%s and init_method=%s", self._cocos, self._init_method)
+
+        self._flux_surfaces = None
+
         try:
+            r, z, psi = self._load_spatial_data(basedata, first_wall)
+            psi_n, pressure, pprime, F, FFprime = self._load_profiles(basedata)
 
-            r = basedata.R.values
-            z = basedata.Z.values
-            psi = basedata.psi.transpose('R', 'Z').values
+            logger.debug('Generating 2D spline')
+            self._setup_psi_spline(r, z, psi, spline_order, spline_smooth)
 
-            if first_wall is None:
-                if 'first_wall' in basedata:
-                    self._first_wall = basedata["first_wall"].values
-                elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
-                    self._first_wall = np.array([basedata.R_first_wall.values,
-                                                 basedata.Z_first_wall.values]).T
-                elif 'r_lim' in basedata and 'z_lim' in basedata:
-                    self._first_wall = np.array([basedata.r_lim.values,
-                                                 basedata.z_lim.values]).T
-                else:
-                    rwall_min = np.min(r)
-                    rwall_max = np.max(r)
-                    zwall_min = np.min(z)
-                    zwall_max = np.max(z)
+            logger.debug('Looking for critical points')
+            self._find_critical_points(r, z, find_extremes_order)
 
-                    dr = rwall_max - rwall_min
-                    dz = zwall_max - zwall_min
-
-                    # todo: remove this if possible
-                    # lets reduce the wall a bit to be have some plasma behind the wall
-                    rwall_min += dr / 100
-                    rwall_max -= dr / 100
-                    zwall_min += dz / 100
-                    zwall_max -= dz / 100
-
-                    corners = np.array(
-                        [[rwall_min, zwall_max], [rwall_max, zwall_max], [rwall_max, zwall_min],
-                         [rwall_min, zwall_min]])
-                    newwall_r = []
-                    newwall_z = []
-                    for i in range(-1, 3):
-                        rs = np.linspace(corners[i, 0], corners[i + 1, 0], 20)
-                        zs = np.linspace(corners[i, 1], corners[i + 1, 1], 20)
-                        newwall_r += list(rs)
-                        newwall_z += list(zs)
-                    self._first_wall = np.stack((newwall_r, newwall_z)).T
-            else:
-                self._first_wall = first_wall
-
-            self._first_wall = self._first_wall[~np.isnan(self._first_wall).any(axis=1)]
-
-            if 'time' in basedata:
-                self.time = basedata['time'].values
-            else:
-                self.time = -1
+            logger.debug('Recognizing equilibrium type')
+            self._setup_plasma_boundary()
 
             if 'time_unit' in basedata:
                 # basedata may be an xr.Dataset, so normalise to a plain str
@@ -162,106 +201,201 @@ class Equilibrium(object):
                 self.time_unit = str(np.asarray(basedata['time_unit']).item())
             else:
                 self.time_unit = "ms"
+            logger.debug('Generating 1D splines')
+            self._setup_1d_profiles(psi_n, F, FFprime, pressure, pprime)
 
-            if 'shot' in basedata:
-                # Shot number will be strictly integer
-                self.shot = int(basedata['shot'])
-            else:
-                self.shot = 0
+            logger.debug('Mapping midplane to psi_n')
+            self._map_midplane2psi()
 
-            # todo: other machine-related information
+        except Exception:
+            logger.exception("Equilibrium initialization failed.")
 
-            self.R_min = np.min(r)
-            self.R_max = np.max(r)
-            self.Z_min = np.min(z)
-            self.Z_max = np.max(z)
+            if get_settings().debug_plots:
+                try:
+                    import matplotlib.pyplot as plt
 
-            # TODO: allow FFprime, ffprime, pprime and other on the input
-            psi_n = basedata.psi_n.values
+                    from pleque.utils.plotting import _plot_debug
 
-            pressure = None
-            pprime = None
+                    plt.figure()
+                    _plot_debug(self)
+                    plt.show()
+                except Exception:
+                    logger.exception("Debug plot of the failed initialization could not be drawn.")
 
-            if 'pprime' in basedata:
-                pprime = basedata.pprime.values
-            if 'pressure' in basedata:
-                pressure = basedata.pressure.values
+            raise
 
-            self.F0 = None
-            # Try to find F0 in basedata:
-            if 'F0' in basedata:
-                self.F0 = basedata['F0']
-                if isinstance(self.F0, xarray.DataArray):
-                    self.F0 = np.asarray(self.F0.values).item()
-            elif 'F0' in basedata.attrs:
-                self.F0 = basedata.attrs['F0']
+    def _load_hints(self, basedata: xarray.Dataset, mg_axis, psi_lcfs, x_points, strike_points):
+        """
+        Resolve initialization hints from constructor arguments with fallback to `basedata` variables.
 
-            F = None
-            FFprime = None
+        An explicitly passed argument takes precedence over a `basedata` variable of the same
+        name; a warning is logged when both are given.
+        """
 
-            if 'FFprime' in basedata:
-                FFprime = basedata.FFprime.values
-            if 'F' in basedata:
-                F = basedata.F.values
+        def resolve(name, value):
+            if value is not None:
+                if name in basedata:
+                    logger.warning("%s specified both in basedata and as an argument. Using the argument value.", name)
+                return value
+            if name in basedata:
+                return basedata[name].values
+            return None
 
-            # Other attempts to identify F0:
-            if self.F0 is None:
-                if F is not None:
-                    self.F0 = F[-1]
+        self._mg_axis = resolve('mg_axis', mg_axis)
+        self._psi_lcfs = resolve('psi_lcfs', psi_lcfs)
+        self._x_points = resolve('x_points', x_points)
+        self._strike_points = resolve('strike_points', strike_points)
 
-                elif 'B0' in basedata and 'R0' in basedata:
-                    self.F0 = basedata['B0'] * basedata['R0']
-                elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
-                    self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+    def _resolve_first_wall(self, basedata: xarray.Dataset, first_wall, r, z):
+        """
+        Resolve the first wall from the argument, `basedata` variables, or synthesize one.
 
-            # ---------------------------
-            # --- Generate psi spline ---
-            # ---------------------------
-            if verbose:
-                print('--- Generate 2D spline ---')
+        NaN rows are dropped from the result.
+        """
+        if first_wall is not None:
+            logger.debug("First wall taken from the constructor argument.")
+        elif 'first_wall' in basedata:
+            first_wall = basedata["first_wall"].values
+            logger.debug("First wall taken from the 'first_wall' basedata variable.")
+        elif 'R_first_wall' in basedata and 'Z_first_wall' in basedata:
+            first_wall = np.array([basedata.R_first_wall.values,
+                                   basedata.Z_first_wall.values]).T
+            logger.debug("First wall taken from the 'R_first_wall'/'Z_first_wall' basedata variables.")
+        elif 'r_lim' in basedata and 'z_lim' in basedata:
+            first_wall = np.array([basedata.r_lim.values,
+                                   basedata.z_lim.values]).T
+            logger.debug("First wall taken from the 'r_lim'/'z_lim' basedata variables.")
+        else:
+            first_wall = eq_tools.synthesize_rectangular_wall(r, z)
+            logger.info("No first wall given; a rectangular wall around the psi grid was synthesized.")
 
-            spl = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
-                                      s=spline_smooth)
-            self._spl_psi = spl
+        first_wall = np.asarray(first_wall)
+        return first_wall[~np.isnan(first_wall).any(axis=1)]
 
-            # -------------------------------
-            # ---- Find critical points -----
-            # -------------------------------
-            if verbose:
-                print('--- Looking for critical points ---')
+    def _load_spatial_data(self, basedata: xarray.Dataset, first_wall) -> tuple:
+        """Load psi grid, first wall, and spatial metadata from dataset."""
+        r = basedata.R.values
+        z = basedata.Z.values
+        psi = basedata.psi.transpose('R', 'Z').values
 
+        self._first_wall = self._resolve_first_wall(basedata, first_wall, r, z)
+
+        if 'time' in basedata:
+            self.time = basedata['time'].values
+        else:
+            self.time = -1
+
+        if 'time_unit' in basedata:
+            self.time_unit = basedata['time_unit']
+        else:
+            self.time_unit = "ms"
+
+        if 'shot' in basedata:
+            self.shot = int(basedata['shot'])
+        else:
+            self.shot = 0
+
+        self.R_min = np.min(r)
+        self.R_max = np.max(r)
+        self.Z_min = np.min(z)
+        self.Z_max = np.max(z)
+
+        return r, z, psi
+
+    def _load_profiles(self, basedata: xarray.Dataset) -> tuple:
+        """Load 1D profile arrays (F, FFprime, pressure, pprime) from dataset."""
+        # TODO: allow FFprime, ffprime, pprime and other on the input
+        psi_n = basedata.psi_n.values
+
+        pressure = None
+        pprime = None
+
+        if 'pprime' in basedata:
+            pprime = basedata.pprime.values
+        if 'pressure' in basedata:
+            pressure = basedata.pressure.values
+
+        self.F0 = None
+        if 'F0' in basedata:
+            self.F0 = basedata['F0']
+            if isinstance(self.F0, xarray.DataArray):
+                self.F0 = np.asarray(self.F0.values).item()
+        elif 'F0' in basedata.attrs:
+            self.F0 = basedata.attrs['F0']
+
+        F = None
+        FFprime = None
+
+        if 'FFprime' in basedata:
+            FFprime = basedata.FFprime.values
+        if 'F' in basedata:
+            F = basedata.F.values
+
+        if self.F0 is None:
+            if F is not None:
+                self.F0 = F[-1]
+            elif 'B0' in basedata and 'R0' in basedata:
+                self.F0 = basedata['B0'] * basedata['R0']
+            elif 'B0' in basedata.attrs and 'R0' in basedata.attrs:
+                self.F0 = basedata.attrs['B0'] * basedata.attrs['R0']
+
+        return psi_n, pressure, pprime, F, FFprime
+
+    def _setup_psi_spline(self, r, z, psi, spline_order: int, spline_smooth: float):
+        """Build the 2D psi(R, Z) spline."""
+        self._spl_psi = RectBivariateSpline(r, z, psi, kx=spline_order, ky=spline_order,
+                                            s=spline_smooth)
+
+    def _find_critical_points(self, r, z, find_extremes_order: int):
+        """
+        Find and classify all critical points; set plasma type and psi at LCFS.
+
+        Hint usage depends on `init_method`: "full" ignores all hints, "hints"
+        (default) uses them to assist the recognition, and "fast_forward" takes
+        the magnetic-axis and X-point hints as final, skipping the critical-point
+        search entirely.
+        """
+        use_hints = self._init_method in ("hints", "fast_forward")
+        mg_axis_hint = self._mg_axis if use_hints else None
+        psi_lcfs_hint = self._psi_lcfs if use_hints else None
+        x_points_hint = self._x_points if use_hints else None
+
+        trust_hints = self._init_method == "fast_forward"
+        if trust_hints and (mg_axis_hint is None or x_points_hint is None):
+            logger.warning("init_method='fast_forward' requires mg_axis and x_points hints; "
+                           "falling back to 'hints' behaviour.")
+            trust_hints = False
+
+        if trust_hints:
+            self._mg_axis = np.asarray(mg_axis_hint, dtype=float)
+            self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
+            self._o_points = self._mg_axis[np.newaxis, :]
+
+            self._x_points = np.asarray(x_points_hint, dtype=float).reshape(-1, 2)
+            xp1 = self._x_points[0] if len(self._x_points) > 0 else None
+            self._x_point = xp1
+            self._x_point2 = self._x_points[1] if len(self._x_points) > 1 else None
+            self._psi_xp = self._spl_psi(*xp1, grid=False) if xp1 is not None else None
+        else:
             x_points, o_points = eq_tools.find_extremes(r, z, self._spl_psi, order=find_extremes_order)
-
-            # TODO: Raise warning if no o_point was found!
 
             r_lim = (self.R_min, self.R_max)
             z_lim = (self.Z_min, self.Z_max)
 
             self._mg_axis, sortidx = eq_tools.recognize_mg_axis(o_points, self._spl_psi, r_lim, z_lim,
                                                                 first_wall=self._first_wall,
-                                                                mg_axis_candidate=self._mg_axis)
+                                                                mg_axis_candidate=mg_axis_hint)
             self._psi_axis = np.asarray(self._spl_psi(self._mg_axis[0], self._mg_axis[1], grid=False)).item()
             self._o_points = o_points[sortidx]
             self._o_points[0] = self._mg_axis
 
-            # ------------------------------------------
-            # Recognize x-point plasma vs limiter plasma
-            # ------------------------------------------
-            if verbose:
-                print('--- Recognizing equilibrium type ---')
-
-            # todo: use these two x-points in the future
             (xp1, xp2), sortidx = eq_tools.recognize_x_points(x_points, self._mg_axis, self._psi_axis,
                                                               self._spl_psi,
-                                                              r_lim, z_lim, self._psi_lcfs, self._x_points)
+                                                              r_lim, z_lim, psi_lcfs_hint, x_points_hint)
 
             self._x_point = xp1
             self._x_point2 = xp2
-
-            if xp1 is None:
-                self._psi_xp = None
-            else:
-                self._psi_xp = self._spl_psi(*xp1, grid=False)
+            self._psi_xp = self._spl_psi(*xp1, grid=False) if xp1 is not None else None
 
             self._x_points = x_points[sortidx]
             if xp1 is not None:
@@ -269,151 +403,138 @@ class Equilibrium(object):
             if xp2 is not None:
                 self._x_points[1] = xp2
 
-            limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
-                                                                           self._mg_axis, self._psi_axis,
-                                                                           self._spl_psi)
+        limiter_plasma, limiter_point = eq_tools.recognize_plasma_type(self._x_point, self._first_wall,
+                                                                       self._mg_axis, self._psi_axis,
+                                                                       self._spl_psi)
+        self._limiter_plasma = limiter_plasma
+        self._limiter_point = limiter_point
 
-            self._limiter_plasma = limiter_plasma
-            self._limiter_point = limiter_point
+        logger.info("Limiter plasma found." if limiter_plasma else "X-point plasma found.")
 
-            if self._verbose:
-                if limiter_plasma:
-                    print(">> Limiter plasma found.")
-                else:
-                    print(">> X-point plasma found.")
-
+        if trust_hints and psi_lcfs_hint is not None:
+            self._psi_lcfs = float(np.asarray(psi_lcfs_hint).item())
+        else:
             self._psi_lcfs = self._spl_psi(*limiter_point, grid=False)
 
-            # -----------------------
-            # --- Plasma boundary ---
-            # -----------------------
+    def _setup_plasma_boundary(self):
+        """Find LCFS contour and strike points using the recognized plasma type."""
+        lcfs_cfg = get_settings().lcfs
+        nr = lcfs_cfg.search_grid_nr
+        nz = lcfs_cfg.search_grid_nz
+        rs = np.linspace(self.R_min, self.R_max, nr)
+        zs = np.linspace(self.Z_min, self.Z_max, nz)
 
-            rs = np.linspace(self.R_min, self.R_max, 700)
-            zs = np.linspace(self.Z_min, self.Z_max, 1200)
-
-            if limiter_plasma:
-                self._strike_points = self._limiter_point[np.newaxis, :]
-                self._contact_point = self._limiter_point
+        if self._limiter_plasma:
+            self._strike_points = self._limiter_point[np.newaxis, :]
+            self._contact_point = self._limiter_point
+        else:
+            self._contact_point = None
+            if self._init_method == "fast_forward" and self._strike_points is not None:
+                self._strike_points = np.asarray(self._strike_points, dtype=float).reshape(-1, 2)
+            elif len(self._first_wall) < 4:
+                self._strike_points = None
             else:
-                self._contact_point = None
-                if len(self._first_wall) < 4:
-                    self._strike_points = None
-                else:
-                    self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
-                                                                      self._first_wall)
+                self._strike_points = eq_tools.find_strike_points(self._spl_psi, rs, zs, self._psi_lcfs,
+                                                                  self._first_wall)
 
-            if self._verbose:
-                print("--- Looking for LCFS: ---")
+        logger.debug("Looking for LCFS")
 
-            # sometimes this close_lcfs is empty - investigate!
-            close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
-                                                  self._mg_axis, self._psi_axis)
+        # sometimes this close_lcfs is empty - investigate!
+        close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
+                                              self._mg_axis, self._psi_axis)
 
-            while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > 1e-10:
-                close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
+        while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > lcfs_cfg.refinement_tolerance:
+            close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)
 
-            if self._verbose:
-                print("Relative LCFS error: {}".format(
-                    surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs)))
+        if logger.isEnabledFor(logging.INFO):
+            logger.info("Relative LCFS error: %s", surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs))
 
-            if not limiter_plasma:
-                close_lcfs = surf.add_xpoint(xp1, close_lcfs, self._mg_axis)
+        if not self._limiter_plasma:
+            close_lcfs = surf.add_xpoint(self._x_point, close_lcfs, self._mg_axis)
 
-            self._lcfs = close_lcfs
+        self._lcfs = close_lcfs
 
-            # generate 1d profiles:
-            if self._psi_lcfs - self._psi_axis > 0:
-                self._psi_sign = +1
-            else:
-                self._psi_sign = -1
+    def _setup_1d_profiles(self, psi_n, F, FFprime, pressure, pprime):
+        """Build 1D profile splines and register them in fluxfuncs."""
+        if self._psi_lcfs - self._psi_axis > 0:
+            self._psi_sign = +1
+        else:
+            self._psi_sign = -1
 
-            Fprime = None
-            if FFprime is not None:
-                F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
-                Fprime = FFprime / F
+        Fprime = None
+        if FFprime is not None:
+            F = eq_tools.ffprime2f(FFprime, self._psi_axis, self._psi_lcfs, self.F0)
+            F_arr = np.asarray(F)
+            if np.any(F_arr == 0):
+                logger.warning("F profile contains zeros; F' is set to zero there.")
+            Fprime = np.divide(FFprime, F_arr, out=np.zeros_like(F_arr, dtype=float), where=F_arr != 0)
 
-            if pprime is not None:
-                pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
+        if pprime is not None:
+            pressure = eq_tools.pprime2p(pprime, self._psi_axis, self._psi_lcfs)
 
-            self.BvacR = self.F0
+        self.BvacR = self.F0
 
-            # if p and F are not define, run vacuum-like discharge:
-            self._vacuum = False
-            if pressure is None or F is None:
-                pressure = np.zeros_like(psi_n)
-                F = np.zeros_like(psi_n)
-                self._vacuum = True
+        self._vacuum = False
+        if pressure is None or F is None:
+            pressure = np.zeros_like(psi_n)
+            F = np.zeros_like(psi_n)
+            self._vacuum = True
 
-            if verbose:
-                print('--- Generate 1D splines ---')
-            self._fpol_spl = UnivariateSpline(psi_n, F, k=3, s=0)
+        spl_cfg = get_settings().splines
+        self._fpol_spl = UnivariateSpline(psi_n, F, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
-            if FFprime is None:
-                self._df_dpsin_spl = self._fpol_spl.derivative()
-                Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
-                FFprime = F * Fprime
+        if FFprime is None:
+            self._df_dpsin_spl = self._fpol_spl.derivative()
+            Fprime = self._df_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+            FFprime = F * Fprime
 
-            self._pressure_spl = UnivariateSpline(psi_n, pressure, k=3, s=0)
+        self._pressure_spl = UnivariateSpline(psi_n, pressure, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
-            if pprime is None:
-                self._dp_dpsin_spl = self._pressure_spl.derivative()
-                pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
+        if pprime is None:
+            self._dp_dpsin_spl = self._pressure_spl.derivative()
+            pprime = self._dp_dpsin_spl(psi_n) / (self._psi_lcfs - self._psi_axis)
 
-            self._pprime_spl = UnivariateSpline(psi_n, pprime, k=3, s=0)
-            self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=3, s=0)
-            self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=3, s=0)
+        self._pprime_spl = UnivariateSpline(psi_n, pprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
+        self._Fprime_spl = UnivariateSpline(psi_n, Fprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
+        self._FFprime_spl = UnivariateSpline(psi_n, FFprime, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
 
-            self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
-            self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('F', F, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('FFprime', FFprime, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
+        self.fluxfuncs.add_flux_func('pprime', pprime, psi_n=psi_n)
 
-            self.fluxfuncs.add_flux_func('pressure', pressure, psi_n=psi_n)
-            self.fluxfuncs.add_flux_func('pprime', pprime, psi_n=psi_n)
-
-            if verbose:
-                print('--- Mapping midplane to psi_n ---')
-            self.__map_midplane2psi__()
-
-            if verbose:
-                print('--- Mapping pressure and f func to psi_n ---')
-
-        except:
-
-            from pleque.utils.plotting import _plot_debug
-            import matplotlib.pyplot as plt
-
-            plt.figure()
-            _plot_debug(self)
-            plt.show()
-
-            raise
-
+    @scalar_function
     def psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         """
         Psi value
 
-        :param psi_n:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return coord.psi
 
+    @vector_function(ndim=2)
+    def nabla_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords) -> np.ndarray:
+        r"""
+        Return the value of :math:`\nabla \psi`.
+
+        :return: Array of shape (2, ...) containing the gradient components [dψ/dR, dψ/dZ].
+                If grid=True, the shape will be (2, nZ, nR).
+        """
+        coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
+        dpsi_dr = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dx=1), coord.grid)
+        dpsi_dz = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, grid=coord.grid, dy=1), coord.grid)
+
+        nabla_psi = np.stack((dpsi_dr, dpsi_dz))
+
+        return nabla_psi
+
+
+    @scalar_function
     def diff_psi(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""
-        Return the value of :math:`\nabla \psi`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
+        Return the value of :math:`\pm|\nabla \psi|`. It is positive/negative if the :math:`\psi` is increasing/decreasing.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
@@ -424,10 +545,12 @@ class Equilibrium(object):
             ret = ret.T
         return ret
 
+    @scalar_function
     def psi_n(self, *coordinates, R=None, Z=None, psi=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi=psi, coord_type=coord_type, grid=grid, **coords)
         return coord.psi_n
 
+    @scalar_function
     def r_mid(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo: map the r_mid to psi_n
@@ -441,23 +564,28 @@ class Equilibrium(object):
         """
         return 1 / (self._psi_lcfs - self._psi_axis)
 
+    @scalar_function
     def rho(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return np.sqrt(coord.psi_n)
 
+    @scalar_function
     def pressure(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pressure_spl(coord.psi_n)
 
+    @scalar_function
     def pprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._pprime_spl(coord.psi_n)
 
+    @scalar_function
     def f(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
         return self.F(coord) / mu_0
 
+    @scalar_function
     def F(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         # todo use in_plasma
@@ -466,16 +594,10 @@ class Equilibrium(object):
         F[mask_out] = self.BvacR
         return F
 
+    @scalar_function
     def Fprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         '''
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         '''
 
@@ -485,11 +607,13 @@ class Equilibrium(object):
         Fprime[mask_out] = 0
         return Fprime
 
+    @scalar_function
     def ffprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
         return self.FFprime(coord) / mu_0 ** 2
 
+    @scalar_function
     def FFprime(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=True, **coords):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         mask_out = coord.psi_n > 1
@@ -497,16 +621,11 @@ class Equilibrium(object):
         FFprime[mask_out] = 0
         return FFprime
 
+    @scalar_function
     def B_abs(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return: Absolute value of magnetic field in Tesla.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -517,17 +636,14 @@ class Equilibrium(object):
 
         return B_abs
 
+    @vector_function(ndim=3)
     def Bvec(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector
 
-        :param grid:
-        :param coordinates:
-        :param swap_order: bool,
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
-        :return: Magnetic field vector array (3, N) if swap_order is False.
+        :param swap_order: If False, return component-first shape ``(3, ...)``.
+                           If True, move the component axis to the end for compatibility.
+        :return: Magnetic field vector array. Component-first shape is ``(3, n_elements)``
+                 for paired points and ``(3, n_z, n_r)`` for grids.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -543,17 +659,14 @@ class Equilibrium(object):
         else:
             return np.moveaxis(bvec, 0, -1)
 
+    @vector_function(ndim=3)
     def Bvec_norm(self, *coordinates, swap_order=False, R=None, Z=None, coord_type=None, grid=True, **coords):
         """ Magnetic field vector, normalised
 
-        :param grid:
-        :param coordinates:
-        :param swap_order:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
-        :return: Normalised magnetic field vector array (3, N) if swap_order is False.
+        :param swap_order: If False, return component-first shape ``(3, ...)``.
+                           If True, move the component axis to the end for compatibility.
+        :return: Normalised magnetic field vector array. Component-first shape is
+                 ``(3, n_elements)`` for paired points and ``(3, n_z, n_r)`` for grids.
         """
 
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -573,9 +686,12 @@ class Equilibrium(object):
     # XXXXXX TODO TODO TODO
     @deprecated('The structure and behaviour of this function will change soon!\n'
                 'to keep the same behaviour use `_flux_surface` instead.')
-    def flux_surface(self, *coordinates, resolution=(1e-3, 1e-3), dim="step",
+    def flux_surface(self, *coordinates, resolution=None, dim="step",
                      closed=True, inlcfs=True, R=None, Z=None, psi_n=None,
                      coord_type=None, **coords):
+        if resolution is None:
+            contour_step = get_settings().flux_surfaces.contour_step
+            resolution = (contour_step, contour_step)
         return self._flux_surface(*coordinates, resolution=resolution, dim=dim,
                                   closed=closed, inlcfs=inlcfs, R=R, Z=Z, psi_n=psi_n,
                                   coord_type=coord_type, **coords)
@@ -588,10 +704,6 @@ class Equilibrium(object):
         fluxsurface properties as if it is inside last closed flux surface or if the surface is supposed to be
         closed are possible.
 
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
                             If coordinates is spatial point (dim=2) then parameters closed and lcfs are automatically overridden.
                             Coordinates.grid must be False.
@@ -618,7 +730,7 @@ class Equilibrium(object):
         # todo: to get lcfs, here is small trick. This should be handled better
         #       otherwise it may return crossed loop
         if np.isclose(coordinates.psi_n[0], 1) and inlcfs:
-            psi_n = 1 - 1e-5
+            psi_n = 1 - get_settings().lcfs.inner_psi_n_offset
         else:
             psi_n = coordinates.psi_n[0]
 
@@ -668,6 +780,7 @@ class Equilibrium(object):
 
         return fluxsurface
 
+    @scalar_function
     def poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Poloidal magnetic flux expansion coefficient.**
@@ -684,12 +797,6 @@ class Equilibrium(object):
         *Poloidal magnetic flux expansion coefficient* is typically used for :math:`\lambda` scaling
         in plane perpendicular to the poloidal component of the magnetic field.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -697,6 +804,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_mag_flux_exp_coef(self, coords)
 
+    @ordered_path_scalar_function
     def effective_poloidal_mag_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal magnetic flux expansion coefficient**
@@ -717,12 +825,6 @@ class Equilibrium(object):
         .. math::
             \lambda^\mathrm{t} = \lambda^\mathrm{u} f_{\mathrm{pol, eff}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -730,6 +832,7 @@ class Equilibrium(object):
 
         return flux_expansion.effective_poloidal_mag_flux_exp_coef(self, coords)
 
+    @scalar_function
     def poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Poloidal heat flux expansion coefficient**
@@ -746,12 +849,6 @@ class Equilibrium(object):
         .. math::
             q_\theta^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -759,6 +856,7 @@ class Equilibrium(object):
 
         return flux_expansion.poloidal_heat_flux_exp_coef(self, coords)
 
+    @ordered_path_scalar_function
     def effective_poloidal_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Effective poloidal heat flux expansion coefficient**
@@ -779,12 +877,6 @@ class Equilibrium(object):
         .. math::
             q_\perp^\mathrm{t} = \frac{q_\theta^\mathrm{u}}{f_{\mathrm{pol, heat, eff}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -792,6 +884,7 @@ class Equilibrium(object):
 
         return flux_expansion.effective_poloidal_heat_flux_exp_coef(self, coords)
 
+    @scalar_function
     def parallel_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Parallel heat flux expansion coefficient**
@@ -809,12 +902,6 @@ class Equilibrium(object):
         .. math::
             q_\parallel^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_\parallel}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -822,6 +909,7 @@ class Equilibrium(object):
 
         return flux_expansion.parallel_heat_flux_exp_coef(self, coords)
 
+    @ordered_path_scalar_function
     def total_heat_flux_exp_coef(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         r"""
         **Total heat flux expansion coefficient**
@@ -842,12 +930,6 @@ class Equilibrium(object):
         .. math::
             q_\perp^\mathrm{t} = \frac{q_\parallel^\mathrm{u}}{f_{\mathrm{tot}}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -863,7 +945,6 @@ class Equilibrium(object):
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        # print(coord.r_mid)
         B_midplane = self.B_abs(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_abs(target)
 
@@ -877,7 +958,6 @@ class Equilibrium(object):
         midplane.
         """
         target = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-        # print(coord.r_mid)
         B_midplane = self.B_pol(r=target.r_mid, theta=np.zeros_like(target.r_mid), grid=False)
         B_coord = self.B_pol(target)
 
@@ -899,7 +979,7 @@ class Equilibrium(object):
             contour = find_contour(coordinates.psi, level=level, r=coordinates.R, z=coordinates.Z)
 
         for i in range(len(contour)):
-            contour[i] = Coordinates(self, contour[i])
+            contour[i] = Coordinates.from_coords(self, contour[i])
 
         return contour
 
@@ -914,12 +994,12 @@ class Equilibrium(object):
         import matplotlib.pyplot as plt
 
         if axs is None:
-            fig, axs = plt.subplots(1, 2)
+            _fig, axs = plt.subplots(1, 2)
 
         fw = self.first_wall
 
         if len(fw) < 4:
-            print('Warning: first wall is not sufficient. LCFS is used instead.')
+            logger.warning('First wall is not sufficient. LCFS is used instead.')
             fw = self.lcfs
 
         R_min = np.min(fw.R)
@@ -1123,7 +1203,8 @@ class Equilibrium(object):
         :param resolution: Iterable of size 2 or a number. If a number is passed,
                            R and Z dimensions will have the same size or step (depending on dim parameter). Different R and Z
                            resolutions or dimension sizes can be required by passing an iterable of size 2.
-                           If None, default grid of size (1000, 2000) is returned.
+                           If None, the default grid given by the PLEQUE settings (`grid.default_nr`,
+                           `grid.default_nz`) is returned.
         :param dim: iterable of size 2 or string ('step', 'size'). Default is "step", determines the meaning
                     of the resolution.
                     If "step" used, values in resolution are interpreted as step length in psi poloidal map. If "size" is used,
@@ -1135,8 +1216,9 @@ class Equilibrium(object):
         if resolution is None:
             if not hasattr(self, '_default_grid'):
                 # TODO THIS is slow now. Decrease resolution and then use find_fluxsurface_step (!!!)
-                R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), 1000)
-                Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), 2000)
+                grid_cfg = get_settings().grid
+                R = np.linspace(self._basedata.R.min().item(), self._basedata.R.max().item(), grid_cfg.default_nr)
+                Z = np.linspace(self._basedata.Z.min().item(), self._basedata.Z.max().item(), grid_cfg.default_nz)
                 self._default_grid = self.coordinates(R=R, Z=Z, grid=True)
             return self._default_grid
         else:
@@ -1195,49 +1277,48 @@ class Equilibrium(object):
 
         return coords
 
-    # todo: resolve the grids
+    @scalar_function
     def B_R(self, *coordinates, R=None, Z=None, coord_type=('R', 'Z'), grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
-        :return:
+        :return: Scalar array with shape ``(n_elements,)`` for paired points and
+                 ``(n_z, n_r)`` for grids.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return cc_norm * self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        dpsi_dz = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, dy=1, grid=coord.grid), coord.grid)
+        R = self._shape_spline_result(coord.R, coord.grid)
+        return cc_norm * dpsi_dz / R * self._Bpol_sign
 
+    def B_R_rz(self, R, Z):
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return cc_norm * self._spl_psi(R, Z, dy=1, grid=False) / R * self._Bpol_sign
+
+    @scalar_function
     def B_Z(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Poloidal value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
-        :return:
+        :return: Scalar array with shape ``(n_elements,)`` for paired points and
+                 ``(n_z, n_r)`` for grids.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
-        return - cc_norm * self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid).T / coord.R * self._Bpol_sign
+        dpsi_dr = self._shape_spline_result(self._spl_psi(coord.R, coord.Z, dx=1, grid=coord.grid), coord.grid)
+        R = self._shape_spline_result(coord.R, coord.grid)
+        return - cc_norm * dpsi_dr / R * self._Bpol_sign
 
+    def B_Z_rz(self, R, Z):
+        cc_norm = self._cocosdic["sigma_cyl"] * self._cocosdic["sigma_Bp"] * 1 / (2 * np.pi) ** self._cocosdic["exp_Bp"]
+        return - cc_norm * self._spl_psi(R, Z, dx=1, grid=False) / R * self._Bpol_sign
+
+
+    @scalar_function
     def B_pol(self, *coordinates, R=None, Z=None, coord_type=None, grid=True, **coords):
         """
         Absolute value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
@@ -1246,52 +1327,47 @@ class Equilibrium(object):
         B_pol = np.sqrt(B_R ** 2 + B_Z ** 2)
         return B_pol
 
+    @scalar_function
     def B_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         """
         Toroidal value of magnetic field in Tesla.
 
-        :param grid:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param coords:
         :return:
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.F(coord) / coord.R
 
+    def B_tor_rz(self, R, Z):
+
+        psi = self._spl_psi(R, Z, grid=False)
+        psi_n = (psi - self._psi_axis) / (self._psi_lcfs - self._psi_axis)
+
+        mask_out = psi_n > 1
+        F = self._fpol_spl(psi_n)
+        F[mask_out] = self.BvacR
+        return F / R
+
+    @scalar_function
     def abs_q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Absolute value of q.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         return np.abs(self.q(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords))
 
+    @scalar_function
     def q(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         if not hasattr(self, '_q_spl'):
             self._init_q()
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self._q_spl(coord.psi_n)
 
+    @scalar_function
     def diff_q(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         """
 
         :param self:
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return: Derivative of q with respect to psi.
         """
         if not hasattr(self, '_dq_dpsin_spl'):
@@ -1299,13 +1375,14 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         return self._dq_dpsin_spl(coord.psi_n) * self._diff_psi_n
 
+    @scalar_function
     def shear(self, *coordinates, R=None, Z=None, psi_n=None, coord_type=None, grid=False, **coords):
         r"""Normalized magnetic shear parameter
 
         .. math::
           \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
 
-        where r_\mathrm{mid} is plasma radius on midplane.
+        where r_\mathrm{mid} is a plasma radius on the midplane.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         q = self.q(coord)
@@ -1314,44 +1391,34 @@ class Equilibrium(object):
         s = coord.r_mid / q * dq_dpsi * dpsi_dr
         return s
 
+    @scalar_function
     def pol_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
         Return poloidal flux in Wb which is not normalized by 2pi defiend as:
 
         .. math::
-            \psi_\mathrm{pol} = - \rho_{Bp} \int B \mathrm{d}S
+            \\psi_\\mathrm{pol} = - \rho_{Bp} \\int B \\mathrm{d}S
 
         the result is obtained by normalization of the reference poloidal flux `psi`
-        with respect to current value of the COCOS:
+        with respect to the current value of the COCOS:
 
         .. math::
-            \psi_\mathrm{pol} = (2 \pi)^{1 - e_{Bp}} \psi_\mathrm{ref}
+            \\psi_\\mathrm{pol} = (2 \\pi)^{1 - e_{Bp}} \\psi_\\mathrm{ref}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
         cc = 2 * np.pi if self._cocosdic['exp_Bp'] == 0 else 1
         return cc * self.psi(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
 
+    @scalar_function
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         """
-        Calculate toroidal magnetic flux :math:`\Phi` from:
+        Calculate toroidal magnetic flux :math:`\\Phi` from:
 
         .. math::
-            q = \frac{\mathrm{d \Phi} }{\mathrm{d \psi}}
+            q = \frac{\\mathrm{d \\Phi} }{\\mathrm{d \\psi}}
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
 
@@ -1361,12 +1428,11 @@ class Equilibrium(object):
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return cc * self._q_anideriv_spl(coord.psi_n) * (1 / self._diff_psi_n)
 
+    @scalar_function
     def j_R(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         # todo test cocos here!
         # todo: test grid
         # todo: test test test
-        from scipy.constants import mu_0
-
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc = self._cocosdic['sigma_cyl']
 
@@ -1376,9 +1442,8 @@ class Equilibrium(object):
 
         return - cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dZ
 
+    @scalar_function
     def j_Z(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
-        from scipy.constants import mu_0
-
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc = self._cocosdic['sigma_cyl']
 
@@ -1388,6 +1453,7 @@ class Equilibrium(object):
 
         return cc * self.Fprime(coord) / (coord.R * mu_0) * dpsi_dR
 
+    @scalar_function
     def j_pol(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
         r"""
         Poloidal component of the current density.
@@ -1398,18 +1464,12 @@ class Equilibrium(object):
 
         [Wesson: Tokamaks, p. 105]
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
-        from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         return self.Fprime(coord) / (coord.R * mu_0) * self.diff_psi(coord)
 
+    @scalar_function
     def j_tor(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=True, **coords):
         r"""
         todo: to be tested
@@ -1420,15 +1480,8 @@ class Equilibrium(object):
         .. math::
           R p' + \frac{1}{\mu_0 R} ff'
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
-        from scipy.constants import mu_0
         coord = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
         cc_norm = - self._cocosdic["sigma_Bp"] * (2 * np.pi) ** self._cocosdic["exp_Bp"]
         return cc_norm * (coord.R * self.pprime(coord) + 1 / (mu_0 * coord.R) * self.FFprime(coord))
@@ -1534,7 +1587,7 @@ class Equilibrium(object):
         return self.coordinates(self._limiter_point[0], self._limiter_point[1])
 
     @property
-    def x_point(self):
+    def x_point(self) -> Coordinates | None:
         """
         Return x-point closest in psi to mg-axis if presented on grid. None otherwise.
 
@@ -1544,6 +1597,16 @@ class Equilibrium(object):
             return None
         else:
             return self.coordinates(*self._x_point)
+
+    @property
+    def secondary_x_point(self) -> Coordinates | None:
+        """
+        Returns the second closest (in units of psi) x-point to magnetic axis. None otherwise.
+        """
+        if self._x_point2 is None:
+            return None
+        else:
+            return self.coordinates(*self._x_point2)
 
     @property
     def first_wall(self):
@@ -1569,6 +1632,22 @@ class Equilibrium(object):
         return self.coordinates(self._mg_axis[0], self._mg_axis[1])
 
     @property
+    def geometrical_axis(self):
+        """
+        Geometrical axis of the plasma defined as
+
+        :math
+            R_{ax} = (max(R_{lcfs}) + min(R_{lcfs})) / 2
+            Z_{ax} = (max(Z_{lcfs}) + min(Z_{lcfs})) / 2
+
+        """
+
+        r_ax = (self.lcfs.R.max() + self.lcfs.R.min()) / 2
+        z_ax = (self.lcfs.Z.max() + self.lcfs.Z.min()) / 2
+
+        return self.coordinates(r_ax, z_ax)
+
+    @property
     def I_plasma(self):
         """
         Toroidal plasma current. Calculated as toroidal current through the LCFS.
@@ -1579,28 +1658,42 @@ class Equilibrium(object):
             self._Ip = self.lcfs.tor_current
         return self._Ip
 
+
+    def xp_section(self, length: float = 0.15) -> tuple["Coordinates"]:
+        """
+        Return poloidal cross-sections of the planes of the x-point section (Σ_s).
+
+        Args:
+            length (float): Length around the X-point for computing sections. Defaults to 0.15.
+
+        Returns:
+            tuple[Coordinates]: Tuple of `Coordinates` objects representing each plane.
+            The order of x-point planes directions (with respect to x-point) (lfs, in-plasma, hfs, out) is preserved.
+        """
+        secs = xp_sections(self._spl_psi, self._x_point[0], self._x_point[1], length=length)
+
+        secs_coords = tuple(self.coordinates(sec) for sec in secs)
+        return secs_coords
+
+    @append_to_doc(COORDINATES_DOC)
     def coordinates(self, *coordinates, coord_type=None, grid=False, **coords):
         """
         Return instance of Coordinates. If instances of coordinates is already on the input, just pass it through.
 
-        :param coordinates:
-        :param coord_type:
-        :param grid:
-        :param coords:
-        :return:
+        :param coordinates: Positional coordinates; see below.
+        :param coord_type: Tuple naming the input coordinates, e.g. ``('rho',)`` or ``('Z', 'R')``.
+        :param grid: If ``True``, the coordinates span a rectangular grid (2D only).
+        :param coords: Coordinates passed by name; see below.
+        :return: Instance of :class:`pleque.core.Coordinates`.
         """
         if len(coordinates) >= 1 and isinstance(coordinates[0], Coordinates):
             return coordinates[0]
         else:
-            return Coordinates(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
+            return Coordinates.from_coords(self, *coordinates, coord_type=coord_type, grid=grid, **coords)
 
     def _as_fluxsurface(self, *coordinates, coord_type=None, grid=False, **coords):
         """
 
-        :param coordinates:
-        :param coord_type:
-        :param grid:
-        :param coords:
         :return:
         """
         from pleque import FluxSurface
@@ -1649,14 +1742,9 @@ class Equilibrium(object):
 
         Todo: The field line is traced to min/max value of z of first wall, distance is calculated to the last
             point before first wall.
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param stopper: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
                        automatically chosen based on psi_n coordinate.
-        :param coords:
         :return:
         """
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
@@ -1690,20 +1778,16 @@ class Equilibrium(object):
         One poloidal turn is calculated for field lines inside the separatrix. Outter field lines
         are limited by z planes given be outermost z coordinates of the first wall.
 
-        :param coordinates:
-        :param R:
-        :param Z:
-        :param coord_type:
         :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param stopper_method: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
                        automatically chosen based on psi_n coordinate.
         :param in_first_wall: if True the only inner part of field line is returned.
-        :param coords:
         :return:
 
         """
-        import pleque.utils.field_line_tracers as flt
         from scipy.integrate import solve_ivp
+
+        import pleque.utils.field_line_tracers as flt
 
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
 
@@ -1727,71 +1811,62 @@ class Equilibrium(object):
             else:
                 phi0 = coords.phi[i]
 
-            atol = 1e-6
+            flt_cfg = get_settings().field_line_tracing
+            atol = flt_cfg.atol
             if self.is_xpoint_plasma:
                 xp = self._x_point
                 xp_dist = np.sqrt(np.sum((xp - y0) ** 2))
-                atol = np.minimum(xp_dist * 1e-3, atol)
+                atol = np.minimum(xp_dist * flt_cfg.x_point_atol_scale, atol)
 
-            if self._verbose:
-                print('>>> tracing from: {:3f},{:3f},{:3f}'.format(y0[0], y0[1], phi0))
-                print('>>> atol = {}'.format(atol))
+            logger.debug('tracing from: %3f,%3f,%3f', y0[0], y0[1], phi0)
+            logger.debug('atol = %s', atol)
 
             stopper = None
 
             if stopper_method is None:
                 if coords.psi_n[i] <= 1:
                     # todo: determine the direction (now -1) !!
-                    if self._verbose:
-                        print('>>> poloidal stopper is used')
+                    logger.debug('poloidal stopper is used')
 
                     # XXX Direction (TODO)
                     # XXX add these values to cocos dict!
                     # sign(dtheta/dphi) = sigma_pol * sign(I * B)
                     # dphidtheta = self._cocosdic['sigma_pol'] * np.sign(self.I_plasma) * np.sign(self.F0)
-                    # print('dir: {}\nsigma_pol: {}\nsigma_tor: {}\nIp: {}\nF0: {}'.format(
-                    #     direction, self._cocosdic['sigma_pol'], self._cocosdic['sigma_cyl'], self.I_plasma, self.F0
-                    # ))
-                    # print('------------------')
 
                     dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
-                    print('direction: {}'.format(direction))
-                    print('dphidtheta: {}'.format(dphidtheta))
+                    logger.debug('direction: %s', direction)
+                    logger.debug('dphidtheta: %s', dphidtheta)
 
                     stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                                  dphidtheta * direction,
-                                                                 stop_res=np.pi / 1024)
+                                                                 stop_res=flt_cfg.poloidal_stop_resolution)
                 else:
-                    if self._verbose:
-                        print('>>> z-lim stopper is used')
+                    logger.debug('z-lim stopper is used')
                     stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'z-stopper':
-                if self._verbose:
-                    print('>>> z-lim stopper is used')
+                logger.debug('z-lim stopper is used')
                 stopper = flt.rz_coordinate_stopper_factory(r_lims, z_lims)
             elif stopper_method == 'poloidal':
-                if self._verbose:
-                    print('>>> poloidal stopper is used')
+                logger.debug('poloidal stopper is used')
 
                 dphidtheta = np.sign(self.F0) * self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
                 stopper = flt.poloidal_angle_stopper_factory(y0, self.magnetic_axis.as_array()[0],
                                                              dphidtheta * direction,
-                                                             stop_res=np.pi / 1024)
+                                                             stop_res=flt_cfg.poloidal_stop_resolution)
 
             # todo: define somehow sufficient tolerances
             sol = solve_ivp(dphifunc,
-                            (phi0, direction * sigma_B0 * (2 * np.pi * 50 + phi0)),
+                            (phi0, direction * sigma_B0 * (2 * np.pi * flt_cfg.max_toroidal_turns + phi0)),
                             y0,
                             #                            method='RK45',
                             method='LSODA',
                             events=stopper,
-                            max_step=1e-2,  # we want high phi resolution
+                            max_step=flt_cfg.max_step,  # we want high phi resolution
                             atol=atol,
-                            rtol=1e-8,
+                            rtol=flt_cfg.rtol,
                             )
 
-            if self._verbose:
-                print("{}, {}".format(sol.message, sol.nfev))
+            logger.debug("%s, %s", sol.message, sol.nfev)
 
             phi = sol.t
             R, Z = sol.y
@@ -1842,7 +1917,30 @@ class Equilibrium(object):
 
         return res
 
-    def trace_flux_surface(self, *coordinates, s_resolution=1e-3, R=None,
+    def lcfs_field_line(self, vect_no=0, xp_shift=None, phi0: float = 0.0):
+        """
+        Computes (some) field line laying on last closed flux surface.
+
+        Parameters:
+        vect_no: int
+            Index of eigenvector determing the direction of integration. Default is 0.
+        xp_shift: float
+            A small positional adjustment for the x-point in the plasma boundary tracking.
+            Defaults to the value from PLEQUE settings (`lcfs.x_point_shift`).
+        phi0: float
+            Toroidal angle on which is field line initiated.
+
+        Returns:
+        list
+            A representation of the LCFS field line as a result of the plasma boundary
+            tracking method.
+        """
+        if xp_shift is None:
+            xp_shift = get_settings().lcfs.x_point_shift
+        lcfs = track_plasma_boundary(self, self._x_point, vect_no=vect_no, xp_shift=xp_shift, phi_0=phi0)
+        return lcfs
+
+    def trace_flux_surface(self, *coordinates, s_resolution=None, R=None,
                            Z=None, psi_n=None, coord_type=None, **coords):
         """
         Find a closed flux surface inside LCFS with requested values of psi or psi-normalized.
@@ -1850,18 +1948,20 @@ class Equilibrium(object):
 
         TODO support open and/or flux surfaces outise LCFS, needs different stopper
 
-        :param R:
-        :param Z:
-        :param psi_n:
-        :param coord_type:
         :param coordinates: specifies flux surface to search for (by spatial point or values of psi or psi normalised).
                             If coordinates is spatial point (dim=2) then the trace starts at the midplane.
                             Coordinates.grid must be False.
-        :param s_resolution: max_step in the distance along the flux surface contour
+        :param s_resolution: max_step in the distance along the flux surface contour.
+                             Defaults to the value from PLEQUE settings (`flux_surfaces.trace_step`).
         :return: FluxSurface
         """
-        import pleque.utils.field_line_tracers as flt
         from scipy.integrate import solve_ivp
+
+        import pleque.utils.field_line_tracers as flt
+
+        fs_cfg = get_settings().flux_surfaces
+        if s_resolution is None:
+            s_resolution = fs_cfg.trace_step
 
         coords = self.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, **coords)
         if coords.dim == 1:
@@ -1874,7 +1974,7 @@ class Equilibrium(object):
                                                       atol=s_resolution ** 2)
 
         sol = solve_ivp(ds_func,
-                        (0, coords.r_mid * 2 * np.pi * 4),
+                        (0, coords.r_mid * 2 * np.pi * fs_cfg.trace_max_turns),
                         y0,
                         method='LSODA',
                         events=stopper,
@@ -1899,13 +1999,15 @@ class Equilibrium(object):
             self._surfacefunc = SurfaceFunctions(self)  # filters out methods from self
         return self._surfacefunc
 
-    def to_geqdsk(self, file, nx=64, ny=128, q_positive=True, use_basedata=False, cocos_out=3):
+    def to_geqdsk(self, file, nx=None, ny=None, q_positive=True, use_basedata=False, cocos_out=3):
         """
         Write a GEQDSK/g-file equilibrium file.
 
         :param file: str, file name
-        :param nx: int, number radial points and profiles points
-        :param ny: int, number of vertical points
+        :param nx: int, number radial points and profiles points.
+                   Defaults to the value from PLEQUE settings (`io.geqdsk_nx`).
+        :param ny: int, number of vertical points.
+                   Defaults to the value from PLEQUE settings (`io.geqdsk_ny`).
         :param use_basedata: The original basedata of equilibrium are used instead of interpolation splines.
                              If this option is chosen, the nx and ny parameters are ignored.
         :param q_positive: Save q value always positive.
@@ -1946,10 +2048,10 @@ class Equilibrium(object):
         """
         return self._limiter_plasma
 
-    def __map_midplane2psi__(self):
+    def _map_midplane2psi(self):
         from scipy.interpolate import UnivariateSpline
 
-        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], 100)
+        r_mid = np.linspace(0, self.R_max - self._mg_axis[0], get_settings().flux_surfaces.midplane_map_points)
         psi_mid = self.psi(r_mid + self._mg_axis[0], self._mg_axis[1] * np.ones_like(r_mid), grid=False)
 
         if self._psi_axis < self._psi_lcfs:
@@ -1962,22 +2064,69 @@ class Equilibrium(object):
 
         psi_mid = psi_mid[idxs]
         r_mid = r_mid[idxs]
-        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=3, s=0)
+        spl_cfg = get_settings().splines
+        self._rmid_spl = UnivariateSpline(psi_mid, r_mid, k=spl_cfg.profile_order, s=spl_cfg.profile_smooth)
+
+    def _init_fluxsurfaces(self, npsi: int | None = None, psi_n_levels: Sequence[float] | None = None):
+
+        if psi_n_levels and npsi:
+            raise ValueError("npsi and psi_n_levels cannot be used simultaneously.")
+        if psi_n_levels is None:
+            fs_cfg = get_settings().flux_surfaces
+            psi0 = fs_cfg.psi_n_min
+            if npsi is None:
+                npsi = fs_cfg.n_psi
+            psi_n_levels = np.linspace(psi0, 1, npsi)
+        else:
+            npsi = len(psi_n_levels)
+
+        # todo: Now I need to rewrite find_flux_surface function first to used multiple psi levels.
+        surfs = []
+        for psi_n in psi_n_levels:
+            surf = self.find_flux_surface(psi_n=psi_n)[0]
+            surfs.append(surf)
+
+        self._flux_surfaces = surfs
 
     def _init_q(self):
-        psi_n = np.arange(0.01, 1, 0.005)
+        fs_cfg = get_settings().flux_surfaces
+        psi_n = np.arange(fs_cfg.q_psi_n_min, 1, fs_cfg.q_psi_n_step)
         qs = []
 
-        if self._verbose:
-            print("--- Generating q-splines ---")
+        logger.debug("Generating q-splines")
         for i, pn in enumerate(psi_n):
-            if self._verbose and np.mod(i, 20) == 0:
-                print("{:.0f}%\r".format(pn / np.max(psi_n) * 100))
+            if np.mod(i, 20) == 0:
+                logger.debug("q-spline progress: %.0f%%", pn / np.max(psi_n) * 100)
             surface = self._flux_surface(psi_n=pn)
             c = surface[0]
             qs.append(c.eval_q)
         qs = np.array(qs)
 
-        self._q_spl = UnivariateSpline(psi_n, qs, s=0, k=3)
+        spl_cfg = get_settings().splines
+        self._q_spl = UnivariateSpline(psi_n, qs, s=spl_cfg.profile_smooth, k=spl_cfg.profile_order)
         self._dq_dpsin_spl = self._q_spl.derivative()
         self._q_anideriv_spl = self._q_spl.antiderivative()
+
+
+# All public Equilibrium methods accepting the rich coordinate input
+# (see ``Coordinates.from_coords``). A note cross-referencing the canonical
+# description of the input syntax is appended to their docstrings, so the
+# syntax itself is documented in a single place only.
+_COORDINATE_INPUT_METHODS = [
+    'psi', 'nabla_psi', 'diff_psi', 'psi_n', 'r_mid', 'rho',
+    'pressure', 'pprime', 'f', 'F', 'Fprime', 'ffprime', 'FFprime',
+    'B_abs', 'Bvec', 'Bvec_norm', 'B_R', 'B_Z', 'B_pol', 'B_tor',
+    'abs_q', 'q', 'diff_q', 'shear', 'pol_flux', 'tor_flux',
+    'j_R', 'j_Z', 'j_pol', 'j_tor',
+    'flux_surface',
+    'poloidal_mag_flux_exp_coef', 'effective_poloidal_mag_flux_exp_coef',
+    'poloidal_heat_flux_exp_coef', 'effective_poloidal_heat_flux_exp_coef',
+    'parallel_heat_flux_exp_coef', 'total_heat_flux_exp_coef',
+    'outter_parallel_fl_expansion_coef', 'outter_poloidal_fl_expansion_coef',
+    'in_first_wall', 'in_lcfs',
+    'connection_length', 'trace_field_line', 'trace_flux_surface',
+]
+
+for _name in _COORDINATE_INPUT_METHODS:
+    append_to_doc(COORD_PARAMS_DOC)(getattr(Equilibrium, _name))
+del _name

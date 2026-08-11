@@ -27,7 +27,7 @@ fign,axn=plt.subplots()
 
 axn.plot(first_wall.R,first_wall.Z)
 
-coords=Coordinates(eq,np.vstack((first_wall.R,first_wall.Z)).T)
+coords=Coordinates.from_coords(eq,np.vstack((first_wall.R,first_wall.Z)).T)
 
 
 def interpolate_lim(coords, npoints):

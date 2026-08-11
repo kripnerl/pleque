@@ -3,8 +3,16 @@ import logging
 import numpy as np
 
 import pleque
+from pleque.config.settings import get_settings
+
 from ._geqdsk import read_as_equilibrium
 from ._geqdsk import write as write_geqdsk
+
+logger = logging.getLogger(__name__)
+
+# Sentinel distinguishing "argument not given" from an explicit None (None has its own
+# meaning for `nbdry` in `write`).
+_UNSET = object()
 
 
 def read(file, cocos=3, first_wall=None):
@@ -15,7 +23,7 @@ def read(file, cocos=3, first_wall=None):
     :param cocos: Tokamak coordinates convention. Default cocos = 3 (EFIT).
     :return:
     """
-    with open(file, 'r') as f:
+    with open(file) as f:
         eq = read_as_equilibrium(f, cocos, first_wall=first_wall)
 
     return eq
@@ -27,10 +35,9 @@ def _is_1dprofile_in_basedata(basedata, name, nx):
     if name in basedata:
         if basedata[name].shape[0] == nx and basedata[name].ndim == 1:
             return True
-        logging.info(f"Basedata {name} has wrong shape or dimension.\n"
-                     f"Shape: {basedata[name].shape}, expected: ({nx},), "
-                     f"ndim: {basedata[name].ndim}, expected: 1.")
-    logging.info(f"Basedata {name} not found.")
+        logger.info("Basedata %s has wrong shape or dimension. Shape: %s, expected: (%s,), ndim: %s, expected: 1.",
+                    name, basedata[name].shape, nx, basedata[name].ndim)
+    logger.info("Basedata %s not found.", name)
     return False
 
 
@@ -163,18 +170,19 @@ def basedata_to_dict(equilibrium: pleque.Equilibrium, cocos_out=13):
     return data
 
 
-def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label=None, cocos_out=3,
+def write(equilibrium: pleque.Equilibrium, file, nx=None, ny=None, nbdry=_UNSET, label=None, cocos_out=3,
           q_positive=True, use_basedata=False):
     """
     Write a GEQDSK equilibrium file.
 
     :param equilibrium: pleque.Equilibrum
     :param file: str, file name
-    :param nx: int, R-dimension
-    :param ny: int, Z-dimension
+    :param nx: int, R-dimension. Defaults to the value from PLEQUE settings (`io.geqdsk_nx`).
+    :param ny: int, Z-dimension. Defaults to the value from PLEQUE settings (`io.geqdsk_ny`).
     :param nbdry: int, None - Maximal number of points used to describe boundary (LCFS).
                  If None, default number obtained by FluxFunc will be used.
                  Note: Actual number number of points can be in (n-bry/2, n-bry)
+                 Defaults to the value from PLEQUE settings (`io.geqdsk_nbdry`).
     :param label: str, max 11 characters long text added on the beginning of g-file (default is PLEQUE)
     :param cocos_out: At the moment only perform 2pi normalization (!) (TODO)
     :param q_positive: always save q positive
@@ -193,14 +201,22 @@ def write(equilibrium: pleque.Equilibrium, file, nx=64, ny=128, nbdry=200, label
       rmagx, zmagx  R,Z at magnetic axis (O-point)
       simagx        Poloidal flux psi at magnetic axis
       sibdry        Poloidal flux psi at plasma boundary
-      cpasma        Plasma current [Amps]   
+      cpasma        Plasma current [Amps]
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       q          1D array of q(psi)
-      
+
       psi           2D array (nx,ny) of poloidal flux
       """
+    io_cfg = get_settings().io
+    if nx is None:
+        nx = io_cfg.geqdsk_nx
+    if ny is None:
+        ny = io_cfg.geqdsk_ny
+    if nbdry is _UNSET:
+        nbdry = io_cfg.geqdsk_nbdry
+
     data = dict.fromkeys(['nx', 'ny', 'rdim', 'zdim', 'rcentr', 'bcentr', 'rleft', 'zmid', 'rmagx', 'zmagx',
                           'simagx', 'sibdry', 'cpasma', 'F', 'pres', 'q', 'psi'])
 

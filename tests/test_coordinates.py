@@ -1,4 +1,7 @@
+import warnings
+
 import numpy as np
+import pytest
 
 from pleque.core import Coordinates
 from pleque.tests.utils import load_testing_equilibrium
@@ -18,7 +21,7 @@ def coords_3d(*coordinates, coord_type=None, **coords):
 def coords_2d(*coordinates, R=None, Z=None, coord_type=None, grid=False, **coords):
     print('--------')
     xy = eq.coordinates(*coordinates, R=R, Z=Z, coord_type=coord_type, grid=grid, **coords)
-    print('_coord_type_input = {}'.format(xy._coord_type_input))
+    print(f'_coord_type_input = {xy._coord_type_input}')
     assert xy.dim == 2
     assert isinstance(xy._x1_input, np.ndarray)
     assert isinstance(xy._x2_input, np.ndarray)
@@ -31,9 +34,9 @@ def coords_1d(*coordinates, psi_n=None, coord_type=None, grid=False, **coords):
     xy = eq.coordinates(*coordinates, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
 
     print('--------')
-    print('dim = {}'.format(xy.dim))
-    print('_x1_input = {}'.format(xy._x1_input))
-    print('_coord_type_input = {}'.format(xy._coord_type_input))
+    print(f'dim = {xy.dim}')
+    print(f'_x1_input = {xy._x1_input}')
+    print(f'_coord_type_input = {xy._coord_type_input}')
     assert xy.dim == 1
     assert isinstance(xy._x1_input, np.ndarray)
     print('--------')
@@ -57,12 +60,12 @@ def test_midplane(equilibrium):
 
 def test_scalar_point_coordinate(equilibrium):
 
-    coord = Coordinates(None, R=1, Z=2)
+    coord = Coordinates.from_coords(None, R=1, Z=2)
     assert len(coord) == 1
     assert coord.x1[0] == 1
     assert coord.x2[0] == 2
 
-    coord = Coordinates(None, R=1, Z=2, phi=0)
+    coord = Coordinates.from_coords(None, R=1, Z=2, phi=0)
     assert len(coord) == 1
     assert coord.x1[0] == 1
     assert coord.x2[0] == 2
@@ -154,7 +157,7 @@ def test_coordinates(equilibrium):
     assert coord is coord2
 
     coord = eq.coordinates(psi_n=np.linspace(0, 1, 10))
-    print('r_mid = {}'.format(coord.r_mid))
+    print(f'r_mid = {coord.r_mid}')
 
     coord = eq.coordinates(eq._mg_axis[0], eq._mg_axis[1])
     compare_arrays(coord.psi_n, [0])
@@ -207,12 +210,93 @@ def test_intersections(equilibrium):
     assert intersections is None
 
 
+def test_array_input():
+
+    r = np.linspace(1, 2, 10)
+    z = np.linspace(-1, 1, 12)
+
+    rr, zz = np.meshgrid(r, z)
+
+    coord = Coordinates.from_coords(eq, R=rr, Z=zz, grid=False)
+
+    assert coord.R.shape == rr.shape
+    assert coord.Z.shape == rr.shape
+    assert coord.r_mid.shape == rr.shape
+
+    coord = Coordinates.from_coords(eq, r=coord.r_mid, theta=np.zeros_like(coord.r_mid), grid=False)
+
+    assert coord.R.shape == rr.shape
+    assert coord.Z.shape == rr.shape
+    assert coord.r_mid.shape == rr.shape
+
+    B_midplane = eq.B_pol(r=coord.r_mid, theta=np.zeros_like(coord.r_mid), grid=False)
+    B_coords = eq.B_pol(coord)
+
+    assert B_midplane.shape == rr.shape
+    assert B_coords.shape == rr.shape
+    assert B_midplane.shape == B_coords.shape
+
+
+
 def test_distances():
 
         R = 2
         N = 52
 
-        coord = Coordinates(None, R=np.ones(N) * R, Z=np.zeros(N), phi=np.linspace(0, 2 * np.pi, N))
+        coord = Coordinates.from_coords(None, R=np.ones(N) * R, Z=np.zeros(N), phi=np.linspace(0, 2 * np.pi, N))
         calc_length = R * np.pi * 2
 
         assert np.isclose(coord.length, calc_length, atol=1e-2, rtol=1e-2)
+
+
+def test_init_deprecated_rich_input():
+    # Rich coordinate input passed directly to the constructor is deprecated:
+    with pytest.warns(DeprecationWarning):
+        Coordinates(None, R=1, Z=2)
+    with pytest.warns(DeprecationWarning):
+        Coordinates(eq, np.array([[1.0, 0.0], [2.0, 0.5]]))
+    with pytest.warns(DeprecationWarning):
+        Coordinates(eq, np.linspace(0, 1, 5), coord_type='rho')
+
+    # ... while `from_coords` and positional input in the default coordinate
+    # type stay silent:
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        Coordinates.from_coords(None, R=1, Z=2)
+        Coordinates.from_coords(eq, np.array([[1.0, 0.0], [2.0, 0.5]]))
+        Coordinates.from_coords(eq, np.linspace(0, 1, 5), coord_type='rho')
+        Coordinates(eq)
+        Coordinates(eq, 0.5)
+        Coordinates(eq, 1.4, 0.0)
+        Coordinates(eq, 1.4, 0.0, coord_type=('R', 'Z'))
+        Coordinates(eq, np.array([1.4]), np.array([0.0]), np.array([0.1]))
+
+
+def test_fast_init_parity():
+    # The fast construction path must give the same result as the full
+    # input parser used by `from_coords`.
+    cases = [
+        (0.5,),                                                  # 1d scalar
+        (np.linspace(0, 1, 5),),                                 # 1d array
+        (1.4, 0.1),                                              # 2d scalars
+        (np.linspace(1, 2, 5), np.linspace(-0.2, 0.2, 5)),       # 2d arrays
+        ([1.4, 1.5], [0.0, 0.1]),                                # 2d lists
+        (1.4, 0.1, 0.3),                                         # 3d scalars
+        (np.array([1.4, 1.5]), np.array([0.0, 0.1]), np.array([0.2, 0.3])),
+    ]
+    for args in cases:
+        c1 = Coordinates(eq, *args)
+        c2 = Coordinates.from_coords(eq, *args)
+        assert c1.dim == c2.dim
+        assert c1 == c2
+        assert c1._coord_type_input == c2._coord_type_input
+        assert isinstance(c1._x1_input, np.ndarray)
+        np.testing.assert_allclose(c1.x1, c2.x1)
+        if c1.dim >= 2:
+            np.testing.assert_allclose(c1.x2, c2.x2)
+        if c1.dim == 3:
+            np.testing.assert_allclose(c1.x3, c2.x3)
+
+    # grid stays available for 2d input and is demoted otherwise:
+    assert Coordinates(eq, np.linspace(1, 2, 5), np.linspace(-0.2, 0.2, 5), grid=True).grid
+    assert not Coordinates(eq, np.linspace(0, 1, 5), grid=True).grid

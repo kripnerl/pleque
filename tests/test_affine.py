@@ -1,5 +1,6 @@
-from pleque.spatran import affine
 import numpy as np
+
+from pleque.spatran import affine
 
 transmat = np.eye(4)
 transmat[0,-1] = 4

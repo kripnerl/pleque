@@ -20,6 +20,7 @@ along with FreeGS.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 
+import logging
 from datetime import date
 
 import numpy as np
@@ -27,14 +28,16 @@ import xarray as xa
 from numpy import zeros
 
 import pleque
-from ._fileutils import f2s, ChunkOutput, write_1d, write_2d, next_value
 
+from ._fileutils import ChunkOutput, f2s, next_value, write_1d, write_2d
+
+logger = logging.getLogger(__name__)
 
 
 def write(data, fh, label=None, shot=None, time=None):
     """
     Write a GEQDSK equilibrium file, given a dictionary of data
-    
+
     data - dictionary
       nx, ny        Number of points in R (x), Z (y)
       rdim, zdim    Sizes of the R,Z dimensions
@@ -45,16 +48,16 @@ def write(data, fh, label=None, shot=None, time=None):
       rmagx, zmagx  R,Z at magnetic axis (O-point)
       simagx        Poloidal flux psi at magnetic axis
       sibdry        Poloidal flux psi at plasma boundary
-      cpasma        Plasma current [Amps]   
+      cpasma        Plasma current [Amps]
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       q          1D array of q(psi)
-      
+
       psi           2D array (nx,ny) of poloidal flux
-    
+
     fh - file handle
-    
+
     label - Text label to put in the file
     """
 
@@ -65,7 +68,7 @@ def write(data, fh, label=None, shot=None, time=None):
         label = "PLEQUE"
     if len(label) > 11:
         label = label[0:12]
-        print('WARNING: label too long, it will be shortened to {}'.format(label))
+        logger.warning('label too long, it will be shortened to %s', label)
 
     creation_date = date.today().strftime("%d/%m/%Y")
 
@@ -73,18 +76,17 @@ def write(data, fh, label=None, shot=None, time=None):
         shot = 0
 
     if isinstance(shot, int):
-        shot = '# {:d}'.format(shot)
+        shot = f'# {shot:d}'
 
     if not time:
         time = 0
 
     if isinstance(time, int):
-        time = '  {:d}ms'.format(time)
+        time = f'  {time:d}ms'
 
     # I have no idea what idum is, here it is set to 3
     idum = 3
-    header = "{0:11s}{1:10s}   {2:>8s}{3:16s}{4:4d}{5:4d}{6:4d}\n" \
-        .format(label, creation_date, shot, time, idum, nx, ny)
+    header = f"{label:11s}{creation_date:10s}   {shot:>8s}{time:16s}{idum:4d}{nx:4d}{ny:4d}\n"
 
     # First line: Identification string, followed by resolution
     fh.write(header)
@@ -133,7 +135,7 @@ def write(data, fh, label=None, shot=None, time=None):
         nlim = len(data["rlim"])
 
     co.newline()
-    fh.write("{0:5d}{1:5d}\n".format(nbdry, nlim))
+    fh.write(f"{nbdry:5d}{nlim:5d}\n")
 
     if nbdry > 0:
         for r, z in zip(data["rbdry"], data["zbdry"]):
@@ -151,13 +153,13 @@ def write(data, fh, label=None, shot=None, time=None):
 def read(fh):
     """
     Read a G-EQDSK formatted equilibrium file
-    
+
     Format is specified here:
     https://fusion.gat.com/theory/Efitgeqdsk
 
     Returns
     -------
-    
+
     A dictionary containing:
       nx, ny        Number of points in R (x), Z (y)
       rdim, zdim    Sizes of the R,Z dimensions
@@ -168,14 +170,14 @@ def read(fh):
       rmagx, zmagx  R,Z at magnetic axis (O-point)
       simagx        Poloidal flux psi at magnetic axis
       sibdry        Poloidal flux psi at plasma boundary
-      cpasma        Plasma current [Amps]   
+      cpasma        Plasma current [Amps]
 
       F          1D array of f(psi)=R*Bt  [meter-Tesla]
       pres          1D array of p(psi) [Pascals]
       q          1D array of q(psi)
-      
+
       psi        2D array (nx,ny) of poloidal flux
-    
+
     """
 
     # Read the first line
@@ -184,11 +186,11 @@ def read(fh):
     if len(words) < 3:
         raise ValueError("Expecting at least 3 numbers on first line")
 
-    idum = int(words[-3])
+    int(words[-3])
     nx = int(words[-2])
     ny = int(words[-1])
 
-    print("  nx = {0}, ny = {1}".format(nx, ny))
+    logger.debug("nx = %s, ny = %s", nx, ny)
 
     # Dictionary to hold result
     data = {"nx": nx, "ny": ny}
@@ -239,7 +241,7 @@ def read(fh):
     nbdry = next(values)
     nlim = next(values)
 
-    print(nbdry, nlim)
+    logger.debug("nbdry = %s, nlim = %s", nbdry, nlim)
 
     if nbdry > 0:
         # Read (R,Z) pairs
@@ -292,12 +294,13 @@ def data_as_ds(data):
     return eq_xarray
 
 
-def read_as_equilibrium(fh, cocos=3, first_wall=None):
+def read_as_equilibrium(fh, cocos=3, first_wall=None, init_method="hints"):
     """
     Read the eqdsk file and open it as `pleque.Equilibrium`.
 
     :param fh: file handler
     :param cocos: Tokamak coordinates convension. Default cocos = 3 (EFIT).
+    :param init_method: One of ("full", "hints", "fast_forward"), see `pleque.Equilibrium`.
     :return: instance of `Equilibrium`
     """
 
@@ -309,5 +312,5 @@ def read_as_equilibrium(fh, cocos=3, first_wall=None):
     else:
         fw = first_wall
 
-    eq = pleque.Equilibrium(ds, fw, cocos=cocos)
+    eq = pleque.Equilibrium(ds, fw, cocos=cocos, init_method=init_method)
     return eq
