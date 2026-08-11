@@ -195,6 +195,12 @@ class Equilibrium:
             logger.debug('Recognizing equilibrium type')
             self._setup_plasma_boundary()
 
+            if 'time_unit' in basedata:
+                # basedata may be an xr.Dataset, so normalise to a plain str
+                # (e.g. from a 0-d DataArray) rather than storing an array.
+                self.time_unit = str(np.asarray(basedata['time_unit']).item())
+            else:
+                self.time_unit = "ms"
             logger.debug('Generating 1D splines')
             self._setup_1d_profiles(psi_n, F, FFprime, pressure, pprime)
 
