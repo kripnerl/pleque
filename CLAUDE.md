@@ -1,6 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Shared contributor instructions are defined in `AGENTS.md`; this file adds Claude-specific project context.
 
 ## Overview
 
@@ -10,27 +11,28 @@ typically constructed by reading an equilibrium file (e.g. G-EQDSK) via `pleque.
 
 ## Commands
 
-The project uses Poetry. The `compass` dependency group pulls `pycdb-compass` from an internal
-IPP git repository that is not reachable outside the COMPASS network — always exclude it:
+The project uses uv. The `compass` dependency group pulls `pycdb-compass` from an internal
+IPP git repository that is not reachable outside the COMPASS network, so install it only when needed:
 
 ```bash
-poetry install --without compass     # install dependencies (this is what CI does)
+uv sync                                      # install locked default and development dependencies
+uv sync --group compass                      # additionally install the COMPASS integration
 
-poetry run pytest                            # run the whole test suite
-poetry run pytest tests/test_equilibria.py   # run one test file
-poetry run pytest tests/test_equilibria.py::test_name   # run a single test
+uv run pytest                                # run the whole test suite
+uv run pytest tests/test_equilibria.py       # run one test file
+uv run pytest tests/test_equilibria.py::test_name       # run a single test
 
-ruff check pleque/ tests/            # lint (CI runs exactly this)
-ruff format pleque/ tests/           # format (line-length 120, double quotes)
+uv run ruff check pleque/ tests/              # lint (CI runs exactly this)
+uv run ruff format pleque/ tests/             # format (line-length 120, double quotes)
 
-poetry run ty check pleque/          # type check (advisory: CI runs it with continue-on-error
-                                     # because the legacy codebase is largely un-annotated)
+uv run ty check pleque/                       # type check (advisory: CI runs it with continue-on-error
+                                              # because the legacy codebase is largely un-annotated)
 ```
 
 Tests that need unavailable optional dependencies (e.g. `pyCDB` in `tests/test_cdb.py`) skip
 themselves via `pytest.importorskip` — they are not failures.
 
-Docs are Sphinx-based in `docs/` (built on Read the Docs): `make -C docs html`.
+Docs are Sphinx-based in `docs/` (built on Read the Docs): `uv run make -C docs html`.
 
 ## Branches and releases
 

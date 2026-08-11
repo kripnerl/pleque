@@ -42,5 +42,7 @@ docs/_static/
 docs/source/_build/
 
 venv/
+.venv/
+.uv-cache/
 /local/gfile_vs_spline.ipynb
 /local/
