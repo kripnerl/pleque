@@ -1,12 +1,8 @@
 image: python:3.10
 
 variables:
-  UV_CACHE_DIR: "$CI_PROJECT_DIR/.uv-cache"
+  UV_CACHE_DIR: "/tmp/.uv-cache"
   UV_LINK_MODE: copy
-
-cache:
-  paths:
-    - .uv-cache
 
 before_script:
   - python -m pip install --disable-pip-version-check "uv==0.11.32"
@@ -43,5 +39,10 @@ build:package:
     - uv build
 
 docs:html:
+  before_script:
+    - apt-get update
+    - apt-get install --yes --no-install-recommends pandoc
+    - python -m pip install --disable-pip-version-check "uv==0.11.32"
+    - uv sync --locked
   script:
     - uv run make -C docs html
