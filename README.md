@@ -54,6 +54,27 @@ pip install --user .
 ```
  Congratulations, you have just installed `pleque`!
 
+### Development with uv
+
+For a development checkout, install the locked runtime and development
+dependencies with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+```
+
+Run tests through the managed environment:
+
+```bash
+uv run pytest
+```
+
+The optional COMPASS integration can be installed with:
+
+```bash
+uv sync --group compass
+```
+
 ## Examples
 
 The following example shows how to load an equilibrium saved in the `eqdsk` format. The equilibrium used here comes from a FIESTA simulation of the COMPASS-Upgrade tokamak.

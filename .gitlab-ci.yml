@@ -1,24 +1,17 @@
-#image: python:3.9
 image: python:3.10
 
 variables:
-  POETRY_HOME: "$CI_PROJECT_DIR/.poetry"
-  POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
+  UV_CACHE_DIR: "/tmp/.uv-cache"
+  UV_LINK_MODE: copy
 
-cache:
-  paths:
-    - .poetry
-    - .cache/pypoetry
-
-before_script:
-  - curl -sSL https://install.python-poetry.org | python3 -
-  - export PATH="$POETRY_HOME/bin:$PATH"
-  - poetry config virtualenvs.create false
-  - poetry install --without compass # --with omas # omas is temporarily skipped due to the complicated dependencies
+default:
+  before_script:
+    - python -m pip install --disable-pip-version-check "uv==0.11.32"
+    - uv sync --locked
 
 test:pytest:
   script:
-    - pytest --junitxml=report.xml --cov=pleque --cov-report=xml:coverage.xml --cov-report=term-missing
+    - uv run pytest --junitxml=report.xml --cov=pleque --cov-report=xml:coverage.xml --cov-report=term-missing
   artifacts:
     when: always
     reports:
@@ -30,19 +23,27 @@ test:pytest:
       - report.xml
       - coverage.xml
     expire_in: 1 week
-    - pytest
 
 lint:ruff:
-  stage: test
   script:
-    - pip install ruff
-    - ruff check pleque/ tests/
+    - uv run ruff check pleque/ tests/
   needs: ["test:pytest"]
 
 typecheck:ty:
-  stage: test
   script:
-    - pip install ty
-    - ty check pleque/
+    - uv run ty check pleque/
   needs: ["test:pytest"]
-  allow_failure: true  # ty is new; don't block pipeline until annotations are complete
+  allow_failure: true
+
+build:package:
+  script:
+    - uv build
+
+docs:html:
+  before_script:
+    # nbsphinx converts the example notebooks with pandoc
+    - apt-get update
+    - apt-get install --yes --no-install-recommends pandoc
+    - !reference [default, before_script]
+  script:
+    - uv run make -C docs html

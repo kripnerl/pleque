@@ -43,7 +43,7 @@ class Equilibrium:
        is synthesized.
     2. *2D spline construction.* psi(R, Z) is interpolated by a
        `RectBivariateSpline` (order and smoothing from the PLEQUE settings).
-    3. *Critical points.* Candidate extremes of |grad psi|^2 are located on a
+    3. *Critical points.* Candidate extremes of ``|grad psi|^2`` are located on a
        regular grid and classified by the determinant of the Hessian of psi
        into O-points (det > 0) and X-points (det < 0); the magnetic axis and
        the relevant X-points are then recognized among the candidates and the
@@ -1382,7 +1382,7 @@ class Equilibrium:
         .. math::
           \hat s = \frac{r_\mathrm{mid}}{q}\frac{\mathrm{d}q}{\mathrm{d}r}
 
-        where r_\mathrm{mid} is a plasma radius on the midplane.
+        where :math:`r_\mathrm{mid}` is a plasma radius on the midplane.
         """
         coord = self.coordinates(*coordinates, R=R, Z=Z, psi_n=psi_n, coord_type=coord_type, grid=grid, **coords)
         q = self.q(coord)
@@ -1393,17 +1393,17 @@ class Equilibrium:
 
     @scalar_function
     def pol_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
-        """
+        r"""
         Return poloidal flux in Wb which is not normalized by 2pi defiend as:
 
         .. math::
-            \\psi_\\mathrm{pol} = - \rho_{Bp} \\int B \\mathrm{d}S
+            \psi_\mathrm{pol} = - \rho_{Bp} \int B \mathrm{d}S
 
         the result is obtained by normalization of the reference poloidal flux `psi`
         with respect to the current value of the COCOS:
 
         .. math::
-            \\psi_\\mathrm{pol} = (2 \\pi)^{1 - e_{Bp}} \\psi_\\mathrm{ref}
+            \psi_\mathrm{pol} = (2 \pi)^{1 - e_{Bp}} \psi_\mathrm{ref}
 
         :return:
         """
@@ -1413,11 +1413,11 @@ class Equilibrium:
 
     @scalar_function
     def tor_flux(self, *coordinates, R: np.array = None, Z: np.array = None, coord_type=None, grid=False, **coords):
-        """
-        Calculate toroidal magnetic flux :math:`\\Phi` from:
+        r"""
+        Calculate toroidal magnetic flux :math:`\Phi` from:
 
         .. math::
-            q = \frac{\\mathrm{d \\Phi} }{\\mathrm{d \\psi}}
+            q = \frac{\mathrm{d \Phi} }{\mathrm{d \psi}}
 
         :return:
         """
@@ -1742,6 +1742,7 @@ class Equilibrium:
 
         Todo: The field line is traced to min/max value of z of first wall, distance is calculated to the last
             point before first wall.
+
         :param direction: if positive trace field line in/cons the direction of magnetic field.
         :param stopper: (None, 'poloidal', 'z-stopper) force to use stopper. If None stopper is
                        automatically chosen based on psi_n coordinate.
@@ -1921,18 +1922,11 @@ class Equilibrium:
         """
         Computes (some) field line laying on last closed flux surface.
 
-        Parameters:
-        vect_no: int
-            Index of eigenvector determing the direction of integration. Default is 0.
-        xp_shift: float
-            A small positional adjustment for the x-point in the plasma boundary tracking.
-            Defaults to the value from PLEQUE settings (`lcfs.x_point_shift`).
-        phi0: float
-            Toroidal angle on which is field line initiated.
-
-        Returns:
-        list
-            A representation of the LCFS field line as a result of the plasma boundary
+        :param vect_no: Index of eigenvector determing the direction of integration. Default is 0.
+        :param xp_shift: A small positional adjustment for the x-point in the plasma boundary
+            tracking. Defaults to the value from PLEQUE settings (`lcfs.x_point_shift`).
+        :param phi0: Toroidal angle on which is field line initiated.
+        :return: A representation of the LCFS field line as a result of the plasma boundary
             tracking method.
         """
         if xp_shift is None:
