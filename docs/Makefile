@@ -2,7 +2,9 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+# -W turns Sphinx warnings into errors so the build stays warning-free;
+# override with e.g. `make html SPHINXOPTS=` while iterating on the docs.
+SPHINXOPTS    = -W
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = Pleque
 SOURCEDIR     = source

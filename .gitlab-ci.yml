@@ -4,9 +4,10 @@ variables:
   UV_CACHE_DIR: "/tmp/.uv-cache"
   UV_LINK_MODE: copy
 
-before_script:
-  - python -m pip install --disable-pip-version-check "uv==0.11.32"
-  - uv sync --locked
+default:
+  before_script:
+    - python -m pip install --disable-pip-version-check "uv==0.11.32"
+    - uv sync --locked
 
 test:pytest:
   script:
@@ -40,9 +41,9 @@ build:package:
 
 docs:html:
   before_script:
+    # nbsphinx converts the example notebooks with pandoc
     - apt-get update
     - apt-get install --yes --no-install-recommends pandoc
-    - python -m pip install --disable-pip-version-check "uv==0.11.32"
-    - uv sync --locked
+    - !reference [default, before_script]
   script:
     - uv run make -C docs html
