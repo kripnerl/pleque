@@ -73,7 +73,7 @@ release = pleque.__version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -164,8 +164,10 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-#Give each notebook cell 3 minutes to execute
-nbsphinx_timeout=180
+# Render committed notebook outputs during documentation builds. Executing the
+# example notebooks is a separate maintenance task and is not reproducible in
+# the minimal documentation environment.
+nbsphinx_execute = 'never'
 
 
 def skip(app, what, name, obj, would_skip, options):
