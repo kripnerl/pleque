@@ -6,16 +6,19 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.11"
+  apt_packages:
+    # nbsphinx converts the example notebooks with pandoc
+    - pandoc
   jobs:
     post_create_environment:
-      # Install poetry
-      # https://python-poetry.org/docs/#installing-manually
-      - pip install poetry
+      # Install uv
+      # https://docs.astral.sh/uv/getting-started/installation/
+      - python -m pip install --disable-pip-version-check "uv==0.11.32"
     post_install:
-      # Install dependencies with 'docs' dependency group
-      # https://python-poetry.org/docs/managing-dependencies/#dependency-groups
-      # VIRTUAL_ENV needs to be set manually for now, see #11150
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install
+      # Install the locked default and development dependencies (the dev group
+      # provides sphinx/nbsphinx). UV_PROJECT_ENVIRONMENT points uv at the
+      # virtualenv Read the Docs created for this build.
+      - UV_PROJECT_ENVIRONMENT=$READTHEDOCS_VIRTUALENV_PATH uv sync --locked
 
 
 sphinx:

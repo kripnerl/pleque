@@ -627,8 +627,7 @@ class Coordinates:
 
         Distance is returned in psi_n for dim = 1. In meters otherwise.
 
-        :return:
-        self._dists
+        :return: self._dists
         """
         if self.grid:
             raise TypeError('The grid is used - no distances between spatial steps will be calculated')

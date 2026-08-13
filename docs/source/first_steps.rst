@@ -50,3 +50,19 @@ Install after cloning the github repository
    pip install --user .
 
 Congratulations, you have installed PLEQUE!
+
+Development with uv
+-------------------
+
+For a development checkout, install the locked runtime and development
+dependencies with `uv <https://docs.astral.sh/uv/>`_::
+
+   uv sync
+
+Run tests through the managed environment::
+
+   uv run pytest
+
+Install the optional COMPASS integration with::
+
+   uv sync --group compass
