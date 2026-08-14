@@ -132,7 +132,10 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     res_point = np.array((res['x'][0], res['x'][1]))
 
     # If unbounded Powell algorithm finds wrong minimum, algorithm with bounds is used.
-    if np.sum(res_point ** 2 - point ** 2) > cp_cfg.relocation_threshold:
+    # Compare the actual relocation distance (not the difference of squared radii,
+    # which can degenerate for points at similar |R| but opposite Z, e.g. the two
+    # X-points of a double-null equilibrium that collapse onto the same saddle).
+    if np.sum((res_point - point) ** 2) > cp_cfg.relocation_threshold ** 2:
         res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': cp_cfg.minimizer_xtol})
         res_point = np.array((res['x'][0], res['x'][1]))
 

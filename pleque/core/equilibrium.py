@@ -269,8 +269,22 @@ class Equilibrium:
             first_wall = eq_tools.synthesize_rectangular_wall(r, z)
             logger.info("No first wall given; a rectangular wall around the psi grid was synthesized.")
 
-        first_wall = np.asarray(first_wall)
-        return first_wall[~np.isnan(first_wall).any(axis=1)]
+        first_wall = np.asarray(first_wall, dtype=float)
+        first_wall = first_wall[~np.isnan(first_wall).any(axis=1)]
+
+        # A wall with fewer than 3 distinct points cannot limit a plasma nor form a
+        # polygon (some G-EQDSK files carry a degenerate nlim=1 limiter). Downstream
+        # consumers (strike-point search, Shapely intersection/point-in-polygon) must
+        # treat it as "no usable wall" rather than crash. The raw points are kept for
+        # backward compatibility but flagged unusable via a warning here.
+        if len(np.unique(first_wall, axis=0)) < 3:
+            logger.warning(
+                "First wall has fewer than 3 distinct points (%d given); it cannot be "
+                "used for strike-point/limiter recognition.",
+                len(np.unique(first_wall, axis=0)),
+            )
+
+        return first_wall
 
     def _load_spatial_data(self, basedata: xarray.Dataset, first_wall) -> tuple:
         """Load psi grid, first wall, and spatial metadata from dataset."""
@@ -1533,24 +1547,48 @@ class Equilibrium:
         """
 
         found = False
-        cnt = 0
-        # todo: This should be rewritten
+        cnt = 1
+        best = None
+        # Scan inward from the LCFS: at psi_n == 1 exactly the contour passes through
+        # the X-point saddle, where ``skimage.find_contours`` merges the closed LCFS
+        # with the open private-flux branches into a single open polyline that wanders
+        # out to the grid boundary. Just inside the LCFS the separatrix branch is a
+        # unique closed contour enclosing the magnetic axis and passing through the
+        # X-point.
+        x_point = self._x_point
         while not found and cnt < 101:
-            psi_n = 1 + 1e-6 * cnt
+            psi_n = 1 - 1e-6 * cnt
             cnt += 1
             separatrix = self._flux_surface(inlcfs=False, closed=None, psi_n=psi_n)
 
+            # Select a closed branch that encloses the magnetic axis and passes
+            # nearest the recognized X-point; open private-flux branches are
+            # rejected because they are not closed.
+            best = None
+            best_dist = np.inf
             for flux_surf in separatrix:
-                # todo: this is not separatrix... for example in limiter plasma and without first wall
-                intersection = self.first_wall.intersection(flux_surf)
-                # The behaviour of intersetion function changed. This condition should catch both empty list and None:
-                if intersection and len(intersection) > 0:
-                    poly = Polygon(flux_surf._string)
-                    o_point = Point(self.magnetic_axis.R[0], self.magnetic_axis.Z[0])
-                    if poly.contains(o_point):
-                        self._separatrix = flux_surf.as_array(("R", "Z"))
-                        found = True
-                        break
+                if not flux_surf.closed:
+                    continue
+                arr = flux_surf.as_array(("R", "Z"))
+                poly = Polygon(flux_surf._string)
+                o_point = Point(self.magnetic_axis.R[0], self.magnetic_axis.Z[0])
+                if not poly.contains(o_point):
+                    continue
+                dist = np.inf
+                if x_point is not None:
+                    dist = np.min(np.hypot(arr[:, 0] - x_point[0], arr[:, 1] - x_point[1]))
+                if dist < best_dist:
+                    best_dist = dist
+                    best = arr
+
+            if best is not None:
+                self._separatrix = best
+                found = True
+
+        if not found:
+            logger.warning("No closed separatrix contour enclosing the magnetic axis "
+                           "and passing through the X-point was found; falling back to LCFS.")
+            self._separatrix = self._lcfs
 
         return self._separatrix
 

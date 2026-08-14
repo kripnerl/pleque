@@ -500,6 +500,12 @@ class Coordinates:
             ax.plot(self.R, self.Z, **kwargs)
 
     def intersection(self, coords2, dim=2) -> Union["Coordinates", None]:
+        """Calculate intersection of two `Coordinates` objects (2D curves).
+
+        :param coords2: Instance of `Coordinates`.
+        :param dim: number of dimensions.
+        :return: Instance of `Coordinates` of the intersection, or ``None``.
+        """
         """
         input: 2 sets of coordinates
         crossection of two lines (2 sets of coordinates)
@@ -513,6 +519,12 @@ class Coordinates:
 
         if self.grid:
             raise ValueError("grid ")
+        # Curves with fewer than two points cannot form a LineString; guard against
+        # degenerate inputs (e.g. a single-point first wall read from a G-EQDSK file
+        # with nlim == 1) that would otherwise raise a GEOS exception downstream.
+        if len(self) < 2 or len(coords2) < 2:
+            return None
+
         coor1 = geometry.linestring.LineString(self.as_array(dim=dim_))
         coor2 = geometry.linestring.LineString(coords2.as_array(dim=dim_))
         intersec = coor1.intersection(coor2)

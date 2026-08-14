@@ -45,6 +45,11 @@ def intersection(line1, line2):
     """
     # TODO: move this method to some utilities (!)
 
+    # Degenerate inputs (fewer than two points) cannot form a LineString and would
+    # raise a GEOS exception; there is nothing to intersect.
+    if line1 is None or line2 is None or len(line1) < 2 or len(line2) < 2:
+        return np.empty((0, 2))
+
     l1 = geo.LineString(line1)
     l2 = geo.LineString(line2)
 

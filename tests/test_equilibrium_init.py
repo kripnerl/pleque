@@ -152,6 +152,53 @@ def test_double_null_x_points():
     assert abs(psi1 - psi2) / psi_span < 0.05
 
 
+def test_double_null_separatrix_is_closed_through_x_point():
+    """Regression: the DoubleNull separatrix must not merge the closed LCFS with the
+    open private-flux lobes that touch the wall. It must be closed, contain the axis,
+    pass through the X-point, and stay within the diverted (inner) region."""
+    gfile = get_test_equilibria_filenames()[2]
+    from pleque.io.geqdsk import read as read_geqdsk_fw
+    from pleque.tests.utils import resource_path
+
+    first_wall = np.loadtxt(resource_path("pleque", "resources/limiter_v3_1_iba_v2.dat"))
+    eq = read_geqdsk_fw(gfile, first_wall=first_wall)
+    sep = eq.separatrix.as_array(("R", "Z"))
+    # 1. passes through the recognized X-point
+    xp = eq._x_point
+    d_xp = np.min(np.hypot(sep[:, 0] - xp[0], sep[:, 1] - xp[1]))
+    assert d_xp < 2e-3, f"separatrix misses X-point by {d_xp:.4f} m"
+    # 2. does not merge with open private-flux lobes reaching the grid boundary
+    assert sep[:, 0].min() > 0.45, "separatrix merged a private-flux lobe (R too small)"
+    assert sep[:, 1].max() < 0.75 and sep[:, 1].min() > -0.75, \
+        "separatrix merged a private-flux lobe (|Z| too large)"
+
+
+def test_double_null_x_points_are_distinct():
+    """Regression: for a true double-null equilibrium the primary and secondary X-points
+    must be distinct (top vs bottom saddle). Previously `minimize_in_vicinity` used the
+    degenerate metric sum(res_point**2 - point**2) which failed to trigger the bounded
+    retry, collapsing both onto the same saddle."""
+    gfile = get_test_equilibria_filenames()[2]
+    eq = read_geqdsk(gfile)
+    assert eq._x_point is not None and eq._x_point2 is not None
+    sep = np.hypot(*(eq._x_point - eq._x_point2))
+    assert sep > 0.05, f"double-null X-points collapsed (distance {sep:.4g} m)"
+
+
+def test_degenerate_first_wall_does_not_crash():
+    """Regression: a G-EQDSK with a degenerate (nlim=1) first wall must not crash the
+    separatrix/intersection machinery; strike points are simply unavailable."""
+    gfile = get_test_equilibria_filenames()[2]
+    eq = read_geqdsk(gfile)  # DoubleNull_eqdsk carries a single-point limiter
+    assert len(eq._first_wall) < 3
+    sep = eq.separatrix
+    assert sep is not None
+    assert eq._strike_points is None
+    # intersection with a single-point wall returns nothing instead of raising
+    inter = eq.first_wall.intersection(sep)
+    assert inter is None or len(inter) == 0
+
+
 def test_spline_order_override():
     eq = Equilibrium(synthetic_dataset(), first_wall=synthetic_test_wall(), spline_order=5, spline_smooth=0)
     assert eq._spl_psi.degrees == (5, 5)
