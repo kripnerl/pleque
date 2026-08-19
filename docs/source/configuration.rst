@@ -225,17 +225,19 @@ Name                      Type    Default   Description
 ``[plotting]`` — plotting helpers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-============================ ======= ========= ==========================================================
-Name                         Type    Default   Description
-============================ ======= ========= ==========================================================
-``grid_nr``                  int     400       Number of R points of grids used by plotting routines.
-``grid_nz``                  int     600       Number of Z points of grids used by plotting routines.
-``debug_contour_levels``     int     60        Number of psi contour levels in the debug overview plot.
-``psi_contour_levels``       int     20        Default number of contour levels of ``plot_psi_contours``.
-``rational_q_psi_n_max``     float   0.95      Upper psi_n bound when looking up rational q surfaces for plotting.
-``sol_spacing``              float   2e-3      Default radial spacing [m] of near-SOL contours.
-``axis_margin``              float   1/12      Margin around the first wall, as a fraction of its size, used for axis limits.
-============================ ======= ========= ==========================================================
+============================== ======= ========= ==============================================================================
+Name                           Type    Default   Description
+============================== ======= ========= ==============================================================================
+``grid_nr``                    int     400       Number of R points of grids used by plotting routines.
+``grid_nz``                    int     600       Number of Z points of grids used by plotting routines.
+``debug_contour_levels``       int     60        Number of psi contour levels in the debug overview plot.
+``psi_contour_levels``         int     20        Default number of contour levels of ``plot_psi_contours``.
+``selected_contour_color``     str     "k"       Default colour of the flux contours selected via the ``contours`` argument.
+``selected_contour_linewidth`` float   1.0       Default line width of the flux contours selected via the ``contours`` argument.
+``rational_q_psi_n_max``       float   0.95      Upper psi_n bound when looking up rational q surfaces for plotting.
+``sol_spacing``                float   2e-3      Default radial spacing [m] of near-SOL contours.
+``axis_margin``                float   1/12      Margin around the first wall, as a fraction of its size, used for axis limits.
+============================== ======= ========= ==============================================================================
 
 ``[io]`` — file writers
 ^^^^^^^^^^^^^^^^^^^^^^^
