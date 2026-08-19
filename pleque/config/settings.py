@@ -203,6 +203,12 @@ class PlottingSettings(BaseModel):
     grid_nz: int = Field(600, description="Number of Z points of grids used by plotting routines.")
     debug_contour_levels: int = Field(60, description="Number of psi contour levels in the debug overview plot.")
     psi_contour_levels: int = Field(20, description="Default number of contour levels of `plot_psi_contours`.")
+    selected_contour_color: str = Field(
+        "k", description="Default colour of the flux contours selected via the `contours` argument."
+    )
+    selected_contour_linewidth: float = Field(
+        1.0, description="Default line width of the flux contours selected via the `contours` argument."
+    )
     rational_q_psi_n_max: float = Field(
         0.95, description="Upper psi_n bound when looking up rational q surfaces for plotting."
     )

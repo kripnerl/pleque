@@ -983,18 +983,53 @@ class Equilibrium:
 
         return contour
 
-    def plot_geometry(self, axs=None, **kwargs):
+    def plot_geometry(self, axs=None, *, top_view=True, poloidal_view=True,
+                      first_wall=None, lcfs=None, magnetic_axis=None,
+                      arrow_kwargs=None, text_kwargs=None):
         """
-        Plots the the directions of angles, current and magnetic field.
+        Plots the directions of angles, current and magnetic field.
 
-        :param axs: None or tuple of axes. If None new figure with to axes is created.
-        :param kwargs: parameters passed to the `plot` routine.
-        :return: tuple of axis (ax1, ax2)
+        The `first_wall`, `lcfs` and `magnetic_axis` layers accept `None` (draw with the
+        default style), `False` (do not draw the layer) or a mapping of keyword arguments
+        merged over the layer defaults, e.g. ``lcfs={"color": "k", "lw": 1}``.
+
+        :param axs: None or a sequence of axes. If None, a new figure is created. The axes
+                    are consumed in the plotting order, i.e. the top view first (if requested)
+                    and the poloidal cross section second.
+        :param top_view: if False, the top view is not plotted.
+        :param poloidal_view: if False, the poloidal cross section is not plotted.
+        :param first_wall: first wall (and machine outline in the top view) layer.
+        :param lcfs: last closed flux surface layer of the poloidal cross section.
+        :param magnetic_axis: magnetic axis marker of the poloidal cross section.
+        :param arrow_kwargs: mapping of keyword arguments passed to `ax.arrow`, merged over
+                             the defaults.
+        :param text_kwargs: mapping of keyword arguments passed to `ax.text`, merged over
+                            the defaults.
+        :return: tuple of the used axes, in the plotting order.
         """
         import matplotlib.pyplot as plt
 
+        from pleque.utils.plotting import _layer_kwargs
+
+        if not top_view and not poloidal_view:
+            raise ValueError("At least one of `top_view` and `poloidal_view` has to be requested.")
+
+        n_axes = int(top_view) + int(poloidal_view)
+
         if axs is None:
-            _fig, axs = plt.subplots(1, 2)
+            _fig, axs = plt.subplots(1, n_axes, squeeze=False)
+            axs = tuple(axs[0])
+        else:
+            axs = tuple(np.atleast_1d(axs))
+            if len(axs) < n_axes:
+                raise ValueError(f"{n_axes} axes are required, {len(axs)} were given.")
+
+        ax_iter = iter(axs)
+
+        first_wall_kwargs = _layer_kwargs(first_wall, {'color': 'k', 'ls': '-'})
+        lcfs_kwargs = _layer_kwargs(lcfs, {'color': 'C0', 'ls': '--'})
+        magnetic_axis_kwargs = _layer_kwargs(magnetic_axis, {'color': 'C0', 'marker': 'o', 'ls': 'none'})
+        text_style = dict(text_kwargs) if text_kwargs else {}
 
         fw = self.first_wall
 
@@ -1013,93 +1048,139 @@ class Equilibrium:
         # Top view: #
         #############
 
-        ax1 = axs[0]
-        ax1.set_title('Top view')
-        phis = np.linspace(0, 2 * np.pi, endpoint=True)
+        if top_view:
+            ax1 = next(ax_iter)
+            top_arrow_kwargs = {'width': 0.005, 'length_includes_head': True, 'head_width': 0.05,
+                                **(arrow_kwargs or {})}
 
-        ax1.plot(R_min * np.cos(phis), R_min * (np.sin(phis)), 'k-')
-        ax1.plot(R_max * np.cos(phis), R_max * (np.sin(phis)), 'k-')
+            ax1.set_title('Top view')
+            phis = np.linspace(0, 2 * np.pi, endpoint=True)
 
-        phi_dir = self.coordinates(R=R_mid, Z=0, phi=np.pi / 8)
-        phi_dir_mg = self.coordinates(R=R_mid, Z=0, phi=np.pi + sig_bt * np.pi / 8)
-        phi_dir_ip = self.coordinates(R=R_mid, Z=0, phi=3 * np.pi / 2 + sig_ip * np.pi / 8)
+            if first_wall_kwargs is not None:
+                ax1.plot(R_min * np.cos(phis), R_min * (np.sin(phis)), **first_wall_kwargs)
+                ax1.plot(R_max * np.cos(phis), R_max * (np.sin(phis)), **first_wall_kwargs)
 
-        ax1.arrow(R_mid, 0, phi_dir.X[0] - R_mid, phi_dir.Y[0],
-                  width=0.005, length_includes_head=True, head_width=0.05)
-        ax1.text(R_mid + R_mid / 14, 0, r'$\phi$',
-                 ha='left', va='center')
+            phi_dir = self.coordinates(R=R_mid, Z=0, phi=np.pi / 8)
+            phi_dir_mg = self.coordinates(R=R_mid, Z=0, phi=np.pi + sig_bt * np.pi / 8)
+            phi_dir_ip = self.coordinates(R=R_mid, Z=0, phi=3 * np.pi / 2 + sig_ip * np.pi / 8)
 
-        ax1.arrow(-R_mid, 0, phi_dir_mg.X[0] + R_mid, phi_dir_mg.Y[0],
-                  width=0.005, length_includes_head=True, head_width=0.05)
-        ax1.text(- (R_mid + R_mid / 14), 0, r'$B_\phi$',
-                 ha='right', va='center')
+            ax1.arrow(R_mid, 0, phi_dir.X[0] - R_mid, phi_dir.Y[0], **top_arrow_kwargs)
+            ax1.text(R_mid + R_mid / 14, 0, r'$\phi$',
+                     **{'ha': 'left', 'va': 'center', **text_style})
 
-        ax1.arrow(0, -R_mid, phi_dir_ip.X[0], phi_dir_ip.Y[0] + R_mid,
-                  width=0.005, length_includes_head=True, head_width=0.05)
-        ax1.text(0, - (R_mid + R_mid / 14), r'$j_\phi$',
-                 ha='center', va='top')
+            ax1.arrow(-R_mid, 0, phi_dir_mg.X[0] + R_mid, phi_dir_mg.Y[0], **top_arrow_kwargs)
+            ax1.text(- (R_mid + R_mid / 14), 0, r'$B_\phi$',
+                     **{'ha': 'right', 'va': 'center', **text_style})
 
-        ax1.set_aspect('equal')
-        ax1.set_xlabel('X [m]')
-        ax1.set_ylabel('Y [m]')
+            ax1.arrow(0, -R_mid, phi_dir_ip.X[0], phi_dir_ip.Y[0] + R_mid, **top_arrow_kwargs)
+            ax1.text(0, - (R_mid + R_mid / 14), r'$j_\phi$',
+                     **{'ha': 'center', 'va': 'top', **text_style})
+
+            ax1.set_aspect('equal')
+            ax1.set_xlabel('X [m]')
+            ax1.set_ylabel('Y [m]')
 
         ###########################
         # Poloidal cross section: #
         ###########################
-        r0 = (R_max - self.magnetic_axis.R[0]) * 0.6
-        pos0 = self.coordinates(r=r0, theta=0)
-        theta0 = 0
-        theta_dir = self.coordinates(r=r0, theta=theta0 + np.pi / 8)
+        if poloidal_view:
+            ax2 = next(ax_iter)
+            pol_arrow_kwargs = {'width': 0.005, 'head_width': 0.03, **(arrow_kwargs or {})}
 
-        r1 = (self.magnetic_axis.R[0] - R_min) * 0.7
-        r2 = (self.magnetic_axis.R[0] - R_min) * 0.45
-        theta1 = theta2 = np.pi
-        pos1 = self.coordinates(r=r1, theta=theta1)
-        pos2 = self.coordinates(r=r2, theta=theta2)
+            r0 = (R_max - self.magnetic_axis.R[0]) * 0.6
+            pos0 = self.coordinates(r=r0, theta=0)
+            theta0 = 0
+            theta_dir = self.coordinates(r=r0, theta=theta0 + np.pi / 8)
 
-        sig_theta = self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
-        sig_bpol = sig_theta * np.sign(self.B_Z(pos1))
-        sig_jpol = sig_theta * np.sign(self.j_Z(pos2))
+            r1 = (self.magnetic_axis.R[0] - R_min) * 0.7
+            r2 = (self.magnetic_axis.R[0] - R_min) * 0.45
+            theta1 = theta2 = np.pi
+            pos1 = self.coordinates(r=r1, theta=theta1)
+            pos2 = self.coordinates(r=r2, theta=theta2)
 
-        theta_dir_bpol = self.coordinates(r=pos1.r[0], theta=pos1.theta[0] + sig_bpol * np.pi / 8)
-        theta_dir_jpol = self.coordinates(r=pos2.r[0], theta=pos2.theta[0] + sig_jpol * np.pi / 8)
+            sig_theta = self._cocosdic['sigma_pol'] * self._cocosdic['sigma_cyl']
+            sig_bpol = sig_theta * np.sign(self.B_Z(pos1))
+            sig_jpol = sig_theta * np.sign(self.j_Z(pos2))
 
-        ax2 = axs[1]
-        ax2.set_title("Poloidal cross section")
-        ax2.plot(fw.R, fw.Z, 'k-')
-        if fw is not self.lcfs:
-            ax2.plot(self.lcfs.R, self.lcfs.Z, 'C0--')
-        ax2.plot(self.magnetic_axis.R, self.magnetic_axis.Z, 'C0o')
+            theta_dir_bpol = self.coordinates(r=pos1.r[0], theta=pos1.theta[0] + sig_bpol * np.pi / 8)
+            theta_dir_jpol = self.coordinates(r=pos2.r[0], theta=pos2.theta[0] + sig_jpol * np.pi / 8)
 
-        ax2.arrow(pos0.R[0], pos0.Z[0], theta_dir.R[0] - pos0.R[0], theta_dir.Z[0] - pos0.Z[0],
-                  width=0.005, head_width=0.03)
-        ax2.text(pos0.R[0] + r0 / 14, pos0.Z[0], r'$\theta$',
-                 ha='left', va='center')
+            ax2.set_title("Poloidal cross section")
+            if first_wall_kwargs is not None:
+                ax2.plot(fw.R, fw.Z, **first_wall_kwargs)
+            if fw is not self.lcfs and lcfs_kwargs is not None:
+                ax2.plot(self.lcfs.R, self.lcfs.Z, **lcfs_kwargs)
+            if magnetic_axis_kwargs is not None:
+                ax2.plot(self.magnetic_axis.R, self.magnetic_axis.Z, **magnetic_axis_kwargs)
 
-        ax2.arrow(pos1.R[0], pos1.Z[0], theta_dir_bpol.R[0] - pos1.R[0], theta_dir_bpol.Z[0] - pos1.Z[0],
-                  width=0.005, head_width=0.03)
-        ax2.text(pos1.R[0] - r0 / 14, pos1.Z[0], r'$B_\theta$',
-                 ha='right', va='center')
+            ax2.arrow(pos0.R[0], pos0.Z[0], theta_dir.R[0] - pos0.R[0], theta_dir.Z[0] - pos0.Z[0],
+                      **pol_arrow_kwargs)
+            ax2.text(pos0.R[0] + r0 / 14, pos0.Z[0], r'$\theta$',
+                     **{'ha': 'left', 'va': 'center', **text_style})
 
-        ax2.arrow(pos2.R[0], pos2.Z[0], theta_dir_jpol.R[0] - pos2.R[0], theta_dir_jpol.Z[0] - pos2.Z[0],
-                  width=0.005, head_width=0.03)
-        ax2.text(pos2.R[0] + r0 / 14, pos2.Z[0], r'$j_\theta$',
-                 ha='left', va='center')
+            ax2.arrow(pos1.R[0], pos1.Z[0], theta_dir_bpol.R[0] - pos1.R[0], theta_dir_bpol.Z[0] - pos1.Z[0],
+                      **pol_arrow_kwargs)
+            ax2.text(pos1.R[0] - r0 / 14, pos1.Z[0], r'$B_\theta$',
+                     **{'ha': 'right', 'va': 'center', **text_style})
 
-        ax2.set_aspect('equal')
+            ax2.arrow(pos2.R[0], pos2.Z[0], theta_dir_jpol.R[0] - pos2.R[0], theta_dir_jpol.Z[0] - pos2.Z[0],
+                      **pol_arrow_kwargs)
+            ax2.text(pos2.R[0] + r0 / 14, pos2.Z[0], r'$j_\theta$',
+                     **{'ha': 'left', 'va': 'center', **text_style})
 
-        ax2.set_xlabel('R [m]')
-        ax2.yaxis.set_label_position("right")
-        ax2.set_ylabel('Z [m]')
+            ax2.set_aspect('equal')
 
-        return axs
+            ax2.set_xlabel('R [m]')
+            ax2.yaxis.set_label_position("right")
+            ax2.set_ylabel('Z [m]')
 
-    def plot_overview(self, ax=None, **kwargs):
+        return axs[:n_axes]
+
+    def plot_overview(self, ax=None, *, colorbar=False, dr_sol=None, contours=None,
+                      first_wall=None, separatrix=None, lcfs=None,
+                      psi_contours=None, near_sol=None, extremes=None):
         """
-        Simple routine for plot of plasma overview
-        :return:
+        Plot an overview of the plasma equilibrium.
+
+        The plot is composed of layers -- the first wall, the separatrix, the last closed flux
+        surface, the poloidal flux contours, the near scrape-off layer contours and the
+        O-point/X-point markers. Each layer is controlled by one argument accepting
+
+        * `None` -- draw the layer with its default style (the default),
+        * `False` -- do not draw the layer,
+        * a mapping of keyword arguments merged over the layer defaults and passed to the
+          corresponding routine in :mod:`pleque.utils.plotting`.
+
+        Contours selected by `contours` are drawn first, so that they lie underneath all the
+        other layers.
+
+        Examples
+        --------
+        >>> eq.plot_overview(lcfs={"color": "k", "lw": 1}, near_sol=False)      # doctest: +SKIP
+        >>> eq.plot_overview(contours=[1.0, "secondary_x_point"])               # doctest: +SKIP
+
+        :param ax: axis to plot into; the current axis is used if None.
+        :param colorbar: if True, a colorbar of the poloidal flux contours is added.
+        :param dr_sol: radial spacing [m] of the near-SOL contours. Deprecated,
+                       use ``near_sol={"dr": ...}`` instead.
+        :param contours: selected flux contours -- a number (`psi_n` level), a `Coordinates`
+                         instance, the string ``"x_point"`` or ``"secondary_x_point"``, or an
+                         iterable of these. See
+                         :func:`pleque.utils.plotting.plot_selected_contours`.
+        :param first_wall: first wall layer, see :func:`pleque.utils.plotting.plot_first_wall`.
+        :param separatrix: separatrix layer, see :func:`pleque.utils.plotting.plot_separatrix`.
+        :param lcfs: last closed flux surface layer, see :func:`pleque.utils.plotting.plot_lcfs`.
+        :param psi_contours: poloidal flux contours, see
+                             :func:`pleque.utils.plotting.plot_psi_contours`.
+        :param near_sol: near scrape-off layer contours, see
+                         :func:`pleque.utils.plotting.plot_near_sol`.
+        :param extremes: O-point and X-point markers, see
+                         :func:`pleque.utils.plotting.plot_extremes`.
+        :return: the axis the equilibrium was plotted into.
         """
-        return self._plot_overview(ax, **kwargs)
+        return self._plot_overview(ax, colorbar=colorbar, dr_sol=dr_sol, contours=contours,
+                                   first_wall=first_wall, separatrix=separatrix, lcfs=lcfs,
+                                   psi_contours=psi_contours, near_sol=near_sol, extremes=extremes)
 
     def _plot_overview(self, ax=None, **kwargs):
         """

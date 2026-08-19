@@ -103,6 +103,10 @@ The `Equilibrium` class comes with tons of interesting functions and caveats.
 # Plot a simple overview of the equilibrium
 eq.plot_overview()
 
+# Every layer of the overview plot can be restyled or switched off, and selected flux
+# contours (here the one passing through the secondary X-point) can be added
+eq.plot_overview(near_sol=False, lcfs={"color": "k"}, contours=["secondary_x_point"])
+
 # Calculate the separatrix area
 sep_area = eq.lcfs.area
 
@@ -112,7 +116,7 @@ Z = 0.1 #m
 B = eq.B_abs(R, Z)
 ```
 
-Equilibria may be visualised in many different ways; they may be used for mapping or field line tracing; the possibilities are virtually endless. If there's a caveat you find missing from `pleque`, write to us! Further examples can be found as notebooks in the `notebooks` folder or in the `examples` directory. 
+Equilibria may be visualised in many different ways (see the [plotting documentation](https://pleque.readthedocs.io/en/latest/plotting.html)); they may be used for mapping or field line tracing; the possibilities are virtually endless. If there's a caveat you find missing from `pleque`, write to us! Further examples can be found as notebooks in the `notebooks` folder or in the `examples` directory. 
 
 ## Array convention
 

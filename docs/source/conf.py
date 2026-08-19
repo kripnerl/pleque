@@ -40,7 +40,15 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.githubpages',
               'nbsphinx',
               'nbsphinx_link',
+              'matplotlib.sphinxext.plot_directive',
               ]
+
+# matplotlib.sphinxext.plot_directive -- figures of docs/source/plotting.rst are generated
+# at build time from the equilibria bundled in pleque/resources.
+plot_include_source = True
+plot_html_show_source_link = False
+plot_html_show_formats = False
+plot_formats = [('png', 100)]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
