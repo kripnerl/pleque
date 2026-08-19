@@ -81,6 +81,10 @@ pages:
     name: pages
     url: $CI_PAGES_URL
   rules:
-    # Publish only from the default branch so feature branches do not
-    # overwrite the live site.
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # Publish from the development and release branches only, so that feature
+    # branches do not overwrite the live site. `$CI_DEFAULT_BRANCH` is not used
+    # here: the default branch of the project is `master`, so gating on it would
+    # never publish the documentation of `develop`, where the work happens.
+    # Both branches deploy to the same site, so the pipeline finishing last wins.
+    - if: $CI_COMMIT_BRANCH == "develop"
+    - if: $CI_COMMIT_BRANCH == "master"
