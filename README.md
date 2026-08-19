@@ -4,6 +4,9 @@
 
 PLEQUE is a Python module allowing simple visualisation and manipulation of tokamak plasma equilibria.
 For more information see the documentation at https://pleque.readthedocs.io.
+An internal mirror of the documentation is also published via GitLab Pages
+(repository Settings → Pages shows the URL) whenever the default branch is
+updated.
 
 **Note:** The work is still in the early development stage, so `pleque` probably contains bugs. You are very welcome to submit your wishes, encountered bugs or any other comments as an issue. Minor changes in the code structure may occur before the `0.1.0` release. 
 
