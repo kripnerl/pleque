@@ -1,5 +1,10 @@
 image: python:3.10
 
+stages:
+  - test
+  - build
+  - deploy
+
 variables:
   UV_CACHE_DIR: "/tmp/.uv-cache"
   UV_LINK_MODE: copy
@@ -39,7 +44,9 @@ build:package:
   script:
     - uv build
 
-docs:html:
+# `docs:html` and `pages` share the docs build so Pages never publishes
+# output that fails the plain docs build.
+.build-docs: &build-docs
   before_script:
     # nbsphinx converts the example notebooks with pandoc
     - apt-get update
@@ -47,3 +54,33 @@ docs:html:
     - !reference [default, before_script]
   script:
     - uv run make -C docs html
+
+docs:html:
+  <<: *build-docs
+  artifacts:
+    paths:
+      - docs/build/html
+    expire_in: 1 week
+
+# Publishes the Sphinx documentation to GitLab Pages.
+# https://docs.gitlab.com/user/project/pages/
+# Requires Pages to be enabled for the project (Settings > General >
+# Visibility, project features, permissions > Pages). Read the Docs
+# (readthedocs.yml) remains the public documentation site.
+pages:
+  stage: deploy
+  <<: *build-docs
+  script:
+    - uv run make -C docs html
+    - mv docs/build/html public
+  artifacts:
+    paths:
+      # GitLab Pages serves exactly this directory.
+      - public
+  environment:
+    name: pages
+    url: $CI_PAGES_URL
+  rules:
+    # Publish only from the default branch so feature branches do not
+    # overwrite the live site.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
