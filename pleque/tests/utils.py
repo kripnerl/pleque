@@ -1,4 +1,5 @@
 
+import itertools
 from importlib import resources
 
 import numpy as np
@@ -79,6 +80,96 @@ def get_test_divertor():
     limiterfile = 'resources/limiter_v3_1_iba.dat'
     limiter = [resource_path(resource_package, limiterfile)]
     return limiter
+
+
+# Line-current model of a lower single null with a second (inactive) X-point 1 m above the lower one, mimicking
+# COMPASS-U downward-VDE equilibria: (R, Z, strength, core radius) of a vertical chain of plasma filaments and of
+# two divertor coils outside the wall. psi = sum(strength / 2 * ln(dR^2 + dZ^2 + core^2)) has its minimum on the
+# axis and X-points at (0.72, -0.546) and (0.72, 0.452): like in the COMPASS-U case, the lower X-point is 4 mm off
+# the nearest grid node, which lies only 2 mm from a point 1 m below the upper X-point.
+_X_POINT_NEAR_DOME_FILAMENTS = (
+    *((0.90, z, 0.1 / 7, 0.10) for z in np.linspace(-0.35, 0.05, 7)),
+    (0.6404303, -0.73, 0.05442506, 0.02),
+    (0.64948179, 0.75, 0.06265461, 0.02),
+)
+
+
+def _filament_psi(r, z):
+    return sum(0.5 * c * np.log((r - rc) ** 2 + (z - zc) ** 2 + a ** 2) for rc, zc, c, a in _X_POINT_NEAR_DOME_FILAMENTS)
+
+
+def _filament_psi_grad(x):
+    r, z = x
+    dr = dz = 0.0
+    for rc, zc, c, a in _X_POINT_NEAR_DOME_FILAMENTS:
+        d2 = (r - rc) ** 2 + (z - zc) ** 2 + a ** 2
+        dr += c * (r - rc) / d2
+        dz += c * (z - zc) / d2
+    return np.array([dr, dz])
+
+
+def _filament_critical_point(guess):
+    from scipy.optimize import fsolve
+
+    return fsolve(_filament_psi_grad, guess, xtol=1e-13)
+
+
+def _wall_with_dome(dome_top_z, dome_r=(0.70, 0.74), step=1e-3):
+    """Closed wall polygon with a flat-topped divertor dome, densely sampled with `step` [m]."""
+    r_in, r_out, z_bot, z_top = 0.50, 1.30, -0.70, 0.60
+    corners = np.array([
+        [r_in, z_top], [r_out, z_top], [r_out, z_bot],
+        [dome_r[1] + 0.02, z_bot], [dome_r[1], dome_top_z], [dome_r[0], dome_top_z], [dome_r[0] - 0.02, z_bot],
+        [r_in, z_bot], [r_in, z_top],
+    ])
+    segments = []
+    for p0, p1 in itertools.pairwise(corners):
+        n = max(int(np.ceil(np.hypot(*(p1 - p0)) / step)), 1)
+        segments.append(p0 + np.linspace(0, 1, n, endpoint=False)[:, np.newaxis] * (p1 - p0))
+    return np.concatenate([*segments, corners[-1:]])
+
+
+def synthetic_x_point_near_dome(dome_gap):
+    """
+    Synthetic lower-single-null equilibrium with the lower X-point `dome_gap` [m] above a divertor dome.
+
+    psi is a line-current (2D) model of the plasma and two divertor coils on a 61 x 71 (R x Z) grid, with the lower
+    X-point at (0.72, -0.546) and a second, inactive X-point about 1 m above it. This geometry reproduces two former
+    initialisation failures seen on COMPASS-U MEQ VDE simulations: the refinement of the lower X-point candidate
+    jumped to the upper X-point, and a dome a few mm below the X-point (private flux region, psi_n slightly below 1)
+    was taken for the limiter. A negative `dome_gap` puts the dome top above the X-point, i.e. the plasma is limited
+    by the dome.
+
+    :param dome_gap: vertical distance [m] of the lower X-point above the dome top
+    :return: tuple (basedata xarray.Dataset, first_wall array (N, 2), truth dict with the `mg_axis`,
+             `x_points` (lower, upper), `psi_axis` and `psi_x_point` of the analytic model)
+    """
+    R = np.linspace(0.30, 1.50, 61)
+    Z = np.linspace(-0.75, 0.65, 71)
+    R_mesh, Z_mesh = np.meshgrid(R, Z)
+    psi = _filament_psi(R_mesh, Z_mesh)
+
+    mg_axis = _filament_critical_point((0.9, -0.05))
+    x_points = np.array([_filament_critical_point((0.72, -0.55)), _filament_critical_point((0.72, 0.45))])
+
+    psi_n = np.linspace(0, 1, 19)
+    basedata = xr.Dataset(
+        {
+            "psi": (("Z", "R"), psi),
+            "F": ("psi_n", 0.9 + 0.02 * (1 - psi_n)),
+            "pressure": ("psi_n", 1e4 * (1 - psi_n) ** 2),
+            "F0": 0.9,
+        },
+        coords={"R": R, "Z": Z, "psi_n": psi_n},
+    )
+    first_wall = _wall_with_dome(x_points[0, 1] - dome_gap)
+    truth = {
+        "mg_axis": mg_axis,
+        "x_points": x_points,
+        "psi_axis": float(_filament_psi(*mg_axis)),
+        "psi_x_point": float(_filament_psi(*x_points[0])),
+    }
+    return basedata, first_wall, truth
 
 
 def synthetic_test_wall():

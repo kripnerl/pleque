@@ -89,22 +89,44 @@ def get_psi_n_on_q(eq, q, max_psi_n=None):
     return _get_psi_n_on_q(eq, q, max_psi_n=max_psi_n)
 
 
-def is_monotonic(f, x0, x1, n_test=None):
+def is_monotonic(f, x0, x1, n_test=None, refine_start=None, refine_factor=1.5):
     """
     Test whether line connection of two points is monotonic on f.
+
+    The line is sampled at `n_test` equidistant points. If `refine_start` is given, the sampling is
+    additionally refined geometrically towards `x0`: points are added at the distances
+    ``refine_start * refine_factor**k`` (k = 0, 1, ...) from `x0`. This resolves a narrow extremum
+    of f close to `x0` -- e.g. when `x0` is a wall point a few millimetres beyond an X-point, f rises
+    over the X-point and falls again within roughly twice the X-point distance from `x0` -- which
+    equidistant sampling misses. Thanks to the geometric spacing, such an extremum is resolved
+    whatever its distance from `x0` (down to `refine_start`) for the cost of only a few tens of points.
 
     :param f: 2D spline `f(x[0], x[1])`
     :param x0: start point (2d) of the line
     :param x1: end point (2d) of the line
-    :param n_test: number of points which are tested. Defaults to the value from PLEQUE settings.
+    :param n_test: number of equidistant points which are tested. Defaults to the value from PLEQUE settings.
+    :param refine_start: distance [m] from `x0` of the first refining point; `None` disables the refinement.
+    :param refine_factor: ratio (> 1) of the distances of consecutive refining points from `x0`.
     :return: logic value
     """
     if n_test is None:
         n_test = get_settings().critical_points.monotonicity_test_points
-    rpts = np.linspace(x0[0], x1[0], n_test)
-    zpts = np.linspace(x0[1], x1[1], n_test)
+    x0 = np.asarray(x0, dtype=float)
+    x1 = np.asarray(x1, dtype=float)
+
+    t = np.linspace(0, 1, n_test)
+    length = np.hypot(*(x1 - x0))
+    if refine_start is not None and length > refine_start:
+        if refine_factor <= 1:
+            raise ValueError(f"refine_factor must be greater than one, got {refine_factor}.")
+        n_refine = int(np.ceil(np.log(length / refine_start) / np.log(refine_factor)))
+        t_refine = refine_start * refine_factor ** np.arange(n_refine) / length
+        t = np.union1d(t, t_refine[t_refine < 1])
+
+    rpts = x0[0] + t * (x1[0] - x0[0])
+    zpts = x0[1] + t * (x1[1] - x0[1])
     psi_test = f(rpts, zpts, grid=False)
-    return np.abs(np.sum(np.sign(np.diff(psi_test)))) == n_test - 1
+    return np.abs(np.sum(np.sign(np.diff(psi_test)))) == len(t) - 1
 
 
 def minimize_in_vicinity(point, func, r_lims, z_lims):
@@ -121,6 +143,7 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     # minimize in the vicinity:
 
     # Study different methods and find the most propriate and fastest!
+    point = np.asarray(point, dtype=float)
     cp_cfg = get_settings().critical_points
     vicinity = cp_cfg.vicinity_radius
     bounds = ((np.max((r_lims[0], point[0] - vicinity)),
@@ -131,8 +154,12 @@ def minimize_in_vicinity(point, func, r_lims, z_lims):
     res = minimize(func, point, method='Powell', options={'xtol': cp_cfg.minimizer_xtol})
     res_point = np.array((res['x'][0], res['x'][1]))
 
-    # If unbounded Powell algorithm finds wrong minimum, algorithm with bounds is used.
-    if np.sum(res_point ** 2 - point ** 2) > cp_cfg.relocation_threshold:
+    # If the unbounded Powell algorithm wanders off to another (e.g. deeper) minimum -- such as from
+    # a lower to an upper X-point -- the algorithm with bounds is used. The displacement itself is
+    # tested (a change of R^2 + Z^2, as tested formerly, is negative for jumps towards smaller |Z|).
+    if np.sum((res_point - point) ** 2) > cp_cfg.relocation_threshold:
+        logger.debug("Unbounded refinement moved the critical point candidate %s to %s; "
+                     "refining within the vicinity box instead.", point, res_point)
         res = minimize(func, point, method='TNC', bounds=bounds, options={'xtol': cp_cfg.minimizer_xtol})
         res_point = np.array((res['x'][0], res['x'][1]))
 
@@ -340,6 +367,11 @@ def recognize_x_points(x_points, mg_axis, psi_axis, psi_spl, r_lims, z_lims, psi
 
     xp1 = minimize_in_vicinity(xp1, psi_xysq_func, r_lims, z_lims)
 
+    if xp2 is not None and np.hypot(*(xp2 - xp1)) < cp_cfg.x_point_merge_distance:
+        logger.warning("The two best X-point candidates converged to the same point %s; "
+                       "the second X-point is discarded.", xp1)
+        xp2 = None
+
     return (xp1, xp2), sortidx
 
 
@@ -367,8 +399,18 @@ def recognize_plasma_type(x_point, first_wall, mg_axis, psi_axis, psi_spl):
 
     i = 0
 
-    n_test = get_settings().critical_points.limiter_monotonicity_test_points
-    while not (i == len(idxs_wall) or is_monotonic(psi_spl, first_wall[idxs_wall[i]], mg_axis, n_test)):
+    # A wall point limits the plasma only if psi changes monotonically on the way to the axis. Wall points
+    # in the private flux region just below an X-point (e.g. a divertor dome a few mm from the X-point) have
+    # psi_n slightly below 1 and fail this test only within a few mm of the wall, hence the refined sampling.
+    cp_cfg = get_settings().critical_points
+    n_test = cp_cfg.limiter_monotonicity_test_points
+
+    def wall_point_connects_to_axis(wall_point):
+        return is_monotonic(psi_spl, wall_point, mg_axis, n_test,
+                            refine_start=cp_cfg.limiter_monotonicity_refine_start,
+                            refine_factor=cp_cfg.limiter_monotonicity_refine_factor)
+
+    while not (i == len(idxs_wall) or wall_point_connects_to_axis(first_wall[idxs_wall[i]])):
         i += 1
 
     if i == len(idxs_wall):

@@ -146,6 +146,10 @@ def test_double_null_x_points():
     eq = read_geqdsk(gfile)
     assert eq._x_point is not None
     assert eq._x_point2 is not None
+    # the up-down symmetric equilibrium has two distinct X-points mirrored by the midplane
+    # (formerly the lower X-point candidate was refined onto the upper X-point)
+    assert np.allclose(eq._x_point2, eq._x_point * np.array([1, -1]), atol=1e-3)
+    assert abs(eq._x_point[1]) > 0.1
     psi1 = np.asarray(eq._spl_psi(*eq._x_point, grid=False)).item()
     psi2 = np.asarray(eq._spl_psi(*eq._x_point2, grid=False)).item()
     psi_span = abs(np.asarray(eq._psi_lcfs).item() - eq._psi_axis)
