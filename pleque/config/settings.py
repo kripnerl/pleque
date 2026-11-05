@@ -95,8 +95,8 @@ class CriticalPointSettings(BaseModel):
     minimizer_xtol: float = Field(1e-7, description="`xtol` passed to the Powell/TNC minimizers refining extremes.")
     relocation_threshold: float = Field(
         1e-2,
-        description="If unbounded minimization moves a candidate point by more than this (in psi-grid units), "
-        "the bounded minimizer is used instead.",
+        description="If unbounded minimization moves a candidate point by a squared distance [m^2] larger than "
+        "this, the bounded minimizer (within `vicinity_radius`) is used instead.",
     )
     axis_vertical_weight: float = Field(
         5.0,
@@ -109,11 +109,31 @@ class CriticalPointSettings(BaseModel):
     x_point_sort_epsilon: float = Field(
         1e-3, description="Regularization added to X-point ranking terms to avoid zero scores."
     )
+    x_point_merge_distance: float = Field(
+        1e-3,
+        description="Distance [m] under which the two best refined X-point candidates are considered the same "
+        "critical point (the second one is then discarded).",
+    )
     monotonicity_test_points: int = Field(
         10, description="Number of test points for the psi-monotonicity check between magnetic axis and X-point."
     )
     limiter_monotonicity_test_points: int = Field(
-        50, description="Number of test points for the psi-monotonicity check between magnetic axis and limiter point."
+        50,
+        description="Number of equidistant test points for the psi-monotonicity check between magnetic axis "
+        "and limiter point.",
+    )
+    limiter_monotonicity_refine_start: float = Field(
+        1e-4,
+        gt=0.0,
+        description="Distance [m] from the tested wall point of the first of the test points added (with "
+        "geometrically growing spacing) to the limiter monotonicity check. They detect wall points in the "
+        "private flux region just below an X-point.",
+    )
+    limiter_monotonicity_refine_factor: float = Field(
+        1.5,
+        gt=1.0,
+        description="Ratio of the distances from the wall point of consecutive refining test points of the "
+        "limiter monotonicity check.",
     )
 
 

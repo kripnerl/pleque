@@ -54,7 +54,9 @@ class Equilibrium:
        by the marching-squares algorithm on a search grid and refined by an
        iterative downhill (gradient-step) method until the relative psi error
        drops below the `lcfs.refinement_tolerance` setting; for diverted
-       plasmas the X-point is inserted into the contour. (Note: poloidal
+       plasmas the X-point is inserted into the contour. If no closed contour
+       enclosing the magnetic axis exists (misidentified critical points), a
+       `RuntimeError` is raised. (Note: poloidal
        field-line tracing of the boundary is *not* used during the
        initialisation; it is available separately via `lcfs_field_line`.)
     5. *1D profile splines.* If derivatives (pprime, FFprime) are provided,
@@ -439,9 +441,19 @@ class Equilibrium:
 
         logger.debug("Looking for LCFS")
 
-        # sometimes this close_lcfs is empty - investigate!
         close_lcfs = eq_tools.find_close_lcfs(self._psi_lcfs, rs, zs, self._spl_psi,
                                               self._mg_axis, self._psi_axis)
+        if close_lcfs is None:
+            # No closed contour of psi_lcfs encloses the axis: the boundary-defining point (X-point or
+            # limiter point) lies outside the true separatrix, i.e. the critical points were misidentified.
+            plasma_type = "limiter" if self._limiter_plasma else "X-point"
+            raise RuntimeError(
+                f"No closed flux surface enclosing the magnetic axis {self._mg_axis} was found at "
+                f"psi_lcfs = {float(self._psi_lcfs):.6g} defined by the {plasma_type} point {self._limiter_point} "
+                f"(X-points found: {self._x_point}, {self._x_point2}). The critical points were probably "
+                "misidentified; inspect them with the `debug_plots` setting or pass the `mg_axis` and "
+                "`x_points` hints (optionally with init_method='fast_forward')."
+            )
 
         while surf.fluxsurf_error(self._spl_psi, close_lcfs, self._psi_lcfs) > lcfs_cfg.refinement_tolerance:
             close_lcfs = eq_tools.find_surface_step(self._spl_psi, self._psi_lcfs, close_lcfs)

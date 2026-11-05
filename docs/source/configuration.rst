@@ -163,12 +163,15 @@ Name                                   Type    Default   Description
 ``gradient_threshold``                 float   1.0       Upper bound on \|grad psi\|^2 for a grid point to count as a critical-point candidate.
 ``vicinity_radius``                    float   0.1       Half-size [m] of the (R, Z) box used when refining a critical point by local minimization.
 ``minimizer_xtol``                     float   1e-7      ``xtol`` passed to the Powell/TNC minimizers refining extremes.
-``relocation_threshold``               float   1e-2      If unbounded minimization moves a candidate point by more than this, the bounded minimizer is used instead.
+``relocation_threshold``               float   1e-2      If unbounded minimization moves a candidate point by a squared distance [m^2] larger than this, the bounded minimizer is used instead.
 ``axis_vertical_weight``               float   5.0       Weight of the radial distance when ranking O-point candidates.
 ``axis_out_of_wall_penalty``           float   1e-3      Score multiplier penalizing O-point candidates outside the first wall.
 ``x_point_sort_epsilon``               float   1e-3      Regularization added to X-point ranking terms to avoid zero scores.
+``x_point_merge_distance``             float   1e-3      Distance [m] under which the two best refined X-point candidates are considered the same point.
 ``monotonicity_test_points``           int     10        Number of test points for the psi-monotonicity check between magnetic axis and X-point.
-``limiter_monotonicity_test_points``   int     50        Number of test points for the psi-monotonicity check between magnetic axis and limiter point.
+``limiter_monotonicity_test_points``   int     50        Number of equidistant test points for the psi-monotonicity check between magnetic axis and limiter point.
+``limiter_monotonicity_refine_start``  float   1e-4      Distance [m] from the wall point of the first of the geometrically spaced test points added to the limiter check (detects wall points just below an X-point).
+``limiter_monotonicity_refine_factor`` float   1.5       Ratio of the distances from the wall point of consecutive refining test points of the limiter check.
 ====================================== ======= ========= ==========================================================
 
 ``[lcfs]`` — last closed flux surface search
